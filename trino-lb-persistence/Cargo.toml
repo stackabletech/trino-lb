@@ -1,0 +1,27 @@
+[package]
+name = "trino-lb-persistence"
+description = "Persitence for trino-lb"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+trino-lb-core = { path = "../trino-lb-core" }
+
+async-trait.workspace = true
+bincode.workspace = true
+enum_dispatch.workspace = true
+futures.workspace = true
+http-serde.workspace = true
+http.workspace = true
+redis.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+snafu.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+url.workspace = true

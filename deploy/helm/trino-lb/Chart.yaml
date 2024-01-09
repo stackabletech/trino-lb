@@ -1,0 +1,17 @@
+---
+apiVersion: v2
+name: trino-lb
+version: "0.0.0-dev"
+appVersion: "0.0.0-dev"
+description: Loadbalancer in front of Stackable Trino clusters
+home: https://github.com/stackabletech/trino-lb
+maintainers:
+  - name: Stackable
+    url: https://www.stackable.tech
+dependencies:
+  - name: redis-cluster
+    version: 9.1.3
+    repository: https://charts.bitnami.com/bitnami/
+  - name: kube-prometheus-stack
+    version: 55.5.0
+    repository: https://prometheus-community.github.io/helm-charts

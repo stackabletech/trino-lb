@@ -1,0 +1,76 @@
+_: &common-credentials
+  username: admin
+  password: adminadmin
+
+trinoLb:
+  externalAddress: https://127.0.0.1:8443
+  tls:
+    enabled: true
+    certPemFile: /home/sbernauer/stackabletech/trino-lb/self_signed_certs/cert.pem
+    keyPemFile: /home/sbernauer/stackabletech/trino-lb/self_signed_certs/key.pem
+  persistence:
+    inMemory: {}
+    # redis:
+    #   # docker run -p 6379:6379 redis
+    #   endpoint: redis://127.0.0.1:6379/
+    # postgres:
+    #   # docker run -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=trino_lb postgres
+    #   url: postgres://postgres:postgres@localhost/trino_lb
+  tracing:
+    enabled: true
+    # helm install jaeger jaegertracing/jaeger --set 'collector.service.otlp.grpc.name=otlp-grpc,collector.service.otlp.grpc.port=4317,collector.service.otlp.http.name=otlp-http,collector.service.otlp.http.port=4318'
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://5.250.183.53:4317
+    OTEL_EXPORTER_OTLP_PROTOCOL: Grpc
+    # In case endpoint and protocol are not set here, they will still be read from the env vars
+    # OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_EXPORTER_OTLP_PROTOCOL
+
+trinoClusterGroups:
+  s:
+    maxRunningQueries: 1
+    trinoClusters:
+      - name: trino-s-1
+        endpoint: https://5.250.181.98:8443
+        credentials: *common-credentials
+  m:
+    maxRunningQueries: 1
+    trinoClusters:
+      - name: trino-m-1
+        endpoint: https://5.250.181.98:8443
+        credentials: *common-credentials
+trinoClusterGroupsIgnoreCert: true
+
+routers:
+  # This list will be walked top to bottom and the first router making a decision will choose the target trinoClusterGroup.
+  # If no router makes a decision the query will fall through to the "routingFallback".
+  - trinoRoutingGroupHeader:
+      header: X-Trino-Routing-Group
+  - pythonScript:
+      script: |
+        # Tested using Python 3.11
+        from typing import Optional
+
+        def targetClusterGroup(query: str, headers: dict[str, str]) -> Optional[str]:
+          return headers.get('x-trino-client-tags') # Will return None in case the header is not set
+  # - explainCosts:
+  #     # TODO: Let users point to a trinoClusterGroup, e.g. "trinoClusterGroupToRunExplainQuery: s"
+  #     trinoClusterToRunExplainQuery:
+  #       endpoint: https://5.250.181.98:8443
+  #       ignoreCert: true
+  #       username: admin
+  #       password: adminadmin
+  #     # This list will be walked top to bottom and the first entry where all resource measurements are sufficient will be chosen.
+  #     # If non matches the router will not a make a decision and let the routers further down the chain decide.
+  #     targets:
+  #       - cpuCost: 5E+9
+  #         memoryCost: 5E9 # 5GB
+  #         networkCost: 10E9 # 10GB
+  #         outputRowCount: 1E6
+  #         outputSizeInBytes: 1E9 # 1GB
+  #         trinoClusterGroup: s
+  #       - cpuCost: 5E+12
+  #         memoryCost: 5E12 # 5TB
+  #         networkCost: 5E12 # 5TB
+  #         outputRowCount: 1E9
+  #         outputSizeInBytes: 5E12 # 5TB
+  #         trinoClusterGroup: m
+routingFallback: m

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app.kubernetes.io/name: trino-lb
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    prometheus.io/scrape: "true"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: trino-lb
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - protocol: TCP
+      port: 8443
+      targetPort: 8443
+      name: https
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090
+      name: metrics

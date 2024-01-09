@@ -1,0 +1,56 @@
+[package]
+name = "trino-lb"
+description = "Loadbalancer in front of Stackable Trino clusters"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+# This is the default binary to run
+default-run = "trino-lb"
+
+[dependencies]
+trino-lb-core = { path = "../trino-lb-core" }
+trino-lb-persistence = { path = "../trino-lb-persistence" }
+
+async-trait.workspace = true
+axum-server.workspace = true
+axum.workspace = true
+chrono.workspace = true
+clap.workspace = true
+enum_dispatch.workspace = true
+futures.workspace = true
+http.workspace = true
+k8s-openapi.workspace = true
+kube.workspace = true
+main_error.workspace = true
+num_cpus.workspace = true
+number_prefix.workspace = true
+opentelemetry_sdk.workspace = true
+opentelemetry-http.workspace = true
+opentelemetry-otlp.workspace = true
+opentelemetry-prometheus.workspace = true
+opentelemetry.workspace = true
+prometheus.workspace = true
+prusto.workspace = true
+pyo3.workspace = true
+rand.workspace = true
+regex.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+serde.workspace = true
+snafu.workspace = true
+strum.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tracing-opentelemetry.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+indoc.workspace = true
+rstest.workspace = true

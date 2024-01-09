@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, trino_cluster, trino_endpoint, creation_time, delivered_time\n            FROM queries\n            WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "trino_cluster",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "trino_endpoint",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "creation_time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "delivered_time",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d6b1cc38b5e80b51b157d1989beec66a68126c1606a1ae39caeed6ecd380b9f1"
+}

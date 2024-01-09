@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO last_query_count_fetcher_update (dummy, last_query_count_fetcher_update)\n            VALUES ($1, $2)\n            ON CONFLICT (dummy) DO UPDATE SET last_query_count_fetcher_update = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "71ff84b7dc23376bc6396589a2bc983042ddc8fc5f2da2f023bc78268e5724a4"
+}

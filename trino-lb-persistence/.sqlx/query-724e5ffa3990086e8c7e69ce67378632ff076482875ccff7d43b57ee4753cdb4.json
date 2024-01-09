@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM queued_queries\n            WHERE last_accessed < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "724e5ffa3990086e8c7e69ce67378632ff076482875ccff7d43b57ee4753cdb4"
+}

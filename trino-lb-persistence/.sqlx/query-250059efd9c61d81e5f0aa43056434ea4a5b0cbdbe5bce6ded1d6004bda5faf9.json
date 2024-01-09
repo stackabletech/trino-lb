@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO cluster_query_counts (cluster, count)\n            VALUES ($1, $2)\n            ON CONFLICT (cluster) DO UPDATE SET count = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "250059efd9c61d81e5f0aa43056434ea4a5b0cbdbe5bce6ded1d6004bda5faf9"
+}

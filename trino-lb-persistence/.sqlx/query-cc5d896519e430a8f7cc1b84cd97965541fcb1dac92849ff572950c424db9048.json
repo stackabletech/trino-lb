@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, query, headers, creation_time, last_accessed, cluster_group\n            FROM queued_queries\n            WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "query",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "headers",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "creation_time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "last_accessed",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "cluster_group",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "cc5d896519e430a8f7cc1b84cd97965541fcb1dac92849ff572950c424db9048"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO cluster_states (id, state)\n            VALUES ($1, $2)\n            ON CONFLICT (id) DO UPDATE SET state = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c96bb3397332e6c9d9b47239ffadd90620ba1316eb2ffa861524751991097ce9"
+}

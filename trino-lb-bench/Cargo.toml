@@ -1,0 +1,17 @@
+[package]
+name = "trino-lb-bench"
+description = "Helper tool to submit many concurrent queries to a Trino cluster"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+clap.workspace = true
+futures.workspace = true
+indicatif.workspace = true
+prusto.workspace = true
+tokio.workspace = true
+url.workspace = true

@@ -1,0 +1,33 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: trino-lb
+    release: {{ .Release.Name }}
+    # app.kubernetes.io/instance: {{ .Release.Name }}
+    # app.kubernetes.io/managed-by: Helm
+    # app.kubernetes.io/part-of: kube-prometheus-stack
+    # app.kubernetes.io/version: 55.5.0
+    # chart: kube-prometheus-stack-55.5.0
+    # heritage: Helm
+spec:
+  endpoints:
+  - port: metrics
+    scheme: http
+  jobLabel: jobLabel
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: trino-lb
+      app.kubernetes.io/instance: {{ .Release.Name }}
+# spec:
+#   attachMetadata:
+#     node: false
+#   endpoints:
+#   - port: http-metrics
+#     scheme: http
+#   jobLabel: jobLabel
+#   selector:
+#     matchLabels:
+#       app.kubernetes.io/instance: trino-lb
+#       app.kubernetes.io/name: prometheus-node-exporter

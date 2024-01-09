@@ -1,0 +1,567 @@
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::{Duration, SystemTime, SystemTimeError},
+};
+
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use enum_dispatch::enum_dispatch;
+use futures::future::try_join_all;
+use snafu::{ResultExt, Snafu};
+use stackable::StackableScaler;
+use tokio::{
+    join,
+    task::{JoinError, JoinSet},
+    time,
+};
+use tracing::{debug, error, info, instrument, Instrument, Span};
+use trino_lb_core::{
+    config::{Config, ScalerConfig},
+    trino_cluster::ClusterState,
+    TrinoClusterName,
+};
+use trino_lb_persistence::{Persistence, PersistenceImplementation};
+
+use crate::cluster_group_manager::TrinoCluster;
+
+use self::config::TrinoClusterGroupAutoscaling;
+
+pub mod config;
+pub mod stackable;
+
+#[derive(Snafu, Debug)]
+pub enum Error {
+    #[snafu(display("Stackable scaling error"), context(false))]
+    #[allow(clippy::enum_variant_names)]
+    StackableError { source: stackable::Error },
+
+    #[snafu(display("Configuration error: A specific Trino cluster can only be part of a single clusterGroup. Please make sure the Trino cluster {cluster_name:?} only is part of a single clusterGroup."))]
+    ConfigErrorTrinoClusterInMultipleClusterGroups { cluster_name: String },
+
+    #[snafu(display("Failed to create Stackable autoscaler"))]
+    CreateStackableAutoscaler { source: stackable::Error },
+
+    #[snafu(display("Failed to get the counter of running queries on the cluster {cluster:?}"))]
+    GetClusterQueryCounter {
+        source: trino_lb_persistence::Error,
+        cluster: TrinoClusterName,
+    },
+
+    #[snafu(display(
+        "Failed to get the query counter on the clusters of the group {cluster_group:?}"
+    ))]
+    GetQueryCounterForGroup {
+        source: trino_lb_persistence::Error,
+        cluster_group: String,
+    },
+
+    #[snafu(display("Failed to get the queued query counter of the group {cluster_group:?}"))]
+    GetQueuedQueryCounterForGroup {
+        source: trino_lb_persistence::Error,
+        cluster_group: String,
+    },
+
+    #[snafu(display(
+        "The cluster group {cluster_group:?} has an invalid autoscaler configuration"
+    ))]
+    InvalidAutoscalerConfiguration {
+        source: crate::scaling::config::Error,
+        cluster_group: String,
+    },
+
+    #[snafu(display(
+        "Failed to read current cluster state for cluster {cluster:?} from persistence"
+    ))]
+    ReadCurrentClusterStateFromPersistence {
+        source: trino_lb_persistence::Error,
+        cluster: TrinoClusterName,
+    },
+
+    #[snafu(display(
+        "Failed to read current cluster state for cluster group {cluster_group:?} from persistence"
+    ))]
+    ReadCurrentClusterStateForClusterGroupFromPersistence {
+        source: trino_lb_persistence::Error,
+        cluster_group: String,
+    },
+
+    #[snafu(display("Failed to set cluster state for cluster {cluster:?} in persistence"))]
+    SetCurrentClusterStateInPersistence {
+        source: trino_lb_persistence::Error,
+        cluster: TrinoClusterName,
+    },
+
+    #[snafu(display(
+        "Failed to determine how long the cluster {cluster:?} has no queries running (currently draining). Maybe the clocks are out of sync"
+    ))]
+    DetermineDurationWithoutQueries {
+        source: SystemTimeError,
+        cluster: TrinoClusterName,
+    },
+
+    #[snafu(display("Failed to join reconcile cluster group task"))]
+    JoinReconcileClusterGroupTask { source: JoinError },
+
+    #[snafu(display("Failed to join apply cluster target state task"))]
+    JoinApplyClusterTargetStateTask { source: JoinError },
+
+    #[snafu(display("Failed to join get current cluster state task"))]
+    JoinGetCurrentClusterStateTask { source: JoinError },
+}
+
+pub struct Scaler {
+    scaler: ScalerImplementation,
+    persistence: Arc<PersistenceImplementation>,
+    groups: HashMap<String, Vec<TrinoCluster>>,
+    scaling_config: HashMap<String, TrinoClusterGroupAutoscaling>,
+}
+
+impl Scaler {
+    #[instrument(skip(persistence))]
+    pub async fn new_if_configured(
+        config: &Config,
+        persistence: Arc<PersistenceImplementation>,
+    ) -> Result<Option<Self>, Error> {
+        let mut scaling_config = HashMap::new();
+        let scaler = match &config.cluster_autoscaler {
+            None => {
+                // As scaling is not active we need to mark all clusters as ready, so the routing will not
+                // queued all queries as it thinks all clusters are in an unknown state.
+                for cluster in config
+                    .trino_cluster_groups
+                    .values()
+                    .flat_map(|g| &g.trino_clusters)
+                {
+                    persistence
+                        .set_cluster_state(&cluster.name, ClusterState::Ready)
+                        .await
+                        .context(SetCurrentClusterStateInPersistenceSnafu {
+                            cluster: &cluster.name,
+                        })?;
+                }
+                return Ok(None);
+            }
+            Some(scaler) => {
+                for (group_name, group) in &config.trino_cluster_groups {
+                    if let Some(autoscaling) = &group.autoscaling {
+                        scaling_config.insert(
+                            group_name.to_owned(),
+                            autoscaling.to_owned().try_into().context(
+                                InvalidAutoscalerConfigurationSnafu {
+                                    cluster_group: group_name,
+                                },
+                            )?,
+                        );
+                    } else {
+                        // As scaling is not active we need to mark all clusters as ready, so the routing will not
+                        // queued all queries as it thinks all clusters are in an unknown state.
+                        for cluster in &group.trino_clusters {
+                            persistence
+                                .set_cluster_state(&cluster.name, ClusterState::Ready)
+                                .await
+                                .context(SetCurrentClusterStateInPersistenceSnafu {
+                                    cluster: &cluster.name,
+                                })?;
+                        }
+                    }
+                }
+
+                match scaler {
+                    ScalerConfig::Stackable(scaler_config) => {
+                        StackableScaler::new(scaler_config, &config.trino_cluster_groups)
+                            .await
+                            .context(CreateStackableAutoscalerSnafu)?
+                            .into()
+                    }
+                }
+            }
+        };
+
+        // FIXME: Remove duplicated code (copied from ClusterGroupManager)
+        let mut clusters_seen = HashSet::new();
+        let mut groups = HashMap::new();
+        for (group_name, group_config) in &config.trino_cluster_groups {
+            let mut group = Vec::with_capacity(group_config.trino_clusters.len());
+            for cluster_config in &group_config.trino_clusters {
+                let cluster_name = cluster_config.name.clone();
+                if !clusters_seen.insert(cluster_name.clone()) {
+                    ConfigErrorTrinoClusterInMultipleClusterGroupsSnafu {
+                        cluster_name: cluster_name.clone(),
+                    }
+                    .fail()?;
+                }
+
+                group.push(TrinoCluster {
+                    name: cluster_name,
+                    max_running_queries: group_config.max_running_queries,
+                    endpoint: cluster_config.endpoint.clone(),
+                })
+            }
+            groups.insert(group_name.clone(), group);
+        }
+
+        Ok(Some(Scaler {
+            scaler,
+            persistence,
+            groups,
+            scaling_config,
+        }))
+    }
+
+    pub fn start_loop(self) {
+        let me = Arc::new(self);
+        tokio::spawn(async move {
+            let mut interval = time::interval(Duration::from_secs(10));
+            interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
+
+            loop {
+                // First tick does not sleep, so let's put it at the start of the loop.
+                interval.tick().await;
+
+                match me.clone().reconcile().await {
+                    Ok(()) => info!("Scaler: reconciled"),
+                    Err(error) => error!(?error, "Scaler: reconciled failed"),
+                }
+            }
+        });
+    }
+
+    #[instrument(name = "Scaler::reconcile", skip(self))]
+    pub async fn reconcile(self: Arc<Self>) -> Result<(), Error> {
+        let mut join_set = JoinSet::new();
+
+        for (cluster_group, clusters) in self.groups.clone() {
+            let me = Arc::clone(&self);
+            join_set.spawn(
+                me.reconcile_cluster_group(cluster_group, clusters)
+                    .instrument(Span::current()),
+            );
+        }
+
+        while let Some(res) = join_set.join_next().await {
+            res.context(JoinReconcileClusterGroupTaskSnafu)??;
+        }
+        info!("All cluster groups reconciled");
+
+        Ok(())
+    }
+
+    #[instrument(name = "Scaler::reconcile_cluster_group", skip(self))]
+    pub async fn reconcile_cluster_group(
+        self: Arc<Self>,
+        cluster_group: String,
+        clusters: Vec<TrinoCluster>,
+    ) -> Result<(), Error> {
+        let now = Utc::now();
+        let scaling_config = match self.scaling_config.get(&cluster_group) {
+            Some(scaling_config) => scaling_config,
+            None => {
+                // Nothing to scale for this group
+                return Ok(());
+            }
+        };
+
+        let mut join_set = JoinSet::new();
+        for cluster in &clusters {
+            let me = Arc::clone(&self);
+            join_set.spawn(
+                me.get_current_cluster_state(cluster.name.clone(), scaling_config.to_owned())
+                    .instrument(Span::current()),
+            );
+        }
+
+        let mut target_states = HashMap::new();
+        while let Some(res) = join_set.join_next().await {
+            let (cluster_name, current_state) =
+                res.context(JoinGetCurrentClusterStateTaskSnafu)??;
+            target_states.insert(cluster_name, current_state);
+        }
+        info!(current_states = ?target_states, "Current cluster states");
+
+        // Determine needed clusters
+        let queued = self
+            .persistence
+            .get_queued_query_count(&cluster_group)
+            .await
+            .context(GetQueuedQueryCounterForGroupSnafu {
+                cluster_group: &cluster_group,
+            })?;
+        if queued >= scaling_config.upscale_queued_queries_threshold {
+            // Check if there is already a cluster starting, nothing to do in that case
+            let already_starting = target_states.values().any(|s| *s == ClusterState::Starting);
+
+            if !already_starting {
+                // Walk list top to bottom and start the first cluster that can be started
+                let to_start = clusters
+                    .iter()
+                    .map(|c| (target_states.get(&c.name).unwrap(), c))
+                    .find(|(state, _)| state.can_be_started());
+
+                if let Some((_, to_start)) = to_start {
+                    target_states.insert(to_start.name.to_owned(), ClusterState::Starting);
+                }
+            }
+        } else {
+            // Determine excess clusters, this only makes sense when we don't upscale
+            let cluster_query_counters = try_join_all(
+                clusters
+                    .iter()
+                    .map(|g| async { self.persistence.get_cluster_query_count(&g.name).await }),
+            )
+            .await
+            .context(GetQueryCounterForGroupSnafu {
+                cluster_group: &cluster_group,
+            })?;
+            let max_running_queries: u64 = clusters
+                .iter()
+                .map(|c| (c, target_states.get(&c.name).unwrap()))
+                .filter(|(_, s)| s.ready_to_accept_queries())
+                .map(|(c, _)| c.max_running_queries)
+                .sum();
+            let current_running_queries: u64 = cluster_query_counters.iter().sum();
+            let utilization_percent = 100 * current_running_queries / max_running_queries;
+
+            debug!(
+                current_running_queries,
+                max_running_queries, utilization_percent, "Current cluster group query utilization"
+            );
+
+            if utilization_percent <= scaling_config.downscale_running_queries_percentage_threshold
+            {
+                // Check if there is already a cluster shutting down, nothing to do in that case
+                let already_shutting_down = clusters
+                    .iter()
+                    .map(|c| target_states.get(&c.name).unwrap())
+                    .any(|s| {
+                        *s == ClusterState::Terminating
+                            || matches!(s, ClusterState::Draining { .. })
+                    });
+
+                if !already_shutting_down {
+                    // Walk list bottom to top and find the first cluster that is currently active
+                    let shut_down_candidates = clusters
+                        .iter()
+                        .rev()
+                        .map(|c| (target_states.get(&c.name).unwrap(), c))
+                        .filter(|(state, _)| **state == ClusterState::Ready)
+                        .collect::<Vec<_>>();
+
+                    // We don't want to shut down the last remaining cluster obviously
+                    // The only exception is the case no queries were running at all, in that case we shut down
+                    // the unneeded cluster.
+                    if shut_down_candidates.len() > 1 || current_running_queries == 0 {
+                        if let Some((_, to_shut_down)) = shut_down_candidates.first() {
+                            target_states.insert(
+                                to_shut_down.name.to_owned(),
+                                ClusterState::Draining {
+                                    last_time_seen_with_queries: SystemTime::now(),
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Spin up the minimum amount of required clusters
+        let min_clusters = self.get_current_min_cluster_count(scaling_config, &cluster_group, &now);
+        debug!(cluster_group, min_clusters, "Current min clusters");
+        for cluster in clusters.iter().take(min_clusters as usize) {
+            let current_state = target_states.get(&cluster.name).unwrap();
+            let target_state = current_state.start();
+            target_states.insert(cluster.name.to_owned(), target_state);
+        }
+
+        debug!(?target_states, "Target cluster states");
+
+        let mut join_set = JoinSet::new();
+
+        for cluster in clusters {
+            // FIXME: unwrap
+            let me = Arc::clone(&self);
+            let target_state = target_states.get(&cluster.name).unwrap();
+            join_set.spawn(
+                me.apply_cluster_target_state(cluster, target_state.clone())
+                    .instrument(Span::current()),
+            );
+        }
+
+        while let Some(res) = join_set.join_next().await {
+            res.context(JoinApplyClusterTargetStateTaskSnafu)??;
+        }
+        info!("Applied all target cluster states");
+
+        Ok(())
+    }
+
+    #[instrument(name = "Scaler::get_current_state", skip(self))]
+    async fn get_current_cluster_state(
+        self: Arc<Self>,
+        cluster_name: TrinoClusterName,
+        scaling_config: TrinoClusterGroupAutoscaling,
+    ) -> Result<(TrinoClusterName, ClusterState), Error> {
+        let (stored_state, activated, ready) = join!(
+            self.persistence.get_cluster_state(&cluster_name),
+            self.scaler.is_activated(&cluster_name),
+            self.scaler.is_ready(&cluster_name)
+        );
+        let (stored_state, activated, ready) = (
+            stored_state.context(ReadCurrentClusterStateFromPersistenceSnafu {
+                cluster: &cluster_name,
+            })?,
+            activated?,
+            ready?,
+        );
+
+        let current_state = match stored_state {
+            ClusterState::Unknown => {
+                // State not known in persistence, so let's determine current state
+                match (activated, ready) {
+                    (true, true) => ClusterState::Ready,
+                    // It could also be Terminating, but in that case it would need to be stored as Terminating
+                    // in the persistence
+                    (true, false) => ClusterState::Starting,
+                    // This might happen for very short time periods. E.g. for the Stackable scaler, this can be
+                    // the case when spec.clusterOperation.stopped was just set to true, but trino-operator did
+                    // not have the time yet to update the status of the TrinoCluster to reflect the change.
+                    (false, true) => ClusterState::Terminating,
+                    (false, false) => ClusterState::Stopped,
+                }
+            }
+            ClusterState::Stopped => ClusterState::Stopped,
+            ClusterState::Starting => {
+                if ready {
+                    ClusterState::Ready
+                } else {
+                    ClusterState::Starting
+                }
+            }
+            ClusterState::Ready => {
+                // In the future we might want to check if the cluster is healthy and have a state `Unhealthy`.
+                ClusterState::Ready
+            }
+            ClusterState::Draining {
+                last_time_seen_with_queries,
+            } => {
+                // There might be the case someone manually "force-killed" to cluster as the draining took to
+                // long. We should detect this case.
+                if !ready {
+                    if activated {
+                        ClusterState::Terminating
+                    } else {
+                        ClusterState::Stopped
+                    }
+                } else {
+                    let current_query_counter = self
+                        .persistence
+                        .get_cluster_query_count(&cluster_name)
+                        .await
+                        .context(GetClusterQueryCounterSnafu {
+                            cluster: &cluster_name,
+                        })?;
+
+                    let duration_with_no_queries = last_time_seen_with_queries.elapsed().context(
+                        DetermineDurationWithoutQueriesSnafu {
+                            cluster: &cluster_name,
+                        },
+                    )?;
+
+                    if current_query_counter == 0 {
+                        if duration_with_no_queries
+                            >= scaling_config.drain_idle_duration_before_shutdown
+                        {
+                            ClusterState::Terminating
+                        } else {
+                            ClusterState::Draining {
+                                // Don't set it to `SystemTime::now()`, as there is currently no query running
+                                last_time_seen_with_queries,
+                            }
+                        }
+                    } else {
+                        ClusterState::Draining {
+                            last_time_seen_with_queries: SystemTime::now(),
+                        }
+                    }
+                }
+            }
+            ClusterState::Terminating => {
+                if !ready {
+                    ClusterState::Stopped
+                } else {
+                    ClusterState::Terminating
+                }
+            }
+            ClusterState::Deactivated => ClusterState::Deactivated,
+        };
+
+        Ok((cluster_name, current_state))
+    }
+
+    #[instrument(name = "Scaler::apply_target_states", skip(self))]
+    async fn apply_cluster_target_state(
+        self: Arc<Self>,
+        cluster: TrinoCluster,
+        target_state: ClusterState,
+    ) -> Result<(), Error> {
+        match target_state {
+            ClusterState::Unknown => {
+                error!(cluster = cluster.name, ?target_state, "After calculating the new target states the state was \"Unknown\", so we did not enabled or disable the cluster. This should not happen!")
+            }
+            ClusterState::Stopped | ClusterState::Terminating => {
+                self.scaler.deactivate(&cluster.name).await?;
+            }
+            ClusterState::Starting | ClusterState::Ready | ClusterState::Draining { .. } => {
+                self.scaler.activate(&cluster.name).await?;
+            }
+            ClusterState::Deactivated => {
+                // We don't do anything here, as it's up to the (possible human) operator to take care of the cluster
+            }
+        }
+
+        self.persistence
+            .set_cluster_state(&cluster.name, target_state.to_owned())
+            .await
+            .context(SetCurrentClusterStateInPersistenceSnafu {
+                cluster: &cluster.name,
+            })?;
+
+        Ok(())
+    }
+
+    #[instrument(skip(self))]
+    fn get_current_min_cluster_count(
+        &self,
+        scaling_config: &TrinoClusterGroupAutoscaling,
+        cluster_group: &str,
+        date: &DateTime<Utc>,
+    ) -> u64 {
+        let min_cluster = scaling_config
+            .min_clusters
+            .iter()
+            .rev()
+            .find(|c| c.date_is_in_range(date));
+
+        min_cluster
+            .map(|m| m.min)
+            // In case no time period matches we assume no cluster is needed
+            .unwrap_or(0)
+    }
+}
+
+#[async_trait]
+#[enum_dispatch(ScalerImplementation)]
+pub trait ScalerTrait {
+    async fn activate(&self, cluster: &TrinoClusterName) -> Result<(), Error>;
+
+    async fn deactivate(&self, cluster: &TrinoClusterName) -> Result<(), Error>;
+
+    async fn is_activated(&self, cluster: &TrinoClusterName) -> Result<bool, Error>;
+
+    async fn is_ready(&self, cluster: &TrinoClusterName) -> Result<bool, Error>;
+}
+
+#[enum_dispatch]
+pub enum ScalerImplementation {
+    Stackable(StackableScaler),
+}

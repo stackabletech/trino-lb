@@ -1,0 +1,10 @@
+/target
+.vscode/
+
+Cargo.nix
+crate-hashes.json
+result
+image.tar
+
+# Folder to store temporary files for testing
+hack/
