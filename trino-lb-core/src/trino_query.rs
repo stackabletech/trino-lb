@@ -107,7 +107,7 @@ impl Debug for QueuedQuery {
 }
 
 /// Produce a [`TrinoLbQueryId`] similar to what Trino does (e.g. `20231125_173754_00083_4sknc`),
-/// but with an `trino_lb_` prefix, so that it's clear this is a faked [`QueryId`].
+/// but with an `trino_lb_` prefix, so that it's clear this is a faked query ID.
 #[instrument]
 fn new_query_id() -> TrinoLbQueryId {
     let utc: DateTime<Utc> = Utc::now();
