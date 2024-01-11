@@ -8,13 +8,13 @@ use crate::{trino_query_plan::QueryPlanEstimation, TrinoClusterName};
 
 #[derive(Snafu, Debug)]
 pub enum Error {
-    #[snafu(display("Failed to read configuration file"))]
+    #[snafu(display("Failed to read configuration file at {config_file:?}"))]
     ReadConfigFile {
         source: std::io::Error,
         config_file: PathBuf,
     },
 
-    #[snafu(display("Failed to read configuration file"))]
+    #[snafu(display("Failed to parse configuration file at {config_file:?}"))]
     ParseConfigFile {
         source: serde_yaml::Error,
         config_file: PathBuf,
