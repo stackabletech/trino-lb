@@ -5,7 +5,7 @@ use std::{
 
 use prusto::{QueryError, Warning};
 use serde::{Deserialize, Serialize};
-use snafu::{OptionExt, ResultExt, Snafu};
+use snafu::{ResultExt, Snafu};
 use tracing::instrument;
 use url::Url;
 
@@ -21,12 +21,6 @@ pub enum Error {
 
     #[snafu(display("Failed to parse nextUri Trino send us"))]
     ParseNextUriFromTrino { source: url::ParseError },
-
-    #[snafu(display("The trino-lb address {trino_lb_addr} has no host"))]
-    TrinoLbAddrHasNoHost { trino_lb_addr: Url },
-
-    #[snafu(display("Failed to change the host of the nextUri"))]
-    ChangeHostOfNextUri { source: url::ParseError },
 
     #[snafu(display("Failed to determine the elapsed time of a queued query. Are all system clocks of trino-lb instances in sync?"))]
     DetermineElapsedTime { source: SystemTimeError },
@@ -159,17 +153,11 @@ impl TrinoQueryApiResponse {
     #[instrument(
         fields(trino_lb_addr = %trino_lb_addr),
     )]
-    pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: &Url) -> Result<(), Error> {
+    pub fn change_next_uri_to_trino_lb(&mut self, mut trino_lb_addr: Url) -> Result<(), Error> {
         if let Some(next_uri) = &self.next_uri {
-            let mut next_uri = Url::parse(next_uri).context(ParseNextUriFromTrinoSnafu)?;
-            next_uri
-                .set_host(Some(trino_lb_addr.host_str().context(
-                    TrinoLbAddrHasNoHostSnafu {
-                        trino_lb_addr: trino_lb_addr.clone(),
-                    },
-                )?))
-                .context(ChangeHostOfNextUriSnafu)?;
-            self.next_uri = Some(next_uri.to_string());
+            let next_uri = Url::parse(next_uri).context(ParseNextUriFromTrinoSnafu)?;
+            trino_lb_addr.set_path(next_uri.path());
+            self.next_uri = Some(trino_lb_addr.to_string());
         }
 
         Ok(())

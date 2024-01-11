@@ -1,6 +1,7 @@
 use std::{
     fmt::Debug,
     net::{Ipv6Addr, SocketAddr},
+    path::PathBuf,
     sync::Arc,
     time::Duration,
 };
@@ -27,14 +28,20 @@ mod v1;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
-    #[snafu(display("Failed configure HTTP server"))]
-    ConfigureHttpServer { source: std::io::Error },
+    #[snafu(display(
+        "Failed configure HTTP server PEM cert at {cert_pem_file:?} and PEM key at {key_pem_file:?}"
+    ))]
+    ConfigureServerTrustAndKeystore {
+        source: std::io::Error,
+        cert_pem_file: PathBuf,
+        key_pem_file: PathBuf,
+    },
 
     #[snafu(display("Failed start HTTP server"))]
     StartHttpServer { source: std::io::Error },
 
     #[snafu(display(
-        "In case https is used the `tls.certPemFile` and `tls.keyPemFile` option must be set"
+        "In case https is used the `tls.certPemFile` and `tls.keyPemFile` options must be set"
     ))]
     CertsMissing {},
 }
@@ -118,12 +125,15 @@ pub async fn start_http_server(
         // Start https server
         let listen_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, 8443));
         info!(%listen_addr, "Starting server");
-        let tls_config = RustlsConfig::from_pem_file(
-            tls_config.cert_pem_file.context(CertsMissingSnafu)?,
-            tls_config.key_pem_file.context(CertsMissingSnafu)?,
-        )
-        .await
-        .context(ConfigureHttpServerSnafu)?;
+
+        let cert_pem_file = tls_config.cert_pem_file.context(CertsMissingSnafu)?;
+        let key_pem_file = tls_config.key_pem_file.context(CertsMissingSnafu)?;
+        let tls_config = RustlsConfig::from_pem_file(&cert_pem_file, &key_pem_file)
+            .await
+            .context(ConfigureServerTrustAndKeystoreSnafu {
+                cert_pem_file,
+                key_pem_file,
+            })?;
 
         axum_server::bind_rustls(listen_addr, tls_config)
             .handle(handle)
@@ -142,18 +152,23 @@ pub async fn start_http_server(
             .context(StartHttpServerSnafu)?;
     }
 
+    info!("Shut down");
+
     Ok(())
 }
 
 async fn graceful_shutdown(handle: Handle) {
     wait_for_shutdown_signal().await;
 
-    info!("Sending graceful shutdown signal");
+    info!("Shutting down gracefully");
 
     // Signal the server to shutdown using Handle.
     handle.graceful_shutdown(Some(Duration::from_secs(5)));
     loop {
-        info!(connection = handle.connection_count(), "Alive connections");
+        info!(
+            connections = handle.connection_count(),
+            "Waiting for all connections to close"
+        );
         sleep(Duration::from_secs(1)).await;
     }
 }

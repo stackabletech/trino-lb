@@ -321,7 +321,9 @@ async fn queue_or_hand_over_query(
                         )?;
 
                         trino_query_api_response
-                            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
+                            .change_next_uri_to_trino_lb(
+                                state.config.trino_lb.external_address.clone(),
+                            )
                             .context(ModifyNextUriSnafu)?;
 
                         info!(
@@ -463,7 +465,7 @@ async fn handle_query_running_on_trino(
     if trino_query_api_response.next_uri.is_some() {
         // Change the nextUri to actually point to trino-lb instead of Trino.
         trino_query_api_response
-            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
+            .change_next_uri_to_trino_lb(state.config.trino_lb.external_address.clone())
             .context(ModifyNextUriSnafu)?;
     } else {
         info!(%query_id, "Query completed (no next_uri send)");
