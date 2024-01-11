@@ -68,8 +68,8 @@ pub async fn start_http_server(
         .route("/", get(|| async { Redirect::permanent("/metrics") }))
         .route("/metrics", get(metrics::get))
         .with_state(Arc::clone(&app_state));
-    let listen_addr = SocketAddr::from(([0, 0, 0, 0], 9090));
-    info!(addr = %listen_addr, "Starting metrics exporter");
+    let listen_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, 9090));
+    info!(%listen_addr, "Starting metrics exporter");
 
     let handle = Handle::new();
     tokio::spawn(graceful_shutdown(handle.clone()));
@@ -117,7 +117,7 @@ pub async fn start_http_server(
     if tls_config.enabled {
         // Start https server
         let listen_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, 8443));
-        info!(addr = %listen_addr, "Starting server");
+        info!(%listen_addr, "Starting server");
         let tls_config = RustlsConfig::from_pem_file(
             tls_config.cert_pem_file.context(CertsMissingSnafu)?,
             tls_config.key_pem_file.context(CertsMissingSnafu)?,
@@ -133,7 +133,7 @@ pub async fn start_http_server(
     } else {
         // Start http server
         let listen_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, 8080));
-        info!(addr = %listen_addr, "Starting server");
+        info!(%listen_addr, "Starting server");
 
         axum_server::bind(listen_addr)
             .handle(handle)
