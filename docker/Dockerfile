@@ -30,4 +30,4 @@ RUN python3 -m pip install --break-system-packages requests
 COPY --from=builder /trino-lb/target/release/trino-lb /trino-lb/target/release/trino-lb
 
 ENV PATH="${PATH}:/trino-lb/target/release/"
-ENTRYPOINT trino-lb --config-file /etc/trino-lb-config.yaml
+ENTRYPOINT ["trino-lb", "--config-file", "/etc/trino-lb-config.yaml"]
