@@ -42,7 +42,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.74.0
       - run: cargo doc --document-private-items
 
-  docs:
+  build-docker-image:
     name: Build docker image
     runs-on: ubuntu-latest
     steps:
