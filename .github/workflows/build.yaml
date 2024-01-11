@@ -4,6 +4,7 @@ on: [push, pull_request]
 env:
   RUSTFLAGS: "-D warnings"
   RUSTDOCFLAGS: "-D warnings"
+  CARGO_TERM_COLOR: always
 
 jobs:
   test:
@@ -42,9 +43,42 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.74.0
       - run: cargo doc --document-private-items
 
-  build-docker-image:
-    name: Build docker image
+  docker-image:
+    name: Build and push docker image
+    permissions:
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f docker/Dockerfile .
+      - name: Set up Cosign
+        uses: sigstore/cosign-installer@v3.3.0
+      - name: Login to Stackable Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: oci.stackable.tech
+          username: robot$stackable+github-action-build
+          password: ${{ secrets.HARBOR_ROBOT_STACKABLE_GITHUB_ACTION_BUILD_SECRET }}
+      - name: Build and (optionally) push docker image
+        env:
+          TRIGGER: ${{ github.event_name }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          # trino-lb is not (yet) a product as the SDP, but a community project, so use "stackable" instead of "sdp"
+          IMAGE_NAME="oci.stackable.tech/stackable/trino-lb"
+          TAG_NAME="dev"
+
+          docker build -f docker/Dockerfile . -t "$IMAGE_NAME:$TAG_NAME"
+
+          if [[ $TRIGGER == "push" && $GITHUB_REF == "refs/heads/main" ]]; then
+            # Store the output of `docker image push` into a variable, so we can parse it for the digest
+            PUSH_OUTPUT=$(docker image push "$IMAGE_NAME:$TAG_NAME" 2>&1)
+            echo "$PUSH_OUTPUT"
+
+            # Obtain the digest of the pushed image from the output of `docker image push`, because signing by tag is deprecated and will be removed from cosign in the future
+            DIGEST=$(echo "$PUSH_OUTPUT" | awk "/: digest: sha256:[a-f0-9]{64} size: [0-9]+$/ { print \$3 }")
+
+            # Refer to image via its digest (oci.stackable.tech/stackable/trino-dev@sha256:0a1b2c...)
+            # This generates a signature and publishes it to the registry, next to the image
+            # Uses the keyless signing flow with Github Actions as identity provider
+            cosign sign -y "$IMAGE_NAME@$DIGEST"
+          fi
