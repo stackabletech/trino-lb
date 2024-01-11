@@ -31,7 +31,7 @@ trino> select 42;
 Query trino_lb_20240111_194610_ZI6zmb1d, QUEUED_IN_TRINO_LB, 0 nodes, 0 splits
 ```
 
-As you can see by `QUEUED_IN_TRINO_LB`, the query is queued in trino-lb indefinitely, as no Trino clusters are configured - hence trino-ln has Trino cluster to hand the query to.
+As you can see by `QUEUED_IN_TRINO_LB`, the query is queued in trino-lb indefinitely, as no Trino clusters are configured - hence trino-lb has Trino cluster to hand the query to.
 
 ### With Trino clusters
 
