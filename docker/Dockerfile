@@ -16,6 +16,7 @@ COPY trino-lb-persistence trino-lb-persistence
 
 RUN . "$HOME/.cargo/env" && cargo build --release --all-features
 
+# Build final image
 FROM debian:bookworm-slim
 
 # Install python, needed for PythonScriptRouter
