@@ -1,0 +1,13 @@
+trinoLb:
+  externalAddress: http://127.0.0.1:8080
+  persistence:
+    inMemory: {}
+# Use in-memory persistence which will loose all queued running queries on restart
+trinoClusterGroups:
+  default:
+    maxRunningQueries: 1
+    trinoClusters: []
+
+# Route all queries to the "default" cluster group
+routers: []
+routingFallback: default
