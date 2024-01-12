@@ -3691,6 +3691,7 @@ dependencies = [
  "prusto",
  "rand",
  "reqwest",
+ "rstest",
  "serde",
  "serde_json",
  "serde_yaml",

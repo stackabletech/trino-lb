@@ -153,13 +153,54 @@ impl TrinoQueryApiResponse {
     #[instrument(
         fields(trino_lb_addr = %trino_lb_addr),
     )]
-    pub fn change_next_uri_to_trino_lb(&mut self, mut trino_lb_addr: Url) -> Result<(), Error> {
+    pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: &Url) -> Result<(), Error> {
         if let Some(next_uri) = &self.next_uri {
             let next_uri = Url::parse(next_uri).context(ParseNextUriFromTrinoSnafu)?;
-            trino_lb_addr.set_path(next_uri.path());
-            self.next_uri = Some(trino_lb_addr.to_string());
+            self.next_uri = Some(change_next_uri_to_trino_lb(&next_uri, trino_lb_addr).to_string());
         }
 
         Ok(())
+    }
+}
+
+fn change_next_uri_to_trino_lb(next_uri: &Url, trino_lb_addr: &Url) -> Url {
+    let mut result = trino_lb_addr.clone();
+    result.set_path(next_uri.path());
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+
+    #[rstest]
+    #[case("http://trino", "http://trino-lb", "http://trino-lb/")]
+    #[case("http://trino:8080", "http://trino-lb", "http://trino-lb/")]
+    #[case("http://trino", "http://trino-lb:8080", "http://trino-lb:8080/")]
+    #[case("http://trino:8080", "http://trino-lb:1234", "http://trino-lb:1234/")]
+    #[case("https://trino", "http://trino-lb", "http://trino-lb/")]
+    #[case("http://trino", "https://trino-lb", "https://trino-lb/")]
+    #[case("https://trino", "https://trino-lb", "https://trino-lb/")]
+    #[case(
+        "https://trino:8443/v1/statement",
+        "https://trino-lb:1234",
+        "https://trino-lb:1234/v1/statement"
+    )]
+    #[case(
+        "https://trino-m-1-coordinator-default.default.svc.cluster.local:8443/v1/statement/executing/20240112_082858_00000_kggk9/yb3c629e616e7cd9fdef859ce15bd660d26e44d24/0",
+        "https://5.250.179.64:1234",
+        "https://5.250.179.64:1234/v1/statement/executing/20240112_082858_00000_kggk9/yb3c629e616e7cd9fdef859ce15bd660d26e44d24/0"
+    )]
+    fn test_change_next_uri_to_trino_lb(
+        #[case] next_uri: String,
+        #[case] trino_lb_addr: String,
+        #[case] expected: String,
+    ) {
+        let next_uri = Url::parse(&next_uri).unwrap();
+        let trino_lb_addr = Url::parse(&trino_lb_addr).unwrap();
+        let result = change_next_uri_to_trino_lb(&next_uri, &trino_lb_addr);
+        assert_eq!(result.to_string(), expected);
     }
 }
