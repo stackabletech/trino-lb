@@ -5,7 +5,6 @@ use std::{
     time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH},
 };
 
-use async_trait::async_trait;
 use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::sync::RwLock;
 use tracing::{error, info, instrument};
@@ -54,7 +53,6 @@ impl Default for InMemoryPersistence {
     }
 }
 
-#[async_trait]
 impl Persistence for InMemoryPersistence {
     #[instrument(skip(self))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {

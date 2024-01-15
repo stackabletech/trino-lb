@@ -4,7 +4,6 @@ use std::{
     time::{Duration, SystemTime, SystemTimeError},
 };
 
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use enum_dispatch::enum_dispatch;
 use futures::future::try_join_all;
@@ -549,7 +548,6 @@ impl Scaler {
     }
 }
 
-#[async_trait]
 #[enum_dispatch(ScalerImplementation)]
 pub trait ScalerTrait {
     async fn activate(&self, cluster: &TrinoClusterName) -> Result<(), Error>;

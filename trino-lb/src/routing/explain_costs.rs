@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use snafu::{ResultExt, Snafu};
 use tracing::{instrument, warn};
 use trino_lb_core::sanitization::Sanitize;
@@ -33,7 +32,6 @@ impl ExplainCostsRouter {
     }
 }
 
-#[async_trait]
 impl RouterImplementationTrait for ExplainCostsRouter {
     #[instrument(
         name = "ExplainCostsRouter::route"

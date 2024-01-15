@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use async_trait::async_trait;
 use kube::{
     api::{Patch, PatchParams},
     core::{DynamicObject, GroupVersionKind},
@@ -248,7 +247,6 @@ impl StackableScaler {
     }
 }
 
-#[async_trait]
 impl ScalerTrait for StackableScaler {
     #[instrument(name = "StackableScaler::activate", skip(self))]
     async fn activate(&self, cluster: &TrinoClusterName) -> Result<(), super::Error> {

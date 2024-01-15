@@ -1,6 +1,5 @@
 use std::{fmt::Debug, time::SystemTime};
 
-use async_trait::async_trait;
 use enum_dispatch::enum_dispatch;
 use snafu::Snafu;
 use trino_lb_core::{
@@ -29,8 +28,9 @@ pub enum Error {
 /// multiple replicas of trino-lb and every instance can answer requests for every query correctly. This is especially important
 /// for increment and decrement operations to not end up with a wrong query count after multiple trino-lb instances modifying the
 /// counter simultaneous.
-#[async_trait]
 #[enum_dispatch(PersistenceImplementation)]
+// According to https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits.html
+#[trait_variant::make(SendPersistence: Send)]
 pub trait Persistence {
     async fn store_queued_query(&self, query: QueuedQuery) -> Result<(), Error>;
     async fn load_queued_query(&self, query_id: &TrinoLbQueryId) -> Result<QueuedQuery, Error>;

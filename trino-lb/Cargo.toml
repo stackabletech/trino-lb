@@ -15,7 +15,6 @@ default-run = "trino-lb"
 trino-lb-core = { path = "../trino-lb-core" }
 trino-lb-persistence = { path = "../trino-lb-persistence" }
 
-async-trait.workspace = true
 axum-server.workspace = true
 axum.workspace = true
 chrono.workspace = true

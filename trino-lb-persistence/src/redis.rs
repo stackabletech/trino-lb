@@ -4,7 +4,6 @@ use std::{
     time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH},
 };
 
-use async_trait::async_trait;
 use futures::{future::try_join_all, TryFutureExt};
 use redis::{
     cluster::ClusterClientBuilder, cluster_async::ClusterConnection, AsyncCommands, RedisError,
@@ -161,7 +160,6 @@ impl RedisPersistence {
     }
 }
 
-#[async_trait]
 impl Persistence for RedisPersistence {
     #[instrument(skip(self))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {

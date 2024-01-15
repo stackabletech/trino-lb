@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use async_trait::async_trait;
 use tracing::{instrument, warn};
 use trino_lb_core::{config::TrinoRoutingGroupHeaderRouterConfig, sanitization::Sanitize};
 
@@ -24,7 +23,6 @@ impl TrinoRoutingGroupHeaderRouter {
     }
 }
 
-#[async_trait]
 impl RouterImplementationTrait for TrinoRoutingGroupHeaderRouter {
     #[instrument(
         name = "TrinoRoutingGroupHeaderRouter::route"

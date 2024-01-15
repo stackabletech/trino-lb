@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use async_trait::async_trait;
 use pyo3::{
     types::{IntoPyDict, PyModule},
     Py, PyAny, Python,
@@ -53,7 +52,6 @@ impl PythonScriptRouter {
     }
 }
 
-#[async_trait]
 impl RouterImplementationTrait for PythonScriptRouter {
     #[instrument(
         name = "PythonScriptRouter::route"

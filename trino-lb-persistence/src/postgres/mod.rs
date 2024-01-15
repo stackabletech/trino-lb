@@ -3,7 +3,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use async_trait::async_trait;
 use http::HeaderMap;
 use serde::{Deserialize, Serialize};
 use snafu::{ResultExt, Snafu};
@@ -135,7 +134,6 @@ struct HeaderMapWrapper {
     pub inner: HeaderMap,
 }
 
-#[async_trait]
 impl Persistence for PostgresPersistence {
     #[instrument(skip(self))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {

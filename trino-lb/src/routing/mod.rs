@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use enum_dispatch::enum_dispatch;
 use snafu::{ResultExt, Snafu};
 use tracing::instrument;
@@ -102,7 +101,6 @@ impl Router {
     }
 }
 
-#[async_trait]
 #[enum_dispatch(RoutingImplementation)]
 pub trait RouterImplementationTrait {
     /// The router will be asked to make a decision for the queued query. It can either return
