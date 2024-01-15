@@ -63,3 +63,6 @@ trino> select 42;
 While this example seems a bit silly, keep in mind that trino-lb already keeps track of the number of queries running on the underlying Trino cluster and queues every query that would exceed the limit of allowed queries (a single query in this case).
 You can test this out by executing multiple long running queries in parallel.
 Also this is just the starting point without any routing, load-balancing or autoscaling. Read on the [design guide](./docs/design.md) on what trino-lb can do.
+
+## Example configs
+Please have a look at the `example-configs` folder to get an inspiration on what you can configure.

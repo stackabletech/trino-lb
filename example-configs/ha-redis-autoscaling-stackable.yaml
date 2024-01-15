@@ -1,0 +1,114 @@
+_: &common-credentials
+  username: admin
+  password: adminadmin
+
+trinoLb:
+  externalAddress: https://5.250.179.64:8443
+  tls:
+    enabled: true
+    certPemFile: /certificates/cert.pem
+    keyPemFile: /certificates/key.pem
+  persistence:
+    redis:
+      endpoint: redis://:redis@trino-lb-redis-cluster.trino-lb.svc.cluster.local:6379/
+    # postgres:
+    #   # helm install postgres bitnami/postgresql --version 13.2.18 --set auth.username=trino-lb,auth.password=trino-lb,auth.database=trino_lb
+    #   url: postgres://trino-lb:trino-lb@postgres-postgresql.default.svc.cluster.local/trino_lb
+    #   maxConnections: 10
+  refreshQueryCounterInterval: 30s # It is low for testing purpose and to get frequent running queries metrics
+  tracing:
+    enabled: true
+    # helm install jaeger jaegertracing/jaeger --set 'collector.service.otlp.grpc.name=otlp-grpc,collector.service.otlp.grpc.port=4317,collector.service.otlp.http.name=otlp-http,collector.service.otlp.http.port=4318'
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger-collector.default.svc.cluster.local:4317
+    OTEL_EXPORTER_OTLP_PROTOCOL: Grpc
+    # In case endpoint and protocol are not set here, they will still be read from the env vars
+    # OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_EXPORTER_OTLP_PROTOCOL
+
+trinoClusterGroups:
+  s:
+    maxRunningQueries: 3
+    autoscaling:
+      upscaleQueuedQueriesThreshold: 1
+      downscaleRunningQueriesPercentageThreshold: 70
+      drainIdleDurationBeforeShutdown: 60s
+      minClusters:
+        - timeUtc: 00:00:00 - 23:59:59
+          weekdays: Mon - Son
+          min: 0
+    trinoClusters:
+      - name: trino-s-1
+        endpoint: https://trino-s-1-coordinator-default.default.svc.cluster.local:8443
+        credentials: *common-credentials
+  m:
+    maxRunningQueries: 2
+    autoscaling:
+      upscaleQueuedQueriesThreshold: 10
+      downscaleRunningQueriesPercentageThreshold: 70
+      drainIdleDurationBeforeShutdown: 60s
+      minClusters:
+        - timeUtc: 00:00:00 - 23:59:59
+          weekdays: Mon - Son
+          min: 1
+    trinoClusters:
+      - name: trino-m-1
+        endpoint: https://trino-m-1-coordinator-default.default.svc.cluster.local:8443
+        credentials: *common-credentials
+      - name: trino-m-2
+        endpoint: https://trino-m-2-coordinator-default.default.svc.cluster.local:8443
+        credentials: *common-credentials
+  oidc:
+    maxRunningQueries: 3
+    trinoClusters:
+      - name: trino-oidc-1
+        endpoint: https://5.250.182.203:8443
+        credentials: *common-credentials
+trinoClusterGroupsIgnoreCert: true
+
+routers:
+  # This list will be walked top to bottom and the first router making a decision will choose the target trinoClusterGroup.
+  # If no router makes a decision the query will fall through to the "routingFallback".
+  - trinoRoutingGroupHeader:
+      header: X-Trino-Routing-Group
+  - pythonScript:
+      script: |
+        # Tested using Python 3.11
+        from typing import Optional
+
+        def targetClusterGroup(query: str, headers: dict[str, str]) -> Optional[str]:
+          return headers.get('x-trino-client-tags') # Will return None in case the header is not set
+  # - explainCosts:
+  #     # TODO: Let users point to a trinoClusterGroup, e.g. "trinoClusterGroupToRunExplainQuery: s"
+  #     trinoClusterToRunExplainQuery:
+  #       endpoint: https://trino-coordinator-default.default.svc.cluster.local:8443
+  #       ignoreCert: true
+  #       username: admin
+  #       password: adminadmin
+  #     # This list will be walked top to bottom and the first entry where all resource measurements are sufficient will be chosen.
+  #     # If non matches the router will not a make a decision and let the routers further down the chain decide.
+  #     targets:
+  #       - cpuCost: 5E+9
+  #         memoryCost: 5E9 # 5GB
+  #         networkCost: 10E9 # 10GB
+  #         outputRowCount: 1E6
+  #         outputSizeInBytes: 1E9 # 1GB
+  #         trinoClusterGroup: s
+  #       - cpuCost: 5E+12
+  #         memoryCost: 5E12 # 5TB
+  #         networkCost: 5E12 # 5TB
+  #         outputRowCount: 1E9
+  #         outputSizeInBytes: 5E12 # 5TB
+  #         trinoClusterGroup: m
+routingFallback: m
+
+clusterAutoscaler:
+  stackable:
+    clusters:
+      trino-s-1:
+        name: trino-s-1
+        namespace: default
+      trino-m-1:
+        name: trino-m-1
+        namespace: default
+      trino-m-2:
+        name: trino-m-2
+        namespace: default

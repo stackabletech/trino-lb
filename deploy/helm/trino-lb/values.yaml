@@ -1,6 +1,7 @@
 image:
-  repository: docker.stackable.tech/stackable/trino-lb
-  pullPolicy: IfNotPresent
+  repository: oci.stackable.tech/stackable/trino-lb
+  tag: dev
+  pullPolicy: Always
 
 replicas: 3
 
@@ -35,7 +36,7 @@ redis-cluster:
         cpu: 200m
         memory: 128Mi
   service:
-    type: LoadBalancer
+    type: ClusterIP
 
 kube-prometheus-stack:
   prometheus:
