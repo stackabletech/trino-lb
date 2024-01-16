@@ -13,9 +13,9 @@ This imposes the following requirements on the underlying persistence:
 
 The trait `trino_lb_persistence::Persistence` (think of an interface) allows for multiple persistence implementations. Currently the following implementations are available:
 
-1. **In-memory**: Volatile persistence mainly intended for development or testing purposes.
-2. **Redis**: Uses a [Redis Cluster](https://redis.io/docs/management/scaling/) as a distributed key-value store.
-3. **Postgres**: **Experimental** We have seen a few queries too much being send to the Trino clusters, probably related to some transactional problems. Also performance measurements are missing.
+1. [In-memory](./persistence/in-memory.md): Volatile persistence mainly intended for development or testing purposes.
+2. [Redis](./persistence/redis.md): Uses a [Redis Cluster](https://redis.io/docs/management/scaling/) as a distributed key-value store.
+3. [Postgres](./persistence/postgres.md): **Experimental**, as performance measurements are missing.
 
 In case you are interested in a implementation for a different persistence please feel free to open an issue or pull request!
 

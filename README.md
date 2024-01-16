@@ -6,6 +6,10 @@ A highly available load balancer with support for queueing, routing and auto-sca
 * [Example setups](./docs/example-setups.md)
 * [Routing](./docs/routing/index.md)
   * [PythonScriptRouter](./docs/routing/PythonScriptRouter.md)
+* [Persistence](./docs/persistence/index.md)
+  * [In-memory](./docs/persistence/in-memory.md)
+  * [Redis](./docs/persistence/redis.md)
+  * [Postgres](./docs/persistence/postgres.md)
 * [Scaling](./docs/scaling/index.md)
   * [Stackable](./docs/scaling/stackable.md)
 
