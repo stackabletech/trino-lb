@@ -112,13 +112,6 @@ This enables nice tracing across trino-lb and trino (as seen in the screenshot b
 This flowchart represents a Trino client submitting a query.
 It might be send to a Trino clusters or queued if all clusters are full.
 
-![Flowchart initial post](./assets/flowchart_initial_post.drawio.svg)
-
-This flowchart represents a Trino client asking for the current state of a query that is queued in trino-lb.
-In case the query will continue to be queued, the client will receive a nextUri pointing to the same endpoint again, resulting in a loop until the query is unqueued.
-
-![Flowchart queued query](./assets/flowchart_queued_query.drawio.svg)
-
 ```mermaid
 sequenceDiagram
     actor client as Trino client
