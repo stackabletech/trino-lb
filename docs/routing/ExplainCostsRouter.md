@@ -10,7 +10,7 @@ This is a very simplistic model and will likely be improved in the future - we a
 After trino-lb got the query estimation, it walks a list of resource buckets you can specify top to bottom and picks the first one that fulfills all resource requirements (CPU, memory, Network traffic etc.).
 If no bucket matches the router will not a make a decision and let the routers further down the chain decide.
 
-> [!WARN]
+> [!WARNING]
 > Please keep in mind that trino-lb will determine the target cluster group for every incoming query instantly (otherwise it does not know if it should queued or hand over the query).
 > In case a Trino client submits many queries at once this will result in the same number of `explain` queries on the Trino used for the query estimations.
 > There is [a issue to address this](https://github.com/stackabletech/trino-lb/issues/10), however until this is resolved it is recommended to have the `ExplainCostsRouter` near the end of the chain and try to classify the queries with a different router.
