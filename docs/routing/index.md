@@ -7,7 +7,7 @@ E.g. a router based on [client tags](https://trino.io/docs/current/develop/clien
 
 Currently the following routers are implemented:
 
-1. TrinoRoutingGroupHeaderRouter
+1. [TrinoRoutingGroupHeaderRouter](./TrinoRoutingGroupHeaderRouter.md)
 2. [PythonScriptRouter](./PythonScriptRouter.md)
-3. ExplainCostsRouter
+3. [ExplainCostsRouter](./ExplainCostsRouter.md)
 4. [ClientTagsRouter](./ClientTagsRouter.md)

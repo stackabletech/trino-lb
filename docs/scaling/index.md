@@ -10,6 +10,10 @@ Scaling implementation therefore only need to implement functions to turn cluste
 Routing is implemented in a generic fashion by exposing the trait `trino_lb::scaling::ScalerImplementation` (think of like an interface).
 Different scaling engines can be implemented using this trait, please feel free to open an issue or pull request!
 
+You can additionally configure the minimum number of clusters per cluster group that should be running per any given time interval.
+This allows you to e.g. have a higher minimum number of clusters during work days.
+An alternative use-case is to scale up the `etl` cluster group just before 02:00 at night, as a client will submit many queries at this given timestamp and scale down at 03:00 again.
+
 Currently the following autoscalers are implemented:
 
 1. [Stackable](./stackable.md)

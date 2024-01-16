@@ -46,10 +46,10 @@ In case any router returns a cluster group that does not exist the decision will
 
 Currently the following routers are implemented:
 
-1. TrinoRoutingGroupHeaderRouter: This router looks at a specific HTTP header (`X-Trino-Routing-Group` by default) and returns the container cluster group in case the header is set.
+1. [TrinoRoutingGroupHeaderRouter](./routing/TrinoRoutingGroupHeaderRouter.md): This router looks at a specific HTTP header (`X-Trino-Routing-Group` by default) and returns the container cluster group in case the header is set.
 2. [PythonScriptRouter](./routing/PythonScriptRouter.md): A user-configured python script is called and can do arbitrary calculations in Python the determine the target cluster group by looking at the query and headers passed.
 This is the most flexible way of defining routing rules.
-3. ExplainCostsRouter: This router executes an `explain {query}` [EXPLAIN](https://trino.io/docs/current/sql/explain.html?highlight=explain) query for every incoming query.
+3. [ExplainCostsRouter](./routing/ExplainCostsRouter.md): This router executes an `explain {query}` [EXPLAIN](https://trino.io/docs/current/sql/explain.html?highlight=explain) query for every incoming query.
 Trino will respond with an resource estimation the query will consume.
 Please note that this functional heavily depends on [Table statistics](https://trino.io/docs/current/optimizer/statistics.html) being present for the access tables to get meaningful estimations.
 4. [ClientTagsRouter](./routing/ClientTagsRouter.md): Route queries based on client tags send in the `X-Trino-Client-Tags` header.

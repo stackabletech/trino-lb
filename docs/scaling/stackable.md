@@ -55,3 +55,37 @@ clusterAutoscaler:
         name: trino-m-2
         namespace: default
 ```
+
+## Kubernetes requirements
+
+trino-lb needs access to the Kubernetes cluster the Stackable Data platform is running on.
+The easiest way to achieve this is by running trino-lb within Kubernetes, e.g. as a Deployment with multiple replicas.
+
+Also the ServiceAccount trino-lb is running with needs at least the following permissions to inspect and start/stop running Trino clusters:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app.kubernetes.io/name: trino-lb
+    app.kubernetes.io/instance: {{ .Release.Name }}
+rules:
+  - apiGroups:
+      - trino.stackable.tech
+    resources:
+      - trinoclusters
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+  - apiGroups:
+      - trino.stackable.tech
+    resources:
+      - trinoclusters/status
+    verbs:
+      - get
+
+```
