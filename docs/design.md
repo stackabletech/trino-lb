@@ -32,7 +32,7 @@ You can think of the cluster groups as e.g. the following examples:
 * `l` (and maybe even `xl`) for big queries, e.g. writing or compacting tables consisting of 1 Trino cluster each.
 * `etl-s` and `etl-l` for scheduled tasks, which should not be disturbed by interactive users bombing the clusters, consisting of 1 Trino cluster each.
 
-## 2. Routing to cluster group
+## 2. Routing to a cluster group
 
 The fist action for every incoming query is to determine the correct cluster group the query should run on.
 
