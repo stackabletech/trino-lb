@@ -10,3 +10,4 @@ Currently the following routers are implemented:
 1. TrinoRoutingGroupHeaderRouter
 2. [PythonScriptRouter](./PythonScriptRouter.md)
 3. ExplainCostsRouter
+4. [ClientTagsRouter](./ClientTagsRouter.md)

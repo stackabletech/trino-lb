@@ -52,6 +52,7 @@ This is the most flexible way of defining routing rules.
 3. ExplainCostsRouter: This router executes an `explain {query}` [EXPLAIN](https://trino.io/docs/current/sql/explain.html?highlight=explain) query for every incoming query.
 Trino will respond with an resource estimation the query will consume.
 Please note that this functional heavily depends on [Table statistics](https://trino.io/docs/current/optimizer/statistics.html) being present for the access tables to get meaningful estimations.
+4. [ClientTagsRouter](./routing/ClientTagsRouter.md): Route queries based on client tags send in the `X-Trino-Client-Tags` header.
 
 ## 3. Choosing cluster from cluster group
 

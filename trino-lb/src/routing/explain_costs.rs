@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use snafu::{ResultExt, Snafu};
 use tracing::{instrument, warn};
 use trino_lb_core::sanitization::Sanitize;
@@ -10,6 +12,11 @@ use crate::{
 
 #[derive(Snafu, Debug)]
 pub enum Error {
+    #[snafu(display(
+        "Configuration error: The configured target cluster group {cluster_group} does not exist"
+    ))]
+    TargetClusterGroupNotFound { cluster_group: String },
+
     #[snafu(display("Failed to create Trino client"))]
     ExtractTrinoHost { source: trino_client::Error },
 }
@@ -21,7 +28,23 @@ pub struct ExplainCostsRouter {
 
 impl ExplainCostsRouter {
     #[instrument(name = "ExplainCostsRouter::new")]
-    pub fn new(config: &ExplainCostsRouterConfig) -> Result<Self, Error> {
+    pub fn new(
+        config: &ExplainCostsRouterConfig,
+        valid_target_groups: HashSet<String>,
+    ) -> Result<Self, Error> {
+        for ExplainCostTargetConfig {
+            trino_cluster_group,
+            ..
+        } in &config.targets
+        {
+            if !valid_target_groups.contains(trino_cluster_group) {
+                TargetClusterGroupNotFoundSnafu {
+                    cluster_group: trino_cluster_group,
+                }
+                .fail()?;
+            }
+        }
+
         let trino_client = TrinoClient::new(&config.trino_cluster_to_run_explain_query)
             .context(ExtractTrinoHostSnafu)?;
 
