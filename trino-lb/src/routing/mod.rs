@@ -5,10 +5,12 @@ use trino_lb_core::sanitization::Sanitize;
 
 use crate::config::{Config, RoutingConfig};
 
+mod client_tags;
 mod explain_costs;
 mod python_script;
 mod trino_routing_group_header;
 
+pub use client_tags::ClientTagsRouter;
 pub use explain_costs::ExplainCostsRouter;
 pub use python_script::PythonScriptRouter;
 pub use trino_routing_group_header::TrinoRoutingGroupHeaderRouter;
@@ -20,6 +22,9 @@ pub enum Error {
 
     #[snafu(display("Failed to create python script router"))]
     CreatePythonScriptRouter { source: python_script::Error },
+
+    #[snafu(display("Failed to create client tags router"))]
+    CreateClientTagsRouter { source: client_tags::Error },
 
     #[snafu(display("Configuration error: The router {router:?} is configured to route to trinoClusterGroup {trino_cluster_group:?} which does not exist"))]
     ConfigErrorClusterGroupDoesNotExist {
@@ -48,9 +53,12 @@ impl Router {
                     let targets = router_config.targets.iter().map(|t| &t.trino_cluster_group);
                     check_every_target_group_exists(targets, cluster_groups, "ExplainCostsRouter")?;
 
-                    ExplainCostsRouter::new(router_config)
-                        .context(CreateExplainCostsRouterSnafu)?
-                        .into()
+                    ExplainCostsRouter::new(
+                        router_config,
+                        config.trino_cluster_groups.keys().cloned().collect(),
+                    )
+                    .context(CreateExplainCostsRouterSnafu)?
+                    .into()
                 }
                 RoutingConfig::TrinoRoutingGroupHeader(router_config) => {
                     TrinoRoutingGroupHeaderRouter::new(
@@ -64,6 +72,12 @@ impl Router {
                     config.trino_cluster_groups.keys().cloned().collect(),
                 )
                 .context(CreatePythonScriptRouterSnafu)?
+                .into(),
+                RoutingConfig::ClientTags(router_config) => ClientTagsRouter::new(
+                    router_config,
+                    config.trino_cluster_groups.keys().cloned().collect(),
+                )
+                .context(CreateClientTagsRouterSnafu)?
                 .into(),
             };
             routers.push(router);
@@ -114,6 +128,7 @@ pub enum RoutingImplementation {
     ExplainCosts(ExplainCostsRouter),
     TrinoRoutingGroupHeader(TrinoRoutingGroupHeaderRouter),
     PythonScript(PythonScriptRouter),
+    ClientTagHeaders(ClientTagsRouter),
 }
 
 #[instrument(skip(targets))]

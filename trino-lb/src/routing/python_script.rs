@@ -132,7 +132,7 @@ mod tests {
             },
             valid_target_groups,
         )
-        .expect("Failed to create PythonScriptRouter router")
+        .expect("Failed to create PythonScriptRouter")
     }
 
     fn get_headers(x_trino_source: Option<&str>, x_trino_client_tags: Option<&str>) -> HeaderMap {

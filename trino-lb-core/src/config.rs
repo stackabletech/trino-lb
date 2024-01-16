@@ -1,4 +1,10 @@
-use std::{collections::HashMap, fmt::Debug, fs::File, path::PathBuf, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    fs::File,
+    path::PathBuf,
+    time::Duration,
+};
 
 use serde::Deserialize;
 use snafu::{ResultExt, Snafu};
@@ -162,6 +168,7 @@ pub enum RoutingConfig {
     ExplainCosts(ExplainCostsRouterConfig),
     TrinoRoutingGroupHeader(TrinoRoutingGroupHeaderRouterConfig),
     PythonScript(PythonScriptRouterConfig),
+    ClientTags(ClientTagsRouterConfig),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -216,6 +223,21 @@ fn default_trino_routing_group_header() -> String {
 #[serde(rename_all = "camelCase")]
 pub struct PythonScriptRouterConfig {
     pub script: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientTagsRouterConfig {
+    #[serde(flatten)]
+    pub tag_matching_strategy: TagMatchingStrategy,
+    pub trino_cluster_group: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum TagMatchingStrategy {
+    AllOf(HashSet<String>),
+    OneOf(HashSet<String>),
 }
 
 #[derive(Clone, Debug, Deserialize)]
