@@ -17,7 +17,7 @@ A highly available load balancer with support for queueing, routing and auto-sca
   * [Stackable](./docs/scaling/stackable.md)
 
 ## Try it out locally
-The easiest way to use trino-ls is by using the available container image.
+The easiest way to use trino-lb is by using the available container image.
 Make sure you clone this repo and run the following command from the root directory of it.
 
 ### Without Trino clusters
