@@ -29,7 +29,7 @@ docker run -p 8080:8080 -v ./example-configs/simple-no-trino.yaml:/etc/trino-lb-
 
 This starts trino-lb listening on http://127.0.0.1:8080.
 
-You can submit a test-query using [trino-cli](https://trino.io/docs/current/client/cli.html) by calling the following command and entering `show catalogs`:
+You can submit a test-query using [trino-cli](https://trino.io/docs/current/client/cli.html) by calling the following command and entering `select 42;`:
 
 ```bash
 java -jar ~/Downloads/trino-cli-435-executable.jar --server http://127.0.0.1:8080
@@ -38,7 +38,7 @@ trino> select 42;
 Query trino_lb_20240111_194610_ZI6zmb1d, QUEUED_IN_TRINO_LB, 0 nodes, 0 splits
 ```
 
-As you can see by `QUEUED_IN_TRINO_LB`, the query is queued in trino-lb indefinitely, as no Trino clusters are configured - hence trino-lb has Trino cluster to hand the query to.
+As you can see by `QUEUED_IN_TRINO_LB`, the query is queued in trino-lb indefinitely, as no Trino clusters are configured - hence trino-lb has no Trino cluster to hand the query to.
 
 ### With Trino clusters
 
