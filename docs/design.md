@@ -19,6 +19,8 @@ The trait `trino_lb_persistence::Persistence` (think of an interface) allows for
 
 In case you are interested in a implementation for a different persistence please feel free to open an issue or pull request!
 
+Read on the [persistence page](./persistence/index.md) for more details.
+
 ## 1. Cluster groups
 
 trino-lb has the concept of so-called "cluster groups" consisting of 1 - n Trino clusters.
@@ -54,6 +56,8 @@ Trino will respond with an resource estimation the query will consume.
 Please note that this functional heavily depends on [Table statistics](https://trino.io/docs/current/optimizer/statistics.html) being present for the access tables to get meaningful estimations.
 4. [ClientTagsRouter](./routing/ClientTagsRouter.md): Route queries based on client tags send in the `X-Trino-Client-Tags` header.
 
+Read on the [routing page](./routing/index.md) for more details.
+
 ## 3. Choosing cluster from cluster group
 
 Once the routers have determined which cluster group the query should run a fitting cluster of this group needs to be chosen.
@@ -87,6 +91,8 @@ As an extreme this enables you to have on-demand clusters: There are certain `xl
 Currently the following autoscalers are implemented:
 
 1. [Stackable](./scaling/stackable.md): Autoscales [Stackable TrinoClusters](https://docs.stackable.tech/home/stable/trino/), which are part of the Stackable Data Platform (SDP)
+
+Read on the [scaling page](./scaling/index.md) for more details.
 
 ## Monitoring
 
