@@ -62,9 +62,9 @@ dependencies = [
 
 [[package]]
 name = "anstream"
-version = "0.6.7"
+version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cd2405b3ac1faab2990b74d728624cd9fd115651fcecc7c2d8daf01376275ba"
+checksum = "3fde6067df7359f2d6335ec1a50c1f8f825801687d10da0cc4c6b08e3f6afd15"
 dependencies = [
  "anstyle",
  "anstyle-parse",
@@ -122,9 +122,9 @@ checksum = "bddcadddf5e9015d310179a59bb28c4d4b9920ad0f11e8e14dbadf654890c9a6"
 
 [[package]]
 name = "async-compression"
-version = "0.4.5"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc2d0cfb2a7388d34f590e76686704c494ed7aaceed62ee1ba35cbf363abc2a5"
+checksum = "a116f46a969224200a0a97f29cfd4c50e7534e4b4826bd23ea2c3c533039c82c"
 dependencies = [
  "flate2",
  "futures-core",
@@ -358,9 +358,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.4.1"
+version = "2.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "327762f6e5a765692301e5bb513e0d9fef63be86bbc14528052b1cd3e6f03e07"
+checksum = "ed570934406eb16438a4e976b1b4500774099c13b8cb96eec99f620f05090ddf"
 dependencies = [
  "serde",
 ]
@@ -446,9 +446,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.4.16"
+version = "4.4.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58e54881c004cec7895b0068a0a954cd5d62da01aef83fa35b1e594497bf5445"
+checksum = "1e578d6ec4194633722ccf9544794b71b1385c3c027efe0c55db226fc880865c"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -456,9 +456,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.4.16"
+version = "4.4.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59cb82d7f531603d2fd1f507441cdd35184fa81beff7bd489570de7f773460bb"
+checksum = "4df4df40ec50c46000231c914968278b1eb05098cf8f1b3a518a95030e71d1c7"
 dependencies = [
  "anstream",
  "anstyle",
@@ -966,9 +966,9 @@ checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "h2"
-version = "0.3.23"
+version = "0.3.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b553656127a00601c8ae5590fcfdc118e4083a7924b6cf4ffc1ea4b99dc429d7"
+checksum = "bb2c4422095b67ee78da96fbb51a4cc413b3b25883c7717ff7ca1ab31022c9c9"
 dependencies = [
  "bytes",
  "fnv",
@@ -985,9 +985,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "991910e35c615d8cab86b5ab04be67e6ad24d2bf5f4f11fdbbed26da999bbeab"
+checksum = "31d030e59af851932b72ceebadf4a2b5986dba4c3b99dd2493f8273a0f151943"
 dependencies = [
  "bytes",
  "fnv",
@@ -1038,9 +1038,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d77f7ec81a6d05a3abb01ab6eb7590f6083d08449fe5a1c8b1e620283546ccb7"
+checksum = "5d3d0e0f38255e7fa3cf31335b3a56f05febd18025f4db5ef7a0cfb4f8da651f"
 
 [[package]]
 name = "hex"
@@ -1185,7 +1185,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "h2 0.3.23",
+ "h2 0.3.24",
  "http 0.2.11",
  "http-body 0.4.6",
  "httparse",
@@ -1208,7 +1208,7 @@ dependencies = [
  "bytes",
  "futures-channel",
  "futures-util",
- "h2 0.4.1",
+ "h2 0.4.2",
  "http 1.0.0",
  "http-body 1.0.0",
  "httparse",
@@ -1578,9 +1578,9 @@ dependencies = [
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.4.12"
+version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4cd1a83af159aa67994778be9070f0ae1bd732942279cabb14f86f986a21456"
+checksum = "01cda141df6706de531b6c46c3a33ecca755538219bd484262fa09410c13539c"
 
 [[package]]
 name = "lock_api"
@@ -1688,7 +1688,7 @@ version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
 dependencies = [
- "bitflags 2.4.1",
+ "bitflags 2.4.2",
  "cfg-if",
  "libc",
 ]
@@ -2138,9 +2138,9 @@ dependencies = [
 
 [[package]]
 name = "pkg-config"
-version = "0.3.28"
+version = "0.3.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69d3587f8a9e599cc7ec2c00e331f71c4e69a5f9a4b8a6efd5b07466b9736f9a"
+checksum = "2900ede94e305130c13ddd391e0ab7cbaeb783945ae07a279c268cb05109c6cb"
 
 [[package]]
 name = "portable-atomic"
@@ -2470,7 +2470,7 @@ dependencies = [
  "encoding_rs",
  "futures-core",
  "futures-util",
- "h2 0.3.23",
+ "h2 0.3.24",
  "http 0.2.11",
  "http-body 0.4.6",
  "hyper 0.14.28",
@@ -2584,7 +2584,7 @@ version = "0.38.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "322394588aaf33c24007e8bb3238ee3e4c5c09c084ab32bc73890b99ff326bca"
 dependencies = [
- "bitflags 2.4.1",
+ "bitflags 2.4.2",
  "errno",
  "libc",
  "linux-raw-sys",
@@ -2959,7 +2959,7 @@ dependencies = [
 [[package]]
 name = "sqlx"
 version = "0.7.3"
-source = "git+https://github.com/sbernauer/sqlx.git?branch=fix/query-macro-nix-build#30e45a4ee21d719541a929aad562f4cc83a2de24"
+source = "git+https://github.com/launchbadge/sqlx.git?rev=b4269b7c865f05701fd0d2d1da1b2d8be7a159b8#b4269b7c865f05701fd0d2d1da1b2d8be7a159b8"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",
@@ -2971,7 +2971,7 @@ dependencies = [
 [[package]]
 name = "sqlx-core"
 version = "0.7.3"
-source = "git+https://github.com/sbernauer/sqlx.git?branch=fix/query-macro-nix-build#30e45a4ee21d719541a929aad562f4cc83a2de24"
+source = "git+https://github.com/launchbadge/sqlx.git?rev=b4269b7c865f05701fd0d2d1da1b2d8be7a159b8#b4269b7c865f05701fd0d2d1da1b2d8be7a159b8"
 dependencies = [
  "ahash",
  "atoi",
@@ -2980,7 +2980,6 @@ dependencies = [
  "chrono",
  "crc",
  "crossbeam-queue",
- "dotenvy",
  "either",
  "event-listener",
  "futures-channel",
@@ -3014,7 +3013,7 @@ dependencies = [
 [[package]]
 name = "sqlx-macros"
 version = "0.7.3"
-source = "git+https://github.com/sbernauer/sqlx.git?branch=fix/query-macro-nix-build#30e45a4ee21d719541a929aad562f4cc83a2de24"
+source = "git+https://github.com/launchbadge/sqlx.git?rev=b4269b7c865f05701fd0d2d1da1b2d8be7a159b8#b4269b7c865f05701fd0d2d1da1b2d8be7a159b8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3026,7 +3025,7 @@ dependencies = [
 [[package]]
 name = "sqlx-macros-core"
 version = "0.7.3"
-source = "git+https://github.com/sbernauer/sqlx.git?branch=fix/query-macro-nix-build#30e45a4ee21d719541a929aad562f4cc83a2de24"
+source = "git+https://github.com/launchbadge/sqlx.git?rev=b4269b7c865f05701fd0d2d1da1b2d8be7a159b8#b4269b7c865f05701fd0d2d1da1b2d8be7a159b8"
 dependencies = [
  "atomic-write-file",
  "dotenvy",
@@ -3052,11 +3051,11 @@ dependencies = [
 [[package]]
 name = "sqlx-mysql"
 version = "0.7.3"
-source = "git+https://github.com/sbernauer/sqlx.git?branch=fix/query-macro-nix-build#30e45a4ee21d719541a929aad562f4cc83a2de24"
+source = "git+https://github.com/launchbadge/sqlx.git?rev=b4269b7c865f05701fd0d2d1da1b2d8be7a159b8#b4269b7c865f05701fd0d2d1da1b2d8be7a159b8"
 dependencies = [
  "atoi",
  "base64",
- "bitflags 2.4.1",
+ "bitflags 2.4.2",
  "byteorder",
  "bytes",
  "chrono",
@@ -3094,11 +3093,11 @@ dependencies = [
 [[package]]
 name = "sqlx-postgres"
 version = "0.7.3"
-source = "git+https://github.com/sbernauer/sqlx.git?branch=fix/query-macro-nix-build#30e45a4ee21d719541a929aad562f4cc83a2de24"
+source = "git+https://github.com/launchbadge/sqlx.git?rev=b4269b7c865f05701fd0d2d1da1b2d8be7a159b8#b4269b7c865f05701fd0d2d1da1b2d8be7a159b8"
 dependencies = [
  "atoi",
  "base64",
- "bitflags 2.4.1",
+ "bitflags 2.4.2",
  "byteorder",
  "chrono",
  "crc",
@@ -3133,7 +3132,7 @@ dependencies = [
 [[package]]
 name = "sqlx-sqlite"
 version = "0.7.3"
-source = "git+https://github.com/sbernauer/sqlx.git?branch=fix/query-macro-nix-build#30e45a4ee21d719541a929aad562f4cc83a2de24"
+source = "git+https://github.com/launchbadge/sqlx.git?rev=b4269b7c865f05701fd0d2d1da1b2d8be7a159b8#b4269b7c865f05701fd0d2d1da1b2d8be7a159b8"
 dependencies = [
  "atoi",
  "chrono",
@@ -3462,7 +3461,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-util",
- "h2 0.3.23",
+ "h2 0.3.24",
  "http 0.2.11",
  "http-body 0.4.6",
  "hyper 0.14.28",
@@ -3505,7 +3504,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c5bb1d698276a2443e5ecfabc1008bf15a36c12e6a7176e7bf089ea9131140"
 dependencies = [
  "base64",
- "bitflags 2.4.1",
+ "bitflags 2.4.2",
  "bytes",
  "futures-core",
  "futures-util",
@@ -3751,9 +3750,9 @@ checksum = "ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9"
 
 [[package]]
 name = "unicode-bidi"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f2528f27a9eb2b21e69c95319b30bd0efd85d09c379741b0f78ea1d86be2416"
+checksum = "08f95100a766bf4f8f28f90d77e0a5461bbdb219042e7679bebe79004fed8d75"
 
 [[package]]
 name = "unicode-ident"

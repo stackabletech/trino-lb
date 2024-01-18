@@ -58,6 +58,5 @@ indicatif = "0.17"
 
 [patch.crates-io]
 prusto = { git = "https://github.com/sbernauer/prusto.git", branch = "feat/derive-name-attribute" }
-# We need to patch some minor things to get the Nix build to work
-# Actually someone else propased the exact changes in https://github.com/launchbadge/sqlx/pull/2927
-sqlx = { git = "https://github.com/sbernauer/sqlx.git", branch = "fix/query-macro-nix-build" }
+# https://github.com/launchbadge/sqlx/pull/2927 was merged but we need to wait for a release
+sqlx = { git = "https://github.com/launchbadge/sqlx.git", rev = "b4269b7c865f05701fd0d2d1da1b2d8be7a159b8" }
