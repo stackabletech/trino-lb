@@ -292,4 +292,22 @@ def targetClusterGroup(query: str, headers: dict[str, str]) -> Optional[str]:
             expected.map(ToOwned::to_owned)
         );
     }
+
+    #[tokio::test]
+    async fn test_invalid_script() {
+        let script = "malformed python :)".to_string();
+        let config = PythonScriptRouterConfig { script };
+
+        let result = PythonScriptRouter::new(&config, HashSet::new());
+        assert!(matches!(result, Err(Error::ParsePythonScript { .. })));
+    }
+
+    #[tokio::test]
+    async fn test_missing_function() {
+        let script = "foo = 42".to_string();
+        let config = PythonScriptRouterConfig { script };
+
+        let result = PythonScriptRouter::new(&config, HashSet::new());
+        assert!(matches!(result, Err(Error::FindPythonFunction { .. })));
+    }
 }
