@@ -21,8 +21,8 @@ http = "1.0"
 http-serde = "2.0.0"
 humantime-serde = "1.0"
 indoc = "2.0"
-k8s-openapi = { version = "0.20", default-features = false, features = ["v1_28"] }
-kube = { version = "0.87", default-features = false, features = ["client", "jsonpatch", "runtime", "rustls-tls"] }
+k8s-openapi = { version = "0.21", default-features = false, features = ["v1_29"] }
+kube = { version = "0.88", default-features = false, features = ["client", "jsonpatch", "runtime", "rustls-tls"] }
 main_error = "0.1"
 num_cpus = "1.0"
 number_prefix = "0.4"
