@@ -7,7 +7,7 @@ use maintenance::{
     leftover_queries::LeftoverQueryDetector, query_count_fetcher,
     query_count_fetcher::QueryCountFetcher,
 };
-use opentelemetry::global::{shutdown_meter_provider, shutdown_tracer_provider};
+use opentelemetry::global::shutdown_tracer_provider;
 use routing::Router;
 use scaling::Scaler;
 use snafu::{ResultExt, Snafu};
@@ -156,12 +156,18 @@ async fn start() -> Result<(), MainError> {
 
     LeftoverQueryDetector::new(Arc::clone(&persistence)).start_loop();
 
-    start_http_server(config, persistence, cluster_group_manager, router, metrics)
-        .await
-        .context(StartHttpServerSnafu)?;
+    start_http_server(
+        config,
+        persistence,
+        cluster_group_manager,
+        router,
+        Arc::clone(&metrics),
+    )
+    .await
+    .context(StartHttpServerSnafu)?;
 
     shutdown_tracer_provider();
-    shutdown_meter_provider();
+    metrics.shutdown();
 
     Ok(())
 }
