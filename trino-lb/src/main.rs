@@ -167,7 +167,6 @@ async fn start() -> Result<(), MainError> {
     .context(StartHttpServerSnafu)?;
 
     shutdown_tracer_provider();
-    metrics.shutdown();
 
     Ok(())
 }

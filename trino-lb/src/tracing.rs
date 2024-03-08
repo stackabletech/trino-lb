@@ -81,8 +81,7 @@ pub fn init(
     opentelemetry::global::set_meter_provider(meter_provider);
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
 
-    let metrics =
-        Metrics::new(meter_provider, registry, persistence, config).context(SetUpMetricsSnafu)?;
+    let metrics = Metrics::new(registry, persistence, config).context(SetUpMetricsSnafu)?;
 
     Ok(metrics)
 }

@@ -9,7 +9,6 @@ use opentelemetry::{
     metrics::{Counter, Histogram, MetricsError, Unit},
     KeyValue,
 };
-use opentelemetry_sdk::metrics::SdkMeterProvider;
 use prometheus::Registry;
 use snafu::{ResultExt, Snafu};
 use tokio::{
@@ -36,7 +35,6 @@ pub enum Error {
 }
 
 pub struct Metrics {
-    pub meter_provider: SdkMeterProvider,
     pub registry: Registry,
     pub http_counter: Counter<u64>,
     pub queued_time: Histogram<u64>,
@@ -48,7 +46,6 @@ pub struct Metrics {
 
 impl Metrics {
     pub fn new(
-        meter_provider: SdkMeterProvider,
         registry: Registry,
         persistence: Arc<PersistenceImplementation>,
         config: &Config,
@@ -214,18 +211,11 @@ impl Metrics {
             .context(RegisterMetricsCallbackSnafu)?;
 
         Ok(Self {
-            meter_provider,
             registry,
             http_counter,
             queued_time,
             cluster_infos,
         })
-    }
-
-    pub fn shutdown(&self) -> Result<(), Error> {
-        self.meter_provider
-            .shutdown()
-            .context(ShutDownMeterProviderSnafu)
     }
 }
 
