@@ -29,9 +29,6 @@ use crate::trino_client::ClusterInfo;
 pub enum Error {
     #[snafu(display("Failed to register metrics callback"))]
     RegisterMetricsCallback { source: MetricsError },
-
-    #[snafu(display("Failed to shut down meter provider"))]
-    ShutDownMeterProvider { source: MetricsError },
 }
 
 pub struct Metrics {
