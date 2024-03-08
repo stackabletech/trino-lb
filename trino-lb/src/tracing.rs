@@ -6,7 +6,7 @@ use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::{
     metrics::{
         reader::{DefaultAggregationSelector, DefaultTemporalitySelector},
-        Aggregation, Instrument, MeterProvider, Stream,
+        Aggregation, Instrument, SdkMeterProvider, Stream,
     },
     propagation::TraceContextPropagator,
     trace::{self, RandomIdGenerator, Sampler},
@@ -70,15 +70,15 @@ pub fn init(
         .build()
         .context(CreateOpenTelemetryPrometheusExporterSnafu)?;
 
-    let provider = MeterProvider::builder()
+    let meter_provider = SdkMeterProvider::builder()
         .with_view(setup_custom_metrics)
         .with_reader(exporter)
         .build();
 
     tracing::subscriber::set_global_default(tracing_subscriber::registry().with(layers))
         .context(SetGlobalTracingSubscriberSnafu)?;
-    // TODO: Have a look at how we can ship Prometheus  and oltp metrics at the same time.
-    opentelemetry::global::set_meter_provider(provider);
+    // TODO: Have a look at how we can ship Prometheus and oltp metrics at the same time.
+    opentelemetry::global::set_meter_provider(meter_provider);
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
 
     let metrics = Metrics::new(registry, persistence, config).context(SetUpMetricsSnafu)?;
@@ -106,7 +106,7 @@ fn otel_tracer(tracing_config: &TrinoLbTracingConfig) -> Result<trace::Tracer, E
         .context(InstallTokioBatchRuntimeSnafu)
 }
 
-fn _otel_meter(tracing_config: &TrinoLbTracingConfig) -> Result<MeterProvider, Error> {
+fn _otel_meter(tracing_config: &TrinoLbTracingConfig) -> Result<SdkMeterProvider, Error> {
     opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
         .with_exporter(exporter(tracing_config))
