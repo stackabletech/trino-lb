@@ -1,15 +1,8 @@
-use std::{
-    fmt::Debug,
-    num::TryFromIntError,
-    time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH},
-};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use futures::{future::try_join_all, TryFutureExt};
-use redis::{
-    cluster::ClusterClientBuilder, cluster_async::ClusterConnection, AsyncCommands, RedisError,
-    Script,
-};
-use snafu::{OptionExt, ResultExt, Snafu};
+use redis::{aio::MultiplexedConnection, AsyncCommands, Client, Script};
+use snafu::{OptionExt, ResultExt};
 use tracing::{debug, debug_span, info, instrument, Instrument};
 use trino_lb_core::{
     config::RedisConfig,
@@ -17,104 +10,23 @@ use trino_lb_core::{
     trino_query::{QueuedQuery, TrinoQuery},
     TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
 };
-use url::Url;
 
-use crate::Persistence;
-
-const LAST_QUERY_COUNT_FETCHER_UPDATE_KEY: &str = "lastQueryCountFetcherUpdate";
-
-#[derive(Snafu, Debug)]
-pub enum Error {
-    #[snafu(display("Failed to extract redis host from endpoint {endpoint}"))]
-    ExtractRedisHost { endpoint: Url },
-
-    #[snafu(display("Failed to create redis client"))]
-    CreateClient { source: RedisError },
-
-    #[snafu(display("Failed to serialize to binary representation"))]
-    SerializeToBinary { source: bincode::Error },
-
-    #[snafu(display("Failed to deserialize from binary representation"))]
-    DeserializeFromBinary { source: bincode::Error },
-
-    #[snafu(display("Failed to write to redis"))]
-    WriteToRedis { source: RedisError },
-
-    #[snafu(display("Failed to read from redis"))]
-    ReadFromRedis { source: RedisError },
-
-    #[snafu(display("Failed to delete from redis"))]
-    DeleteFromRedis { source: RedisError },
-
-    #[snafu(display(
-        "Failed to increment cluster query count for cluster {cluster_name:?} in redis"
-    ))]
-    IncrementClusterQueryCount {
-        source: RedisError,
-        cluster_name: TrinoClusterName,
+use crate::{
+    redis::{
+        cluster_query_counter_key, cluster_state_key, compare_and_set_script, query_key,
+        queued_query_key, queued_query_set_name, ConvertElapsedTimeSinceLastUpdateToMillisSnafu,
+        CreateClientSnafu, DeleteFromRedisSnafu, DeserializeFromBinarySnafu,
+        DetermineElapsedTimeSinceLastUpdateSnafu, ExecuteCASScriptSnafu, ExtractRedisHostSnafu,
+        GetClusterStateSnafu, GetLastQueryCountFetcherUpdateSnafu, InvalidCASScriptResponseSnafu,
+        ReadClusterQueryCountSnafu, ReadFromRedisSnafu, SerializeToBinarySnafu,
+        SetClusterQueryCountSnafu, SetClusterStateSnafu, SetLastQueryCountFetcherUpdateSnafu,
+        WriteToRedisSnafu, LAST_QUERY_COUNT_FETCHER_UPDATE_KEY,
     },
+    Persistence,
+};
 
-    #[snafu(display(
-        "Failed to decrement cluster query count for cluster {cluster_name:?} in redis"
-    ))]
-    DecrementClusterQueryCount {
-        source: RedisError,
-        cluster_name: TrinoClusterName,
-    },
-
-    #[snafu(display("Failed to set cluster query count for cluster {cluster_name:?} in redis"))]
-    SetClusterQueryCount {
-        source: RedisError,
-        cluster_name: TrinoClusterName,
-    },
-
-    #[snafu(display("Failed to read cluster query count for cluster {cluster_name:?} in redis"))]
-    ReadClusterQueryCount {
-        source: RedisError,
-        cluster_name: TrinoClusterName,
-    },
-
-    #[snafu(display("Failed to convert retrieved cluster query count {retrieved:?} to an u64 for cluster {cluster_name:?}"))]
-    ConvertClusterQueryCountToU64 {
-        source: TryFromIntError,
-        cluster_name: TrinoClusterName,
-        retrieved: Option<i64>,
-    },
-
-    #[snafu(display("Failed to get last cluster query count fetcher update timestamp"))]
-    GetLastQueryCountFetcherUpdate { source: RedisError },
-
-    #[snafu(display("Failed to set last cluster query count fetcher update timestamp"))]
-    SetLastQueryCountFetcherUpdate { source: RedisError },
-
-    #[snafu(display("Failed to determined elapsed time since last queryCountFetcher update"))]
-    DetermineElapsedTimeSinceLastUpdate { source: SystemTimeError },
-
-    #[snafu(display("Failed to store determined elapsed time since last queryCountFetcher update as millis in a u64"))]
-    ConvertElapsedTimeSinceLastUpdateToMillis { source: TryFromIntError },
-
-    #[snafu(display("Failed to set cluster state"))]
-    SetClusterState { source: RedisError },
-
-    #[snafu(display("Failed to get cluster state"))]
-    GetClusterState { source: RedisError },
-
-    #[snafu(display("Failed to execute compare and set lua script."))]
-    ExecuteCASScript { source: RedisError },
-
-    #[snafu(display("Invalid response from compare and set lua script. Expected either 0 or 1"))]
-    InvalidCASScriptResponse { response: u64 },
-}
-
-/// This Redis implementation works against Redis clusters. It uses a single connection that is shared between all
-/// operations for best performance. However, this makes atomic operations hard as their are some pitfalls regarding
-/// `WATCH` in combination with `MULTI` and `EXEC` documented
-/// [in this Stackoverflow answer](https://stackoverflow.com/a/68783183). In a nutshell The first exec unwatches all
-/// properties. Therefore, the second multi/exec goes through without watch-guard. One mentioned solution was to use
-/// multiple connections (obviously), but we can achieve our goals using LUA scripts that offer e.g. the compare-and-set
-/// mechanism we need even when re-using a connection.
 pub struct RedisPersistence {
-    connection: ClusterConnection,
+    connection: MultiplexedConnection,
     compare_and_set_script: Script,
 
     /// Sometimes we need to do stuff for all cluster groups, so we need to store them to iterate over them
@@ -122,39 +34,25 @@ pub struct RedisPersistence {
 }
 
 impl RedisPersistence {
-    pub async fn new(config: &RedisConfig, cluster_groups: Vec<String>) -> Result<Self, Error> {
+    pub async fn new(
+        config: &RedisConfig,
+        cluster_groups: Vec<String>,
+    ) -> Result<Self, super::Error> {
         // Logging only the host, as the endpoint can contain credentials
         let redis_host = config.endpoint.host_str().context(ExtractRedisHostSnafu {
             endpoint: config.endpoint.clone(),
         })?;
-        info!(redis_host, "Using redis persistence");
+        info!(redis_host, "Using redis cluster persistence");
 
-        let client = ClusterClientBuilder::new([config.endpoint.clone()])
-            .build()
-            .context(CreateClientSnafu)?;
+        let client = Client::open(config.endpoint.as_str()).context(CreateClientSnafu)?;
         let connection = client
-            .get_async_connection()
+            .get_multiplexed_async_connection()
             .await
             .context(CreateClientSnafu)?;
-        let compare_and_set_script = Script::new(
-            r"
-            local current = redis.call('GET', KEYS[1]);
-            if current == ARGV[1] then
-                redis.call('SET', KEYS[1], ARGV[2]);
-                return 1;
-                end;
-            -- Special case: The entry did not exist so far, so just set it
-            if redis.call('EXISTS', KEYS[1]) == 0 then
-                redis.call('SET', KEYS[1], ARGV[2]);
-                return 1;
-                end;
-            return 0;
-            ",
-        );
 
         Ok(Self {
             connection,
-            compare_and_set_script,
+            compare_and_set_script: compare_and_set_script(),
             cluster_groups,
         })
     }
@@ -162,7 +60,7 @@ impl RedisPersistence {
 
 impl Persistence for RedisPersistence {
     #[instrument(skip(self))]
-    async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {
+    async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), crate::Error> {
         let key = queued_query_key(&queued_query.id);
         let value = bincode::serialize(&queued_query).context(SerializeToBinarySnafu)?;
 
@@ -173,10 +71,10 @@ impl Persistence for RedisPersistence {
         tokio::try_join!(
             connection_1
                 .set::<_, _, ()>(key, value)
-                .map_err(|err| Error::WriteToRedis { source: err }),
+                .map_err(|err| super::Error::WriteToRedis { source: err }),
             connection_2
                 .sadd::<_, _, ()>(queued_query_set_name(&queued_query.cluster_group), key)
-                .map_err(|err| Error::WriteToRedis { source: err }),
+                .map_err(|err| super::Error::WriteToRedis { source: err }),
         )?;
 
         Ok(())
@@ -186,7 +84,7 @@ impl Persistence for RedisPersistence {
     async fn load_queued_query(
         &self,
         queued_query_id: &TrinoLbQueryId,
-    ) -> Result<QueuedQuery, super::Error> {
+    ) -> Result<QueuedQuery, crate::Error> {
         let key = queued_query_key(queued_query_id);
         let value: Vec<u8> = self
             .connection()
@@ -198,7 +96,7 @@ impl Persistence for RedisPersistence {
     }
 
     #[instrument(skip(self))]
-    async fn remove_queued_query(&self, queued_query: &QueuedQuery) -> Result<(), super::Error> {
+    async fn remove_queued_query(&self, queued_query: &QueuedQuery) -> Result<(), crate::Error> {
         let key = queued_query_key(&queued_query.id);
         let mut connection = self.connection();
 
@@ -213,7 +111,7 @@ impl Persistence for RedisPersistence {
     }
 
     #[instrument(skip(self))]
-    async fn store_query(&self, query: TrinoQuery) -> Result<(), super::Error> {
+    async fn store_query(&self, query: TrinoQuery) -> Result<(), crate::Error> {
         let key = query_key(&query.id);
         let value = bincode::serialize(&query).context(SerializeToBinarySnafu)?;
 
@@ -226,7 +124,7 @@ impl Persistence for RedisPersistence {
     }
 
     #[instrument(skip(self))]
-    async fn load_query(&self, query_id: &TrinoQueryId) -> Result<TrinoQuery, super::Error> {
+    async fn load_query(&self, query_id: &TrinoQueryId) -> Result<TrinoQuery, crate::Error> {
         let key = query_key(query_id);
         let value: Vec<u8> = self
             .connection()
@@ -238,7 +136,7 @@ impl Persistence for RedisPersistence {
     }
 
     #[instrument(skip(self))]
-    async fn remove_query(&self, query_id: &TrinoQueryId) -> Result<(), super::Error> {
+    async fn remove_query(&self, query_id: &TrinoQueryId) -> Result<(), crate::Error> {
         let key = query_key(query_id);
         self.connection()
             .del(key)
@@ -253,7 +151,7 @@ impl Persistence for RedisPersistence {
         &self,
         cluster_name: &TrinoClusterName,
         max_allowed_count: u64,
-    ) -> Result<bool, super::Error> {
+    ) -> Result<bool, crate::Error> {
         let key = cluster_query_counter_key(cluster_name);
         let mut connection = self.connection();
 
@@ -303,7 +201,7 @@ impl Persistence for RedisPersistence {
     async fn dec_cluster_query_count(
         &self,
         cluster_name: &TrinoClusterName,
-    ) -> Result<(), super::Error> {
+    ) -> Result<(), crate::Error> {
         let key = cluster_query_counter_key(cluster_name);
         let mut connection = self.connection();
 
@@ -347,7 +245,7 @@ impl Persistence for RedisPersistence {
         &self,
         cluster_name: &TrinoClusterName,
         count: u64,
-    ) -> Result<(), super::Error> {
+    ) -> Result<(), crate::Error> {
         let key = cluster_query_counter_key(cluster_name);
 
         self.connection()
@@ -362,7 +260,7 @@ impl Persistence for RedisPersistence {
     async fn get_cluster_query_count(
         &self,
         cluster_name: &TrinoClusterName,
-    ) -> Result<u64, super::Error> {
+    ) -> Result<u64, crate::Error> {
         let key = cluster_query_counter_key(cluster_name);
         Ok(self
             .connection()
@@ -374,7 +272,7 @@ impl Persistence for RedisPersistence {
     }
 
     #[instrument(skip(self))]
-    async fn get_queued_query_count(&self, cluster_group: &str) -> Result<u64, super::Error> {
+    async fn get_queued_query_count(&self, cluster_group: &str) -> Result<u64, crate::Error> {
         Ok(self
             .connection()
             .scard::<_, Option<u64>>(queued_query_set_name(cluster_group))
@@ -388,7 +286,7 @@ impl Persistence for RedisPersistence {
     async fn delete_queued_queries_not_accessed_after(
         &self,
         not_accessed_after: SystemTime,
-    ) -> Result<u64, super::Error> {
+    ) -> Result<u64, crate::Error> {
         let counts = try_join_all(self.cluster_groups.iter().map(|cg| {
             self.delete_queued_queries_not_accessed_after_for_cluster_group(cg, &not_accessed_after)
         }))
@@ -398,7 +296,7 @@ impl Persistence for RedisPersistence {
     }
 
     #[instrument(skip(self))]
-    async fn get_last_query_count_fetcher_update(&self) -> Result<SystemTime, super::Error> {
+    async fn get_last_query_count_fetcher_update(&self) -> Result<SystemTime, crate::Error> {
         let ms = self
             .connection()
             .get::<_, Option<u64>>(LAST_QUERY_COUNT_FETCHER_UPDATE_KEY)
@@ -416,7 +314,7 @@ impl Persistence for RedisPersistence {
     async fn set_last_query_count_fetcher_update(
         &self,
         update: SystemTime,
-    ) -> Result<(), super::Error> {
+    ) -> Result<(), crate::Error> {
         let ms: u64 = update
             .duration_since(UNIX_EPOCH)
             .context(DetermineElapsedTimeSinceLastUpdateSnafu)?
@@ -437,7 +335,7 @@ impl Persistence for RedisPersistence {
         &self,
         cluster_name: &TrinoClusterName,
         state: ClusterState,
-    ) -> Result<(), super::Error> {
+    ) -> Result<(), crate::Error> {
         let key = cluster_state_key(cluster_name);
         let value = bincode::serialize(&state).context(SerializeToBinarySnafu)?;
 
@@ -453,7 +351,7 @@ impl Persistence for RedisPersistence {
     async fn get_cluster_state(
         &self,
         cluster_name: &TrinoClusterName,
-    ) -> Result<ClusterState, super::Error> {
+    ) -> Result<ClusterState, crate::Error> {
         let key = cluster_state_key(cluster_name);
 
         let cluster_state: Option<Vec<u8>> = self
@@ -472,7 +370,7 @@ impl Persistence for RedisPersistence {
 }
 
 impl RedisPersistence {
-    fn connection(&self) -> ClusterConnection {
+    fn connection(&self) -> MultiplexedConnection {
         self.connection.clone()
     }
 
@@ -481,7 +379,7 @@ impl RedisPersistence {
         &self,
         cluster_group: &str,
         not_accessed_after: &SystemTime,
-    ) -> Result<u64, super::Error> {
+    ) -> Result<u64, crate::Error> {
         let mut connection = self.connection();
         let mut removed = 0;
 
@@ -505,26 +403,4 @@ impl RedisPersistence {
 
         Ok(removed)
     }
-}
-
-/// Trino query ids will always start with `20231208` and will therefore be unique.
-fn query_key(query_id: &TrinoQueryId) -> &str {
-    query_id
-}
-
-/// trino-lb query ids will always start with `trino_lb_20231208` and will therefore be unique.
-fn queued_query_key(query_id: &TrinoLbQueryId) -> &str {
-    query_id
-}
-
-fn queued_query_set_name(cluster_group: &str) -> String {
-    format!("queued-{cluster_group}")
-}
-
-fn cluster_query_counter_key(cluster: &TrinoClusterName) -> String {
-    format!("{cluster}_query_count")
-}
-
-fn cluster_state_key(cluster: &TrinoClusterName) -> String {
-    format!("{cluster}_state")
 }

@@ -89,6 +89,7 @@ pub trait Persistence {
 #[enum_dispatch]
 pub enum PersistenceImplementation {
     Redis(redis::RedisPersistence),
+    RedisCluster(redis::RedisClusterPersistence),
     Postgres(postgres::PostgresPersistence),
     InMemory(in_memory::InMemoryPersistence),
 }

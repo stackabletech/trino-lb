@@ -15,7 +15,7 @@ use trino_lb_core::config::{self, Config, PersistenceConfig};
 use trino_lb_persistence::{
     in_memory::InMemoryPersistence,
     postgres::{self, PostgresPersistence},
-    redis::{self, RedisPersistence},
+    redis::{self, RedisClusterPersistence, RedisPersistence},
     PersistenceImplementation,
 };
 
@@ -41,6 +41,9 @@ pub enum Error {
 
     #[snafu(display("Failed to create redis persistence client"))]
     CreateRedisPersistenceClient { source: redis::Error },
+
+    #[snafu(display("Failed to create redis cluster persistence client"))]
+    CreateRedisClusterPersistenceClient { source: redis::Error },
 
     #[snafu(display("Failed to create postgres persistence client"))]
     CreatePostgresPersistenceClient { source: postgres::Error },
@@ -109,6 +112,12 @@ async fn start() -> Result<(), MainError> {
                 RedisPersistence::new(redis_config, cluster_groups)
                     .await
                     .context(CreateRedisPersistenceClientSnafu)?
+                    .into()
+            }
+            PersistenceConfig::RedisCluster(redis_cluster_config) => {
+                RedisClusterPersistence::new(redis_cluster_config, cluster_groups)
+                    .await
+                    .context(CreateRedisClusterPersistenceClientSnafu)?
                     .into()
             }
             PersistenceConfig::Postgres(postgres_config) => {

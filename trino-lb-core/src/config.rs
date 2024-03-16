@@ -90,12 +90,19 @@ pub struct TrinoLbTracingConfig {
 pub enum PersistenceConfig {
     InMemory {},
     Redis(RedisConfig),
+    RedisCluster(RedisClusterConfig),
     Postgres(PostgresConfig),
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RedisConfig {
+    pub endpoint: Url,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RedisClusterConfig {
     pub endpoint: Url,
 }
 
