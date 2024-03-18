@@ -6,8 +6,8 @@ use std::{
 
 use futures::{future::try_join_all, TryFutureExt};
 use redis::{
-    cluster::ClusterClientBuilder, cluster_async::ClusterConnection, AsyncCommands, RedisError,
-    Script,
+    aio::MultiplexedConnection, cluster::ClusterClientBuilder, cluster_async::ClusterConnection,
+    AsyncCommands, Client, RedisError, Script,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
 use tracing::{debug, debug_span, info, instrument, Instrument};
@@ -113,54 +113,65 @@ pub enum Error {
 /// properties. Therefore, the second multi/exec goes through without watch-guard. One mentioned solution was to use
 /// multiple connections (obviously), but we can achieve our goals using LUA scripts that offer e.g. the compare-and-set
 /// mechanism we need even when re-using a connection.
-pub struct RedisPersistence {
-    connection: ClusterConnection,
+pub struct RedisPersistence<R>
+where
+    R: AsyncCommands + Clone,
+{
+    connection: R,
     compare_and_set_script: Script,
 
     /// Sometimes we need to do stuff for all cluster groups, so we need to store them to iterate over them
     cluster_groups: Vec<String>,
 }
 
-impl RedisPersistence {
+impl RedisPersistence<MultiplexedConnection> {
     pub async fn new(config: &RedisConfig, cluster_groups: Vec<String>) -> Result<Self, Error> {
-        // Logging only the host, as the endpoint can contain credentials
         let redis_host = config.endpoint.host_str().context(ExtractRedisHostSnafu {
             endpoint: config.endpoint.clone(),
         })?;
         info!(redis_host, "Using redis persistence");
 
-        let client = ClusterClientBuilder::new([config.endpoint.clone()])
+        let client = Client::open(config.endpoint.as_str()).context(CreateClientSnafu)?;
+        let connection = client
+            .get_multiplexed_async_connection()
+            .await
+            .context(CreateClientSnafu)?;
+
+        Ok(Self {
+            connection,
+            compare_and_set_script: compare_and_set_script(),
+            cluster_groups,
+        })
+    }
+}
+
+impl RedisPersistence<ClusterConnection<MultiplexedConnection>> {
+    pub async fn new(config: &RedisConfig, cluster_groups: Vec<String>) -> Result<Self, Error> {
+        let redis_host = config.endpoint.host_str().context(ExtractRedisHostSnafu {
+            endpoint: config.endpoint.clone(),
+        })?;
+        info!(redis_host, "Using redis cluster persistence");
+
+        let client = ClusterClientBuilder::new([config.endpoint.as_str()])
             .build()
             .context(CreateClientSnafu)?;
         let connection = client
             .get_async_connection()
             .await
             .context(CreateClientSnafu)?;
-        let compare_and_set_script = Script::new(
-            r"
-            local current = redis.call('GET', KEYS[1]);
-            if current == ARGV[1] then
-                redis.call('SET', KEYS[1], ARGV[2]);
-                return 1;
-                end;
-            -- Special case: The entry did not exist so far, so just set it
-            if redis.call('EXISTS', KEYS[1]) == 0 then
-                redis.call('SET', KEYS[1], ARGV[2]);
-                return 1;
-                end;
-            return 0;
-            ",
-        );
 
         Ok(Self {
             connection,
-            compare_and_set_script,
+            compare_and_set_script: compare_and_set_script(),
             cluster_groups,
         })
     }
 }
 
-impl Persistence for RedisPersistence {
+impl<R> Persistence for RedisPersistence<R>
+where
+    R: AsyncCommands + Clone,
+{
     #[instrument(skip(self))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {
         let key = queued_query_key(&queued_query.id);
@@ -471,8 +482,11 @@ impl Persistence for RedisPersistence {
     }
 }
 
-impl RedisPersistence {
-    fn connection(&self) -> ClusterConnection {
+impl<R> RedisPersistence<R>
+where
+    R: AsyncCommands + Clone,
+{
+    fn connection(&self) -> R {
         self.connection.clone()
     }
 
@@ -527,4 +541,22 @@ fn cluster_query_counter_key(cluster: &TrinoClusterName) -> String {
 
 fn cluster_state_key(cluster: &TrinoClusterName) -> String {
     format!("{cluster}_state")
+}
+
+fn compare_and_set_script() -> Script {
+    Script::new(
+        r"
+    local current = redis.call('GET', KEYS[1]);
+    if current == ARGV[1] then
+        redis.call('SET', KEYS[1], ARGV[2]);
+        return 1;
+        end;
+    -- Special case: The entry did not exist so far, so just set it
+    if redis.call('EXISTS', KEYS[1]) == 0 then
+        redis.call('SET', KEYS[1], ARGV[2]);
+        return 1;
+        end;
+    return 0;
+    ",
+    )
 }
