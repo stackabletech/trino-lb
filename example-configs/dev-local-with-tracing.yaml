@@ -6,8 +6,8 @@ trinoLb:
   externalAddress: https://127.0.0.1:8443
   tls:
     enabled: true
-    certPemFile: /home/sbernauer/stackabletech/trino-lb/self_signed_certs/cert.pem
-    keyPemFile: /home/sbernauer/stackabletech/trino-lb/self_signed_certs/key.pem
+    certPemFile: /home/sbernauer/stackabletech/trino-lb/example-configs/self-signed-certs/cert.pem
+    keyPemFile: /home/sbernauer/stackabletech/trino-lb/example-configs/self-signed-certs/key.pem
   persistence:
     inMemory: {}
     # redis:

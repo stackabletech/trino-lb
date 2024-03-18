@@ -107,19 +107,19 @@ async fn start() -> Result<(), MainError> {
             PersistenceConfig::InMemory {} => InMemoryPersistence::default().into(),
             PersistenceConfig::Redis(redis_config) => {
                 if redis_config.cluster_mode {
-                    RedisPersistence::<::redis::aio::MultiplexedConnection>::new(
-                        redis_config,
-                        cluster_groups,
-                    )
-                    .await
-                    .context(CreateRedisPersistenceClientSnafu)?
-                    .into()
-                } else {
                     RedisPersistence::<
                         ::redis::cluster_async::ClusterConnection<
                             ::redis::aio::MultiplexedConnection,
                         >,
                     >::new(redis_config, cluster_groups)
+                    .await
+                    .context(CreateRedisPersistenceClientSnafu)?
+                    .into()
+                } else {
+                    RedisPersistence::<::redis::aio::MultiplexedConnection>::new(
+                        redis_config,
+                        cluster_groups,
+                    )
                     .await
                     .context(CreateRedisPersistenceClientSnafu)?
                     .into()
