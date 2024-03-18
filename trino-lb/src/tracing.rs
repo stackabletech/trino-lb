@@ -13,6 +13,7 @@ use opentelemetry_sdk::{
     Resource,
 };
 use snafu::{ResultExt, Snafu};
+use tokio::task::JoinError;
 use tracing::{level_filters::LevelFilter, subscriber::SetGlobalDefaultError};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Layer};
 use trino_lb_core::config::{Config, TrinoLbTracingConfig};
@@ -22,6 +23,9 @@ use crate::metrics::{self, Metrics};
 
 #[derive(Snafu, Debug)]
 pub enum Error {
+    #[snafu(display("Failed to spawn dedicated tokio runtime for metrics"))]
+    SpawnTokioRuntimeForMetrics { source: JoinError },
+
     #[snafu(display("Failed to install tokio batch runtime"))]
     InstallTokioBatchRuntime { source: TraceError },
 
@@ -38,7 +42,7 @@ pub enum Error {
     SetUpMetrics { source: metrics::Error },
 }
 
-pub fn init(
+pub async fn init(
     tracing_config: Option<&TrinoLbTracingConfig>,
     persistence: Arc<PersistenceImplementation>,
     config: &Config,
@@ -81,7 +85,16 @@ pub fn init(
     opentelemetry::global::set_meter_provider(meter_provider);
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
 
-    let metrics = Metrics::new(registry, persistence, config).context(SetUpMetricsSnafu)?;
+    // https://github.com/open-telemetry/opentelemetry-rust/issues/1376#issuecomment-1987102217
+    // For now, I was able to get around it by launching the meter provider in its own dedicated Tokio runtime in a new
+    // thread. The separate Tokio runtime seems to avoid issues with the tasks in the primary Tokio runtime.
+    let config_for_metrics = config.clone();
+    let metrics = tokio::task::spawn_blocking(move || {
+        Metrics::new(registry, persistence, &config_for_metrics)
+    })
+    .await
+    .context(SpawnTokioRuntimeForMetricsSnafu)?
+    .context(SetUpMetricsSnafu)?;
 
     Ok(metrics)
 }

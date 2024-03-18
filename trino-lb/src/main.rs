@@ -11,7 +11,6 @@ use opentelemetry::global::shutdown_tracer_provider;
 use routing::Router;
 use scaling::Scaler;
 use snafu::{ResultExt, Snafu};
-use tokio::task::JoinError;
 use trino_lb_core::config::{self, Config, PersistenceConfig};
 use trino_lb_persistence::{
     in_memory::InMemoryPersistence,
@@ -34,9 +33,6 @@ mod trino_client;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
-    #[snafu(display("Failed to spawn dedicated tokio runtime for tracing and metrics"))]
-    SpawnTokioRuntimeForTracingAndMetrics { source: JoinError },
-
     #[snafu(display("Failed to set up tracing"))]
     SetUpTracing { source: tracing::Error },
 
@@ -107,21 +103,13 @@ async fn main() -> Result<(), MainError> {
             }
         });
 
-    // https://github.com/open-telemetry/opentelemetry-rust/issues/1376#issuecomment-1987102217
-    // For now, I was able to get around it by launching the meter provider in its own dedicated Tokio runtime in a new
-    // thread. The separate Tokio runtime seems to avoid issues with the tasks in the primary Tokio runtime.
-    let persistence_for_metrics = Arc::clone(&persistence);
-    let config_for_metrics = config.clone();
     let metrics = Arc::new(
-        tokio::task::spawn_blocking(move || {
-            tracing::init(
-                config_for_metrics.trino_lb.tracing.as_ref(),
-                persistence_for_metrics,
-                &config_for_metrics,
-            )
-        })
+        tracing::init(
+            config.trino_lb.tracing.as_ref(),
+            Arc::clone(&persistence),
+            &config,
+        )
         .await
-        .context(SpawnTokioRuntimeForTracingAndMetricsSnafu)?
         .context(SetUpTracingSnafu)?,
     );
 
