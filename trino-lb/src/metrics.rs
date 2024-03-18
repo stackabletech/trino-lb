@@ -42,7 +42,8 @@ pub struct Metrics {
 }
 
 impl Metrics {
-    pub fn new(
+    #[tokio::main]
+    pub async fn new(
         registry: Registry,
         persistence: Arc<PersistenceImplementation>,
         config: &Config,

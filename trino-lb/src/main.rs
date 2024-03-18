@@ -11,6 +11,7 @@ use opentelemetry::global::shutdown_tracer_provider;
 use routing::Router;
 use scaling::Scaler;
 use snafu::{ResultExt, Snafu};
+use tokio::task::JoinError;
 use trino_lb_core::config::{self, Config, PersistenceConfig};
 use trino_lb_persistence::{
     in_memory::InMemoryPersistence,
@@ -33,6 +34,9 @@ mod trino_client;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
+    #[snafu(display("Failed to spawn dedicated tokio runtime for tracing and metrics"))]
+    SpawnTokioRuntimeForTracingAndMetrics { source: JoinError },
+
     #[snafu(display("Failed to set up tracing"))]
     SetUpTracing { source: tracing::Error },
 
@@ -63,38 +67,8 @@ pub enum Error {
     StartHttpServer { source: http_server::Error },
 }
 
-/// We can not use the `#[tokio::main]` macro, as we need at least 3 worker threads because of some magic happening
-/// in metric collection that are related to <https://github.com/open-telemetry/opentelemetry-rust/issues/1376#issuecomment-1816813128>
-fn main() -> Result<(), MainError> {
-    const ENV_WORKER_THREADS: &str = "TOKIO_WORKER_THREADS";
-
-    let worker_threads = match std::env::var(ENV_WORKER_THREADS) {
-        Ok(s) => {
-            let n = s.parse().unwrap_or_else(|e| {
-                panic!("ENV_WORKER_THREADS:? must be usize, error: {e}, value: {s}")
-            });
-            assert!(n > 0, "{ENV_WORKER_THREADS:?} cannot be set to 0");
-            n
-        }
-        // We default to at least 2 workers
-        Err(std::env::VarError::NotPresent) => usize::max(3, num_cpus::get()),
-        Err(std::env::VarError::NotUnicode(e)) => {
-            panic!("{ENV_WORKER_THREADS:?} must be valid unicode, error: {e:?}")
-        }
-    };
-
-    // We can not emit tracing messages here, as tracing is not set up yet.
-    // println!("Starting tokio runtime with {worker_threads} workers");
-
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .worker_threads(worker_threads)
-        .build()
-        .unwrap()
-        .block_on(start())
-}
-
-async fn start() -> Result<(), MainError> {
+#[tokio::main]
+async fn main() -> Result<(), MainError> {
     let args = Args::parse();
 
     let config = Config::read_from_file(&args.config_file)
@@ -133,12 +107,21 @@ async fn start() -> Result<(), MainError> {
             }
         });
 
+    // https://github.com/open-telemetry/opentelemetry-rust/issues/1376#issuecomment-1987102217
+    // For now, I was able to get around it by launching the meter provider in its own dedicated Tokio runtime in a new
+    // thread. The separate Tokio runtime seems to avoid issues with the tasks in the primary Tokio runtime.
+    let persistence_for_metrics = Arc::clone(&persistence);
+    let config_for_metrics = config.clone();
     let metrics = Arc::new(
-        tracing::init(
-            config.trino_lb.tracing.as_ref(),
-            Arc::clone(&persistence),
-            &config,
-        )
+        tokio::task::spawn_blocking(move || {
+            tracing::init(
+                config_for_metrics.trino_lb.tracing.as_ref(),
+                persistence_for_metrics,
+                &config_for_metrics,
+            )
+        })
+        .await
+        .context(SpawnTokioRuntimeForTracingAndMetricsSnafu)?
         .context(SetUpTracingSnafu)?,
     );
 
