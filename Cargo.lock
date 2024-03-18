@@ -3716,6 +3716,7 @@ dependencies = [
  "prusto",
  "pyo3",
  "rand",
+ "redis",
  "regex",
  "reqwest",
  "rstest",

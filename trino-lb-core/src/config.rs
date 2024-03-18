@@ -97,6 +97,9 @@ pub enum PersistenceConfig {
 #[serde(rename_all = "camelCase")]
 pub struct RedisConfig {
     pub endpoint: Url,
+
+    #[serde(default)]
+    pub cluster_mode: bool,
 }
 
 #[derive(Clone, Debug, Deserialize)]

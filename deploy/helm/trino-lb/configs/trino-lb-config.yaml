@@ -10,6 +10,7 @@ trinoLb:
     keyPemFile: /certificates/key.pem
   persistence:
     redis:
+      clusterMode: true
       endpoint: redis://:redis@trino-lb-redis-cluster.trino-lb.svc.cluster.local:6379/
     # postgres:
     #   # helm install postgres bitnami/postgresql --version 13.2.18 --set auth.username=trino-lb,auth.password=trino-lb,auth.database=trino_lb

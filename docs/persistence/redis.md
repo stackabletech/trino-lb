@@ -1,7 +1,6 @@
 # Redis persistence
 
-The Redis persistence currently only supports a [Redis Cluster](https://redis.io/docs/management/scaling/) as a distributed key-value store.
-A single-instance Redis server is currently not supported but would be an easy addition.
+The Redis persistence currently supports either a single-instance Redis instance or a [Redis Cluster](https://redis.io/docs/management/scaling/) as a distributed key-value store.
 
 The Redis persistence is the most tested implementation and is currently the recommended choice for production systems.
 
@@ -16,5 +15,17 @@ The following configuration connects to the Redis cluster running at `trino-lb-r
 trinoLb:
   persistence:
     redis:
+      endpoint: redis://:redis@trino-lb-redis-cluster.trino-lb.svc.cluster.local:6379/
+```
+
+### Redis clusters
+
+To turn on Redis cluster mode, you need to enable it as follows:
+
+```yaml
+trinoLb:
+  persistence:
+    redis:
+      clusterMode: true
       endpoint: redis://:redis@trino-lb-redis-cluster.trino-lb.svc.cluster.local:6379/
 ```
