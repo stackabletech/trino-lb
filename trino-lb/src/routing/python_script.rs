@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use pyo3::{
-    types::{IntoPyDict, PyModule},
+    types::{IntoPyDict, PyAnyMethods, PyModule},
     Py, PyAny, Python,
 };
 use snafu::{ResultExt, Snafu};
@@ -34,7 +34,7 @@ impl PythonScriptRouter {
         valid_target_groups: HashSet<String>,
     ) -> Result<Self, Error> {
         let function = Python::with_gil(|py| {
-            let function: Py<PyAny> = PyModule::from_code(py, &config.script, "", "")
+            let function: Py<PyAny> = PyModule::from_code_bound(py, &config.script, "", "")
                 .context(ParsePythonScriptSnafu)?
                 .getattr("targetClusterGroup")
                 .context(FindPythonFunctionSnafu {
@@ -60,7 +60,7 @@ impl RouterImplementationTrait for PythonScriptRouter {
     )]
     async fn route(&self, query: &str, headers: &http::HeaderMap) -> Option<String> {
         let result = Python::with_gil(|py| {
-            let args = (query, header_map_to_hashmap(headers).into_py_dict(py));
+            let args = (query, header_map_to_hashmap(headers).into_py_dict_bound(py));
             self.function.call1(py, args)
         });
         let result = match result {
