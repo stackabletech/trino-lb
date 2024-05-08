@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Bump Rust dependency versions ([#19]).
+
+[#19]: https://github.com/stackabletech/trino-lb/pull/19
+
 ## [0.2.0] - 2024-04-07
 
 ### Added
