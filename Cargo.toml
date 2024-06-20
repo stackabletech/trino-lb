@@ -26,11 +26,11 @@ kube = { version = "0.92", default-features = false, features = ["client", "json
 main_error = "0.1"
 num_cpus = "1.16"
 number_prefix = "0.4"
-opentelemetry = "0.22"
-opentelemetry_sdk = { version = "0.22", features = ["rt-tokio", "metrics"] }
-opentelemetry-http = "0.11"
-opentelemetry-otlp = { version = "0.15", features = ["serialize", "metrics"] }
-opentelemetry-prometheus = "0.15"
+opentelemetry = "0.23"
+opentelemetry_sdk = { version = "0.23", features = ["rt-tokio", "metrics"] }
+opentelemetry-http = "0.12"
+opentelemetry-otlp = { version = "0.16", features = ["serialize", "metrics"] }
+opentelemetry-prometheus = "0.16"
 prometheus = "0.13"
 prusto = "0.5"
 pyo3 = { version = "0.21", features = ["auto-initialize"]}
@@ -49,7 +49,7 @@ strum = { version = "0.26", features = ["derive" ] }
 tokio = "1.38"
 tower = "0.4"
 tracing = "0.1"
-tracing-opentelemetry = "0.23"
+tracing-opentelemetry = "0.24"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 trait-variant = "0.1"
 url = { version = "2.5", features = ["serde"] }
