@@ -34,9 +34,6 @@ use crate::{
 
 #[derive(Snafu, Debug)]
 pub enum Error {
-    #[snafu(display("Failed to parse nextUri trino send to trino-lb"))]
-    ParseNextUriFromTrino { source: url::ParseError },
-
     #[snafu(display("Failed to modify nextUri trino send us to point tu trino-lb"))]
     ModifyNextUri {
         source: trino_lb_core::trino_api::Error,
@@ -70,12 +67,6 @@ pub enum Error {
 
     #[snafu(display("Failed to load query with id {query_id:?} from persistence"))]
     LoadQueryFromPersistence {
-        source: trino_lb_persistence::Error,
-        query_id: TrinoQueryId,
-    },
-
-    #[snafu(display("Failed to delete query with id {query_id:?} from persistence"))]
-    DeleteQueryFromPersistence {
         source: trino_lb_persistence::Error,
         query_id: TrinoQueryId,
     },
