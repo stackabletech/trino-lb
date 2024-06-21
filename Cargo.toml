@@ -18,19 +18,19 @@ clap = { version = "4.5", features = ["derive"]}
 enum_dispatch = "0.3"
 futures = "0.3"
 http = "1.1"
-http-serde = "2.0"
+http-serde = "2.1"
 humantime-serde = "1.1"
 indoc = "2.0"
 k8s-openapi = { version = "0.22", default-features = false, features = ["v1_30"] }
-kube = { version = "0.91", default-features = false, features = ["client", "jsonpatch", "runtime", "rustls-tls"] }
+kube = { version = "0.92", default-features = false, features = ["client", "jsonpatch", "runtime", "rustls-tls"] }
 main_error = "0.1"
 num_cpus = "1.16"
 number_prefix = "0.4"
-opentelemetry = "0.22"
-opentelemetry_sdk = { version = "0.22", features = ["rt-tokio", "metrics"] }
-opentelemetry-http = "0.11"
-opentelemetry-otlp = { version = "0.15", features = ["serialize", "metrics"] }
-opentelemetry-prometheus = "0.15"
+opentelemetry = "0.23"
+opentelemetry_sdk = { version = "0.23", features = ["rt-tokio", "metrics"] }
+opentelemetry-http = "0.12"
+opentelemetry-otlp = { version = "0.16", features = ["serialize", "metrics"] }
+opentelemetry-prometheus = "0.16"
 prometheus = "0.13"
 prusto = "0.5"
 pyo3 = { version = "0.21", features = ["auto-initialize"]}
@@ -38,7 +38,7 @@ rand = "0.8"
 redis = { version = "0.25", default-features = false, features = ["acl", "tokio-rustls-comp", "cluster", "cluster-async", "connection-manager", "keep-alive", "script"]}
 regex = "1.10"
 reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "gzip", "cookies"] }
-rstest = "0.19"
+rstest = "0.21"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
@@ -46,10 +46,10 @@ snafu = "0.8"
 # 0.7.4 is the first release that includes https://github.com/launchbadge/sqlx/pull/2927
 sqlx = { version = "0.7.4", features = [ "runtime-tokio", "tls-rustls", "macros", "json", "chrono", "postgres" ] }
 strum = { version = "0.26", features = ["derive" ] }
-tokio = "1.36"
+tokio = "1.38"
 tower = "0.4"
 tracing = "0.1"
-tracing-opentelemetry = "0.23"
+tracing-opentelemetry = "0.24"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 trait-variant = "0.1"
 url = { version = "2.5", features = ["serde"] }
