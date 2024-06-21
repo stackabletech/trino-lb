@@ -4,6 +4,7 @@ on:
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
 
 env:
+  RUST_TOOLCHAIN_VERSION: "1.79.0"
   RUSTFLAGS: "-D warnings"
   RUSTDOCFLAGS: "-D warnings"
   CARGO_TERM_COLOR: always
@@ -14,7 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
-      - uses: dtolnay/rust-toolchain@1.79.0
+      - uses: dtolnay/rust-toolchain@d8352f6b1d2e870bc5716e7a6d9b65c4cc244a1a
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
       - run: cargo test --all-features
 
   clippy:
@@ -22,8 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
-      - uses: dtolnay/rust-toolchain@1.79.0
+      - uses: dtolnay/rust-toolchain@d8352f6b1d2e870bc5716e7a6d9b65c4cc244a1a
         with:
+          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
           components: clippy
       - run: cargo clippy --all-targets -- -D warnings
 
@@ -32,8 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
-      - uses: dtolnay/rust-toolchain@1.79.0
+      - uses: dtolnay/rust-toolchain@d8352f6b1d2e870bc5716e7a6d9b65c4cc244a1a
         with:
+          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
           components: rustfmt
       - run: cargo fmt --all -- --check
 
@@ -42,7 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
-      - uses: dtolnay/rust-toolchain@1.79.0
+      - uses: dtolnay/rust-toolchain@d8352f6b1d2e870bc5716e7a6d9b65c4cc244a1a
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
       - run: cargo doc --document-private-items
 
   docker-image:
