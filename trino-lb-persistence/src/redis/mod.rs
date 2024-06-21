@@ -6,7 +6,9 @@ use std::{
 
 use futures::{future::try_join_all, TryFutureExt};
 use redis::{
-    aio::MultiplexedConnection, cluster::ClusterClientBuilder, cluster_async::ClusterConnection,
+    aio::{ConnectionManager, MultiplexedConnection},
+    cluster::ClusterClientBuilder,
+    cluster_async::ClusterConnection,
     AsyncCommands, Client, RedisError, Script,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
@@ -124,7 +126,7 @@ where
     cluster_groups: Vec<String>,
 }
 
-impl RedisPersistence<MultiplexedConnection> {
+impl RedisPersistence<ConnectionManager> {
     pub async fn new(config: &RedisConfig, cluster_groups: Vec<String>) -> Result<Self, Error> {
         let redis_host = config.endpoint.host_str().context(ExtractRedisHostSnafu {
             endpoint: config.endpoint.clone(),
@@ -133,7 +135,7 @@ impl RedisPersistence<MultiplexedConnection> {
 
         let client = Client::open(config.endpoint.as_str()).context(CreateClientSnafu)?;
         let connection = client
-            .get_multiplexed_async_connection()
+            .get_connection_manager()
             .await
             .context(CreateClientSnafu)?;
 

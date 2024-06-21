@@ -116,7 +116,7 @@ async fn start() -> Result<(), MainError> {
                     .context(CreateRedisPersistenceClientSnafu)?
                     .into()
                 } else {
-                    RedisPersistence::<::redis::aio::MultiplexedConnection>::new(
+                    RedisPersistence::<::redis::aio::ConnectionManager>::new(
                         redis_config,
                         cluster_groups,
                     )
