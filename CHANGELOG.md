@@ -6,8 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Use redis `ConenctionManager`´to re-connect on Redis conenctino failures. Previously trino-lb would stop working once
-  the Redis Pod restarted ([#XX]).
+- Use redis `ConenctionManager` to re-connect on Redis connection failures. Previously trino-lb would stop working once
+  the Redis Pod restarted ([#34]).
+
+[#34]: https://github.com/stackabletech/trino-lb/pull/34
 
 ## [0.2.0] - 2024-04-07
 
