@@ -131,7 +131,7 @@ impl Metrics {
         let trino_cluster_groups = config.trino_cluster_groups.clone();
         let persistence_clone = Arc::clone(&persistence);
         std::thread::spawn(move || {
-            let metrics_runtime = Builder::new_current_thread().build().unwrap();
+            let metrics_runtime = Builder::new_current_thread().enable_all().build().unwrap();
             metrics_runtime.block_on(queued_query_counts_metrics_handler(
                 ping_receiver,
                 metrics_sender,
@@ -170,7 +170,7 @@ impl Metrics {
         let trino_cluster_groups = config.trino_cluster_groups.clone();
         let persistence_clone = Arc::clone(&persistence);
         std::thread::spawn(move || {
-            let metrics_runtime = Builder::new_current_thread().build().unwrap();
+            let metrics_runtime = Builder::new_current_thread().enable_all().build().unwrap();
             metrics_runtime.block_on(cluster_counts_per_state_metrics_handler(
                 ping_receiver,
                 metrics_sender,
