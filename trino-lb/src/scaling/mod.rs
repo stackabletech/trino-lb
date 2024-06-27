@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use enum_dispatch::enum_dispatch;
 use futures::future::try_join_all;
-use snafu::{ResultExt, Snafu};
+use snafu::{OptionExt, ResultExt, Snafu};
 use stackable::StackableScaler;
 use tokio::{
     join,
@@ -107,40 +107,37 @@ pub enum Error {
 
     #[snafu(display("Failed to join get current cluster state task"))]
     JoinGetCurrentClusterStateTask { source: JoinError },
+
+    #[snafu(display("The variable \"scaler\" is None. This should never happen, as we only run the reconciliation when a scaler is configured!"))]
+    ScalerVariableIsNone {},
 }
 
+/// The scaler periodically
+/// 1. Checks the state of all clusters. In case scaling is disabled (either entirely or for a given cluster group),
+///    the cluster states will always be set Ready, so that the cluster will get queries routed.
+/// 2. In case scaling is enabled for a cluster group it supervises the load and scaled the number of clusters
+///    accordingly
 pub struct Scaler {
-    scaler: ScalerImplementation,
+    /// In case this is [`None`], no scaling at all is configured.
+    scaler: Option<ScalerImplementation>,
     persistence: Arc<PersistenceImplementation>,
+    /// Stores a list of all Trino clusters per cluster group.
     groups: HashMap<String, Vec<TrinoCluster>>,
+    /// Stores the scaling config per cluster group. This HashMap only contains entries for the cluster groups that
+    /// actually need scaling, non-scaled cluster groups are missing from the HashMap.
     scaling_config: HashMap<String, TrinoClusterGroupAutoscaling>,
 }
 
 impl Scaler {
     #[instrument(skip(persistence))]
-    pub async fn new_if_configured(
+    pub async fn new(
         config: &Config,
         persistence: Arc<PersistenceImplementation>,
-    ) -> Result<Option<Self>, Error> {
+    ) -> Result<Self, Error> {
         let mut scaling_config = HashMap::new();
+
         let scaler = match &config.cluster_autoscaler {
-            None => {
-                // As scaling is not active we need to mark all clusters as ready, so the routing will not
-                // queued all queries as it thinks all clusters are in an unknown state.
-                for cluster in config
-                    .trino_cluster_groups
-                    .values()
-                    .flat_map(|g| &g.trino_clusters)
-                {
-                    persistence
-                        .set_cluster_state(&cluster.name, ClusterState::Ready)
-                        .await
-                        .context(SetCurrentClusterStateInPersistenceSnafu {
-                            cluster: &cluster.name,
-                        })?;
-                }
-                return Ok(None);
-            }
+            None => None,
             Some(scaler) => {
                 for (group_name, group) in &config.trino_cluster_groups {
                     if let Some(autoscaling) = &group.autoscaling {
@@ -152,28 +149,18 @@ impl Scaler {
                                 },
                             )?,
                         );
-                    } else {
-                        // As scaling is not active we need to mark all clusters as ready, so the routing will not
-                        // queued all queries as it thinks all clusters are in an unknown state.
-                        for cluster in &group.trino_clusters {
-                            persistence
-                                .set_cluster_state(&cluster.name, ClusterState::Ready)
-                                .await
-                                .context(SetCurrentClusterStateInPersistenceSnafu {
-                                    cluster: &cluster.name,
-                                })?;
-                        }
                     }
+                    // Cluster groups that don't need scaling are missing from the `scaling_config`.
                 }
 
-                match scaler {
+                Some(match scaler {
                     ScalerConfig::Stackable(scaler_config) => {
                         StackableScaler::new(scaler_config, &config.trino_cluster_groups)
                             .await
                             .context(CreateStackableAutoscalerSnafu)?
                             .into()
                     }
-                }
+                })
             }
         };
 
@@ -200,30 +187,49 @@ impl Scaler {
             groups.insert(group_name.clone(), group);
         }
 
-        Ok(Some(Scaler {
+        Ok(Scaler {
             scaler,
             persistence,
             groups,
             scaling_config,
-        }))
+        })
     }
 
     pub fn start_loop(self) {
-        let me = Arc::new(self);
-        tokio::spawn(async move {
+        if self.scaler.is_some() {
+            // As there is a scaler configured, let's start it normally.
             let mut interval = time::interval(Duration::from_secs(10));
             interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
 
-            loop {
-                // First tick does not sleep, so let's put it at the start of the loop.
-                interval.tick().await;
+            let me = Arc::new(self);
+            tokio::spawn(async move {
+                loop {
+                    // First tick does not sleep, so let's put it at the start of the loop.
+                    interval.tick().await;
 
-                match me.clone().reconcile().await {
-                    Ok(()) => info!("Scaler: reconciled"),
-                    Err(error) => error!(?error, "Scaler: reconciled failed"),
+                    match me.clone().reconcile().await {
+                        Ok(()) => info!("Scaler: reconciled"),
+                        Err(error) => error!(?error, "Scaler: reconciled failed"),
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            // There is no scaling configured at all, so we periodically need to set all clusters active. We need to do
+            // this repeatedly, as the state would be stuck in Unknown until trino-lb get's restarted once the
+            // persistence gets wiped.
+            let mut interval = time::interval(Duration::from_secs(5));
+            interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
+
+            tokio::spawn(async move {
+                loop {
+                    // First tick does not sleep, so let's put it at the start of the loop.
+                    interval.tick().await;
+                    if let Err(error) = self.set_all_clusters_to_ready().await {
+                        error!(?error, "Scaler: Failed to set all clusters to ready");
+                    }
+                }
+            });
+        }
     }
 
     #[instrument(name = "Scaler::reconcile", skip(self))]
@@ -256,7 +262,17 @@ impl Scaler {
         let scaling_config = match self.scaling_config.get(&cluster_group) {
             Some(scaling_config) => scaling_config,
             None => {
-                // Nothing to scale for this group
+                // As there is no scaling configured for this cluster group, we periodically need to set all clusters
+                // ready. We need to do this repeatedly, as the state would be stuck in Unknown until trino-lb get's
+                // restarted once the persistence gets wiped.
+                for cluster in clusters {
+                    self.persistence
+                        .set_cluster_state(&cluster.name, ClusterState::Ready)
+                        .await
+                        .context(SetCurrentClusterStateInPersistenceSnafu {
+                            cluster: &cluster.name,
+                        })?;
+                }
                 return Ok(());
             }
         };
@@ -400,10 +416,12 @@ impl Scaler {
         cluster_name: TrinoClusterName,
         scaling_config: TrinoClusterGroupAutoscaling,
     ) -> Result<(TrinoClusterName, ClusterState), Error> {
+        let scaler = self.scaler.as_ref().context(ScalerVariableIsNoneSnafu)?;
+
         let (stored_state, activated, ready) = join!(
             self.persistence.get_cluster_state(&cluster_name),
-            self.scaler.is_activated(&cluster_name),
-            self.scaler.is_ready(&cluster_name)
+            scaler.is_activated(&cluster_name),
+            scaler.is_ready(&cluster_name)
         );
         let (stored_state, activated, ready) = (
             stored_state.context(ReadCurrentClusterStateFromPersistenceSnafu {
@@ -503,15 +521,17 @@ impl Scaler {
         cluster: TrinoCluster,
         target_state: ClusterState,
     ) -> Result<(), Error> {
+        let scaler = self.scaler.as_ref().context(ScalerVariableIsNoneSnafu)?;
+
         match target_state {
             ClusterState::Unknown => {
                 error!(cluster = cluster.name, ?target_state, "After calculating the new target states the state was \"Unknown\", so we did not enabled or disable the cluster. This should not happen!")
             }
             ClusterState::Stopped | ClusterState::Terminating => {
-                self.scaler.deactivate(&cluster.name).await?;
+                scaler.deactivate(&cluster.name).await?;
             }
             ClusterState::Starting | ClusterState::Ready | ClusterState::Draining { .. } => {
-                self.scaler.activate(&cluster.name).await?;
+                scaler.activate(&cluster.name).await?;
             }
             ClusterState::Deactivated => {
                 // We don't do anything here, as it's up to the (possible human) operator to take care of the cluster
@@ -524,6 +544,22 @@ impl Scaler {
             .context(SetCurrentClusterStateInPersistenceSnafu {
                 cluster: &cluster.name,
             })?;
+
+        Ok(())
+    }
+
+    /// Returns an Error in case any of the clusters can not be turned ready. Following clusters will not be tried, as
+    /// the assumptions is that they will also fail.
+    #[instrument(name = "Scaler::set_all_clusters_to_ready", skip(self))]
+    async fn set_all_clusters_to_ready(&self) -> Result<(), Error> {
+        for cluster in self.groups.values().flatten() {
+            self.persistence
+                .set_cluster_state(&cluster.name, ClusterState::Ready)
+                .await
+                .context(SetCurrentClusterStateInPersistenceSnafu {
+                    cluster: &cluster.name,
+                })?;
+        }
 
         Ok(())
     }

@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
   affects the single Redis instance connection, *not* the cluster mode connection, as a
   [ClusterConnection](https://docs.rs/redis/latest/redis/cluster/struct.ClusterConnection.html) does not seem to support
   a [`ConnectionManager`](https://docs.rs/redis/latest/redis/aio/struct.ConnectionManager.html) ([#34]).
+- Periodically set all clusters that are not scaled to `Ready`. Previously this was only done during startup, which
+  caused problems when the persistence was wiped while trino-lb is running ([#XX]).
 
 [#34]: https://github.com/stackabletech/trino-lb/pull/34
 
