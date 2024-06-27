@@ -33,7 +33,7 @@ opentelemetry-otlp = { version = "0.16", features = ["serialize", "metrics"] }
 opentelemetry-prometheus = "0.16"
 prometheus = "0.13"
 prusto = "0.5"
-pyo3 = { version = "0.21", features = ["auto-initialize"]}
+pyo3 = { version = "0.22", features = ["auto-initialize"]}
 rand = "0.8"
 redis = { version = "0.25", default-features = false, features = ["acl", "tokio-rustls-comp", "cluster", "cluster-async", "connection-manager", "keep-alive", "script"]}
 regex = "1.10"
