@@ -151,12 +151,10 @@ async fn start() -> Result<(), MainError> {
 
     let router = Router::new(&config).context(CreateRouterSnafu)?;
 
-    let scaler = Scaler::new_if_configured(&config, Arc::clone(&persistence))
+    let scaler = Scaler::new(&config, Arc::clone(&persistence))
         .await
         .context(CreateScalerSnafu)?;
-    if let Some(scaler) = scaler {
-        scaler.start_loop();
-    }
+    scaler.start_loop();
 
     let query_count_fetcher = QueryCountFetcher::new(
         Arc::clone(&persistence),
