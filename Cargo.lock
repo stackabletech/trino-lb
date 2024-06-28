@@ -3886,6 +3886,7 @@ dependencies = [
  "trino-lb-core",
  "trino-lb-persistence",
  "url",
+ "urlencoding",
 ]
 
 [[package]]
