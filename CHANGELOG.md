@@ -8,11 +8,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- URL-escape trino cluster credentials ([#40], [#41]).
+- URL-escape trino cluster credentials ([#40]).
 
 [#40]: https://github.com/stackabletech/trino-lb/pull/40
-[#41]: https://github.com/stackabletech/trino-lb/pull/41
-
 
 ## [0.2.2] - 2024-06-28
 
