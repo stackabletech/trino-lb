@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.3] - 2024-07-01
+
 ### Fixed
 
 - URL-escape trino cluster credentials ([#40], [#41]).
