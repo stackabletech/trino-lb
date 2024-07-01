@@ -75,11 +75,7 @@ pub async fn get_cluster_info(
     client
         .post(login_endpoint.clone())
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-        .body(format!(
-            "username={}&password={}&redirectPath=",
-            encode(&credentials.username),
-            encode(&credentials.password),
-        ))
+        .body(login_body(credentials))
         .send()
         .await
         .context(LogIntoTrinoClusterSnafu { login_endpoint })?;
@@ -97,4 +93,36 @@ pub async fn get_cluster_info(
         .context(RetrieveStatsFromTrinoClusterSnafu { stats_endpoint })?;
 
     response.json().await.context(ParseClusterInfoResponseSnafu)
+}
+
+fn login_body(credentials: &TrinoClusterCredentialsConfig) -> String {
+    format!(
+        "username={}&password={}&redirectPath=",
+        encode(&credentials.username),
+        encode(&credentials.password),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("admin", "admin", "username=admin&password=admin&redirectPath=")]
+    #[case(
+        "foo",
+        "superSecure!1&2;3",
+        "username=foo&password=superSecure%211%262%3B3&redirectPath="
+    )]
+    fn test_login_body(
+        #[case] username: String,
+        #[case] password: String,
+        #[case] expected: String,
+    ) {
+        let credentials = TrinoClusterCredentialsConfig { username, password };
+
+        assert_eq!(login_body(&credentials), expected);
+    }
 }
