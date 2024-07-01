@@ -4,6 +4,7 @@ use snafu::{ResultExt, Snafu};
 use tracing::instrument;
 use trino_lb_core::config::TrinoClusterCredentialsConfig;
 use url::Url;
+use urlencoding::encode;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -76,7 +77,8 @@ pub async fn get_cluster_info(
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .body(format!(
             "username={}&password={}&redirectPath=",
-            &credentials.username, &credentials.password,
+            encode(&credentials.username),
+            encode(&credentials.password),
         ))
         .send()
         .await
