@@ -6,7 +6,7 @@ use std::{
 
 use futures::future::try_join_all;
 use opentelemetry::{
-    metrics::{Counter, Histogram, MetricsError, Unit},
+    metrics::{Counter, Histogram, MetricsError},
     KeyValue,
 };
 use prometheus::Registry;
@@ -51,13 +51,13 @@ impl Metrics {
 
         let http_counter = meter
             .u64_counter("http_requests_total")
-            .with_unit(Unit::new("requests"))
+            .with_unit("requests")
             .with_description("Total number of HTTP requests made.")
             .init();
 
         let queued_time = meter
             .u64_histogram("query_queued_duration")
-            .with_unit(Unit::new("ms"))
+            .with_unit("ms")
             .with_description("The time queries where queued in trino-lb")
             .init();
 
@@ -65,13 +65,13 @@ impl Metrics {
 
         let cluster_counts_per_state_metric = meter
             .u64_observable_gauge("cluster_counts_per_state")
-            .with_unit(Unit::new("clusters"))
+            .with_unit("clusters")
             .with_description("The number of active or inactive clusters for each cluster group")
             .init();
 
         let cluster_queries_metric = meter
             .u64_observable_gauge("cluster_queries")
-            .with_unit(Unit::new("queries"))
+            .with_unit("queries")
             .with_description(
                 "The number of running, queued or blocked queries on a specific Trino cluster",
             )
@@ -79,7 +79,7 @@ impl Metrics {
 
         let queued_queries_metric = meter
             .u64_observable_gauge("queued_queries")
-            .with_unit(Unit::new("queries"))
+            .with_unit("queries")
             .with_description("The number of queries queued across all trino-lb instances")
             .init();
 

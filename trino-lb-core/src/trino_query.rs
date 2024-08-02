@@ -1,7 +1,6 @@
 use std::{fmt::Debug, time::SystemTime};
 
 use chrono::{DateTime, Utc};
-use http::{HeaderMap, HeaderName, HeaderValue};
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -115,30 +114,4 @@ fn new_query_id() -> TrinoLbQueryId {
     let rand_part = Alphanumeric.sample_string(&mut rand::thread_rng(), 8);
 
     format!("{QUEUED_QUERY_ID_PREFIX}{time_part}_{rand_part}",)
-}
-
-/// TODO: We have unwrap() in here, but will hopefully be remove this entire function
-/// after <https://github.com/programatik29/axum-server/issues/92> is resolved.
-pub fn hack_http_to_reqwest_headers(h_headers: &http::HeaderMap) -> reqwest::header::HeaderMap {
-    let mut r_headers = reqwest::header::HeaderMap::new();
-    for (name, value) in h_headers {
-        r_headers.append(
-            reqwest::header::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
-            reqwest::header::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
-        );
-    }
-    r_headers
-}
-
-/// TODO: We have unwrap() in here, but will hopefully be remove this entire function
-/// after <https://github.com/programatik29/axum-server/issues/92> is resolved.
-pub fn hack_reqwest_to_http_headers(r_headers: &reqwest::header::HeaderMap) -> HeaderMap {
-    let mut h_headers = HeaderMap::new();
-    for (name, value) in r_headers {
-        h_headers.append(
-            HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
-            HeaderValue::from_bytes(value.as_bytes()).unwrap(),
-        );
-    }
-    h_headers
 }

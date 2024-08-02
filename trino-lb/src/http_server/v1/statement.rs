@@ -275,7 +275,7 @@ async fn queue_or_hand_over_query(
         if has_increased {
             let mut send_to_trino_response = state
                 .cluster_group_manager
-                .send_query_to_cluster(query.clone(), headers, cluster)
+                .send_query_to_cluster(query.clone(), headers.clone(), cluster)
                 .await
                 .context(SendQueryToTrinoSnafu)?;
 
@@ -584,7 +584,7 @@ async fn cancel_query_on_trino(
 
     state
         .cluster_group_manager
-        .cancel_query_on_trino(&headers, &query, requested_path)
+        .cancel_query_on_trino(headers, &query, requested_path)
         .await
         .context(CancelQueryOnTrinoSnafu)?;
 

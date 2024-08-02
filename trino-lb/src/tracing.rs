@@ -1,6 +1,11 @@
 use std::{sync::Arc, time::Duration};
 
-use opentelemetry::{metrics::MetricsError, trace::TraceError, Context, KeyValue};
+use opentelemetry::{
+    global,
+    metrics::MetricsError,
+    trace::{TraceError, TracerProvider},
+    Context, KeyValue,
+};
 use opentelemetry_http::HeaderInjector;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::{
@@ -87,11 +92,11 @@ pub fn init(
 }
 
 fn otel_tracer(tracing_config: &TrinoLbTracingConfig) -> Result<trace::Tracer, Error> {
-    opentelemetry_otlp::new_pipeline()
+    let provider = opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(exporter(tracing_config))
         .with_trace_config(
-            trace::config()
+            trace::Config::default()
                 .with_sampler(Sampler::AlwaysOn)
                 .with_id_generator(RandomIdGenerator::default())
                 .with_max_events_per_span(64)
@@ -103,7 +108,10 @@ fn otel_tracer(tracing_config: &TrinoLbTracingConfig) -> Result<trace::Tracer, E
                 )])),
         )
         .install_batch(opentelemetry_sdk::runtime::Tokio)
-        .context(InstallTokioBatchRuntimeSnafu)
+        .context(InstallTokioBatchRuntimeSnafu)?;
+
+    global::set_tracer_provider(provider.clone());
+    Ok(provider.tracer("trino-lb"))
 }
 
 fn _otel_meter(tracing_config: &TrinoLbTracingConfig) -> Result<SdkMeterProvider, Error> {
