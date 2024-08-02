@@ -6,7 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- Bump dependencies, such as `opentelemetry` 0.23 -> 0.24, `kube` 0.92 -> 0.93 and `redis` 0.25 -> 0.26 ([#XXX]).
+- Bump dependencies, such as `opentelemetry` 0.23 -> 0.24, `kube` 0.92 -> 0.93 and `redis` 0.25 -> 0.26 ([#42]).
+
+[#41]: https://github.com/stackabletech/trino-lb/pull/41
 
 ## [0.2.3] - 2024-07-01
 
