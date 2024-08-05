@@ -178,7 +178,7 @@ impl ClusterGroupManager {
         // WWW-Authenticate:  Basic realm="Trino"
         // WWW-Authenticate:  Bearer x_redirect_server="https://5.250.182.203:8443/oauth2/token/initiate/80a5152ecfd179618c5ba55d49513a7aec2787212a07c3b2d80c9624b3b9007f", x_token_server="https://5.250.182.203:8443/oauth2/token/abcf2e93-ac90-424e-972b-f00bc1c4e5db"
         if response.status() == reqwest::StatusCode::UNAUTHORIZED {
-            let headers = filter_to_www_authenticate_headers(&headers);
+            let headers = filter_to_www_authenticate_headers(headers);
             let body = response
                 .bytes()
                 .await
@@ -187,7 +187,7 @@ impl ClusterGroupManager {
             return Ok(SendToTrinoResponse::Unauthorized { headers, body });
         }
 
-        let headers = filter_to_trino_headers(&headers);
+        let headers = filter_to_trino_headers(headers);
         let trino_query_api_response = response.json().await.context(DecodeTrinoResponseSnafu)?;
 
         Ok(SendToTrinoResponse::HandedOver {
@@ -215,7 +215,7 @@ impl ClusterGroupManager {
             .context(ContactTrinoPostQuerySnafu)?;
         let headers = response.headers();
 
-        let headers = filter_to_trino_headers(&headers);
+        let headers = filter_to_trino_headers(headers);
         let trino_query_api_response = response.json().await.context(DecodeTrinoResponseSnafu)?;
 
         Ok((trino_query_api_response, headers))
