@@ -12,10 +12,8 @@ use snafu::{OptionExt, ResultExt, Snafu};
 use tracing::{debug, instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 use trino_lb_core::{
-    config::Config,
-    sanitization::Sanitize,
-    trino_api::TrinoQueryApiResponse,
-    trino_query::{hack_http_to_reqwest_headers, hack_reqwest_to_http_headers, TrinoQuery},
+    config::Config, sanitization::Sanitize, trino_api::TrinoQueryApiResponse,
+    trino_query::TrinoQuery,
 };
 use trino_lb_persistence::{Persistence, PersistenceImplementation};
 use url::Url;
@@ -152,10 +150,9 @@ impl ClusterGroupManager {
     pub async fn send_query_to_cluster(
         &self,
         query: String,
-        headers: &http::HeaderMap,
+        headers: http::HeaderMap,
         cluster: &TrinoCluster,
     ) -> Result<SendToTrinoResponse, Error> {
-        let headers = hack_http_to_reqwest_headers(headers);
         // TODO: Enable propagation again. This is disabled, as the POST /v1/statement span runs for the whole
         // query lifetime and let it look like the initial POST takes multiple minutes.
         // add_current_context_to_client_request(tracing::Span::current().context(), &mut r_headers);
@@ -173,7 +170,7 @@ impl ClusterGroupManager {
             .send()
             .await
             .context(ContactTrinoPostQuerySnafu)?;
-        let headers = hack_reqwest_to_http_headers(response.headers());
+        let headers = response.headers();
 
         // In case OpenId connect is used, a 401 will be returned instead of the actual response.
         // Additionally, the following two headers will be set:
@@ -181,7 +178,7 @@ impl ClusterGroupManager {
         // WWW-Authenticate:  Basic realm="Trino"
         // WWW-Authenticate:  Bearer x_redirect_server="https://5.250.182.203:8443/oauth2/token/initiate/80a5152ecfd179618c5ba55d49513a7aec2787212a07c3b2d80c9624b3b9007f", x_token_server="https://5.250.182.203:8443/oauth2/token/abcf2e93-ac90-424e-972b-f00bc1c4e5db"
         if response.status() == reqwest::StatusCode::UNAUTHORIZED {
-            let headers = filter_to_www_authenticate_headers(&headers);
+            let headers = filter_to_www_authenticate_headers(headers);
             let body = response
                 .bytes()
                 .await
@@ -190,7 +187,7 @@ impl ClusterGroupManager {
             return Ok(SendToTrinoResponse::Unauthorized { headers, body });
         }
 
-        let headers = filter_to_trino_headers(&headers);
+        let headers = filter_to_trino_headers(headers);
         let trino_query_api_response = response.json().await.context(DecodeTrinoResponseSnafu)?;
 
         Ok(SendToTrinoResponse::HandedOver {
@@ -206,9 +203,8 @@ impl ClusterGroupManager {
     pub async fn ask_for_query_state(
         &self,
         next_uri: Url,
-        headers: HeaderMap,
+        mut headers: HeaderMap,
     ) -> Result<(TrinoQueryApiResponse, HeaderMap), Error> {
-        let mut headers = hack_http_to_reqwest_headers(&headers);
         add_current_context_to_client_request(tracing::Span::current().context(), &mut headers);
         let response = self
             .http_client
@@ -217,9 +213,9 @@ impl ClusterGroupManager {
             .send()
             .await
             .context(ContactTrinoPostQuerySnafu)?;
-        let headers = hack_reqwest_to_http_headers(response.headers());
+        let headers = response.headers();
 
-        let headers = filter_to_trino_headers(&headers);
+        let headers = filter_to_trino_headers(headers);
         let trino_query_api_response = response.json().await.context(DecodeTrinoResponseSnafu)?;
 
         Ok((trino_query_api_response, headers))
@@ -231,12 +227,14 @@ impl ClusterGroupManager {
     )]
     pub async fn cancel_query_on_trino(
         &self,
-        request_headers: &http::HeaderMap,
+        mut request_headers: http::HeaderMap,
         query: &TrinoQuery,
         requested_path: &str,
     ) -> Result<(), Error> {
-        let mut headers = hack_http_to_reqwest_headers(request_headers);
-        add_current_context_to_client_request(tracing::Span::current().context(), &mut headers);
+        add_current_context_to_client_request(
+            tracing::Span::current().context(),
+            &mut request_headers,
+        );
 
         self.http_client
             .delete(query.trino_endpoint.join(requested_path).context(
@@ -245,7 +243,7 @@ impl ClusterGroupManager {
                     trino_endpoint: query.trino_endpoint.clone(),
                 },
             )?)
-            .headers(headers)
+            .headers(request_headers)
             .send()
             .await
             .context(ContactTrinoPostQuerySnafu)?;

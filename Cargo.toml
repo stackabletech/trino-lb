@@ -29,7 +29,7 @@ indoc = "2.0"
 k8s-openapi = { version = "0.22", default-features = false, features = [
   "v1_30",
 ] }
-kube = { version = "0.92", default-features = false, features = [
+kube = { version = "0.93", default-features = false, features = [
   "client",
   "jsonpatch",
   "runtime",
@@ -38,16 +38,16 @@ kube = { version = "0.92", default-features = false, features = [
 main_error = "0.1"
 num_cpus = "1.16"
 number_prefix = "0.4"
-opentelemetry = "0.23"
-opentelemetry_sdk = { version = "0.23", features = ["rt-tokio", "metrics"] }
-opentelemetry-http = "0.12"
-opentelemetry-otlp = { version = "0.16", features = ["serialize", "metrics"] }
-opentelemetry-prometheus = "0.16"
+opentelemetry = "0.24"
+opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
+opentelemetry-http = "0.13"
+opentelemetry-otlp = { version = "0.17", features = ["serialize"] }
+opentelemetry-prometheus = "0.17"
 prometheus = "0.13"
 prusto = "0.5"
 pyo3 = { version = "0.22", features = ["auto-initialize"] }
 rand = "0.8"
-redis = { version = "0.25", default-features = false, features = [
+redis = { version = "0.26", default-features = false, features = [
   "acl",
   "tokio-rustls-comp",
   "cluster",
@@ -57,9 +57,10 @@ redis = { version = "0.25", default-features = false, features = [
   "script",
 ] }
 regex = "1.10"
-reqwest = { version = "0.11", default-features = false, features = [
+reqwest = { version = "0.12", default-features = false, features = [
   "rustls-tls",
   "gzip",
+  "json",
   "cookies",
 ] }
 rstest = "0.21"
@@ -68,7 +69,7 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 snafu = "0.8"
 # 0.7.4 is the first release that includes https://github.com/launchbadge/sqlx/pull/2927
-sqlx = { version = "0.7.4", features = [
+sqlx = { version = "0.8.0", features = [
   "runtime-tokio",
   "tls-rustls",
   "macros",
@@ -77,10 +78,10 @@ sqlx = { version = "0.7.4", features = [
   "postgres",
 ] }
 strum = { version = "0.26", features = ["derive"] }
-tokio = "1.38"
+tokio = "1.39"
 tower = "0.4"
 tracing = "0.1"
-tracing-opentelemetry = "0.24"
+tracing-opentelemetry = "0.25"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 trait-variant = "0.1"
 url = { version = "2.5", features = ["serde"] }
