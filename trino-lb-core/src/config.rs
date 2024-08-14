@@ -253,7 +253,9 @@ impl Debug for TrinoClientConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+// #[serde(flatten)] is not supported in combination with structs that use deny_unknown_fields. Neither the outer nor
+// inner flattened struct should use that attribute.
+#[serde(rename_all = "camelCase")]
 pub struct ExplainCostTargetConfig {
     #[serde(flatten)]
     pub cluster_max_query_plan_estimation: QueryPlanEstimation,
@@ -278,7 +280,9 @@ pub struct PythonScriptRouterConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+// #[serde(flatten)] is not supported in combination with structs that use deny_unknown_fields. Neither the outer nor
+// inner flattened struct should use that attribute.
+#[serde(rename_all = "camelCase")]
 pub struct ClientTagsRouterConfig {
     #[serde(flatten)]
     pub tag_matching_strategy: TagMatchingStrategy,
@@ -286,7 +290,7 @@ pub struct ClientTagsRouterConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub enum TagMatchingStrategy {
     AllOf(HashSet<String>),
     OneOf(HashSet<String>),
