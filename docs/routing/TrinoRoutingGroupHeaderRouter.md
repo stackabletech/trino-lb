@@ -17,5 +17,5 @@ Additionally you can configure the name of the HTTP header in case it differs fr
 ```yaml
 routers:
   - trinoRoutingGroupHeader:
-      header: X-My-Custom-Routing-Header # optional, defaults to X-Trino-Routing-Group
+      headerName: X-My-Custom-Routing-Header # optional, defaults to X-Trino-Routing-Group
 ```

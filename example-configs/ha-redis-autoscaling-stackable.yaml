@@ -1,7 +1,3 @@
-_: &common-credentials
-  username: admin
-  password: adminadmin
-
 trinoLb:
   externalAddress: https://5.250.179.64:8443
   tls:
@@ -39,7 +35,9 @@ trinoClusterGroups:
     trinoClusters:
       - name: trino-s-1
         endpoint: https://trino-s-1-coordinator-default.default.svc.cluster.local:8443
-        credentials: *common-credentials
+        credentials: &common-credentials
+          username: admin
+          password: adminadmin
   m:
     maxRunningQueries: 2
     autoscaling:
@@ -69,7 +67,7 @@ routers:
   # This list will be walked top to bottom and the first router making a decision will choose the target trinoClusterGroup.
   # If no router makes a decision the query will fall through to the "routingFallback".
   - trinoRoutingGroupHeader:
-      header: X-Trino-Routing-Group
+      headerName: X-Trino-Routing-Group
   - pythonScript:
       script: |
         # Tested using Python 3.11

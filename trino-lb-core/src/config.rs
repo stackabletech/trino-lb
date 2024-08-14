@@ -28,19 +28,26 @@ pub enum Error {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+// We want to fail on unknown config properties (as Trino is doing as well) to make the user aware that what he tried to
+// configure is not a valid configuration.
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Config {
     pub trino_lb: TrinoLbConfig,
+
     pub trino_cluster_groups: HashMap<String, TrinoClusterGroupConfig>,
+
     #[serde(default)]
     pub trino_cluster_groups_ignore_cert: bool,
+
     pub routers: Vec<RoutingConfig>,
+
     pub routing_fallback: String,
+
     pub cluster_autoscaler: Option<ScalerConfig>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoLbConfig {
     pub external_address: Url,
 
@@ -56,6 +63,9 @@ pub struct TrinoLbConfig {
     pub refresh_query_counter_interval: Duration,
 
     pub tracing: Option<TrinoLbTracingConfig>,
+
+    #[serde(default)]
+    pub ports: TrinoLbPortsConfig,
 }
 
 fn default_refresh_query_counter_interval() -> Duration {
@@ -63,7 +73,7 @@ fn default_refresh_query_counter_interval() -> Duration {
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoLbTlsConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -73,7 +83,7 @@ pub struct TrinoLbTlsConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoLbTracingConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -86,7 +96,46 @@ pub struct TrinoLbTracingConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct TrinoLbPortsConfig {
+    #[serde(default = "TrinoLbPortsConfig::default_http_port")]
+    pub http: u16,
+
+    #[serde(default = "TrinoLbPortsConfig::default_https_port")]
+    pub https: u16,
+
+    #[serde(default = "TrinoLbPortsConfig::default_metrics_port")]
+    pub metrics: u16,
+}
+
+impl TrinoLbPortsConfig {
+    /// Same port Trino is using by default
+    fn default_http_port() -> u16 {
+        8080
+    }
+
+    /// Same port Trino is using by default
+    fn default_https_port() -> u16 {
+        8443
+    }
+
+    fn default_metrics_port() -> u16 {
+        9090
+    }
+}
+
+impl Default for TrinoLbPortsConfig {
+    fn default() -> Self {
+        Self {
+            http: Self::default_http_port(),
+            https: Self::default_https_port(),
+            metrics: Self::default_metrics_port(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub enum PersistenceConfig {
     InMemory {},
     Redis(RedisConfig),
@@ -94,7 +143,7 @@ pub enum PersistenceConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct RedisConfig {
     pub endpoint: Url,
 
@@ -103,7 +152,7 @@ pub struct RedisConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct PostgresConfig {
     pub url: Url,
 
@@ -116,7 +165,7 @@ fn default_max_connections() -> u32 {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoClusterGroupConfig {
     pub max_running_queries: u64,
     pub autoscaling: Option<TrinoClusterGroupAutoscalingConfig>,
@@ -124,7 +173,7 @@ pub struct TrinoClusterGroupConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoClusterConfig {
     pub name: String,
     pub endpoint: Url,
@@ -132,14 +181,14 @@ pub struct TrinoClusterConfig {
 }
 
 #[derive(Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoClusterCredentialsConfig {
     pub username: String,
     pub password: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoClusterGroupAutoscalingConfig {
     pub upscale_queued_queries_threshold: u64,
     pub downscale_running_queries_percentage_threshold: u64,
@@ -149,7 +198,7 @@ pub struct TrinoClusterGroupAutoscalingConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct MinClustersConfig {
     pub time_utc: String,
     pub weekdays: String,
@@ -166,7 +215,7 @@ impl Debug for TrinoClusterCredentialsConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub enum RoutingConfig {
     ExplainCosts(ExplainCostsRouterConfig),
     TrinoRoutingGroupHeader(TrinoRoutingGroupHeaderRouterConfig),
@@ -175,7 +224,7 @@ pub enum RoutingConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct ExplainCostsRouterConfig {
     pub trino_cluster_to_run_explain_query: TrinoClientConfig,
 
@@ -183,7 +232,7 @@ pub struct ExplainCostsRouterConfig {
 }
 
 #[derive(Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoClientConfig {
     pub endpoint: Url,
     #[serde(default)]
@@ -204,7 +253,7 @@ impl Debug for TrinoClientConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct ExplainCostTargetConfig {
     #[serde(flatten)]
     pub cluster_max_query_plan_estimation: QueryPlanEstimation,
@@ -212,7 +261,7 @@ pub struct ExplainCostTargetConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoRoutingGroupHeaderRouterConfig {
     #[serde(default = "default_trino_routing_group_header")]
     pub header_name: String,
@@ -223,13 +272,13 @@ fn default_trino_routing_group_header() -> String {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct PythonScriptRouterConfig {
     pub script: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct ClientTagsRouterConfig {
     #[serde(flatten)]
     pub tag_matching_strategy: TagMatchingStrategy,
@@ -237,26 +286,26 @@ pub struct ClientTagsRouterConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub enum TagMatchingStrategy {
     AllOf(HashSet<String>),
     OneOf(HashSet<String>),
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub enum ScalerConfig {
     Stackable(StackableScalerConfig),
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct StackableScalerConfig {
     pub clusters: HashMap<TrinoClusterName, StackableCluster>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct StackableCluster {
     pub name: String,
     pub namespace: String,

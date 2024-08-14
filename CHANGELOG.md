@@ -4,8 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added a configuration to specify the port numbers for `http`, `https` and `metrics` ([#XX]).
+
 ### Changed
 
+- BREAKING: Ensure no unknown config properties have been set. This is to make the user aware that what he tried to configure is not a valid configuration. You may need to adopt your configuration and remove any unknown properties ([#XX]).
 - Bump dependencies, such as `opentelemetry` 0.23 -> 0.24, `kube` 0.92 -> 0.93 and `redis` 0.25 -> 0.26 ([#41]).
 
 [#41]: https://github.com/stackabletech/trino-lb/pull/41
