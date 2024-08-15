@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Added a configuration to specify the port numbers for `http`, `https` and `metrics` ([#XX]).
+- Added a configuration to specify the port numbers for `http`, `https` and `metrics` ([#43]).
 
 ### Changed
 
@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - Bump dependencies, such as `opentelemetry` 0.23 -> 0.24, `kube` 0.92 -> 0.93 and `redis` 0.25 -> 0.26 ([#41]).
 
 [#41]: https://github.com/stackabletech/trino-lb/pull/41
+[#43]: https://github.com/stackabletech/trino-lb/pull/43
 
 ## [0.2.3] - 2024-07-01
 
