@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2024-08-15
+
 ### Added
 
 - Added a configuration to specify the port numbers for `http`, `https` and `metrics` ([#43]).

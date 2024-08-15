@@ -4007,7 +4007,7 @@ dependencies = [
 
 [[package]]
 name = "trino-lb"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "axum",
  "axum-server",
@@ -4053,7 +4053,7 @@ dependencies = [
 
 [[package]]
 name = "trino-lb-bench"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "clap",
  "futures",
@@ -4065,7 +4065,7 @@ dependencies = [
 
 [[package]]
 name = "trino-lb-core"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "http 1.1.0",
@@ -4088,7 +4088,7 @@ dependencies = [
 
 [[package]]
 name = "trino-lb-persistence"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "bincode",
  "enum_dispatch",
