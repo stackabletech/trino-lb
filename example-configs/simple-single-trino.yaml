@@ -1,10 +1,10 @@
 trinoLb:
-  externalAddress: https://127.0.0.1:443
+  externalAddress: https://127.0.0.1:8443
   # When you enable authentication trino-clients enforce https encryption
   tls:
     enabled: true
-    certPemFile: /self-signed-certs/cert.pem
-    keyPemFile: /self-signed-certs/key.pem
+    certPemFile: ./example-configs/self-signed-certs/cert.pem
+    keyPemFile: ./example-configs/self-signed-certs/key.pem
   # Use in-memory persistence which will loose all queued running queries on restart
   persistence:
     inMemory: {}

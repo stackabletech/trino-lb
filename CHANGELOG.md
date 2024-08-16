@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.1] - 2024-08-16
+
+### Fixed
+
+- Install default crypto provider, this prevent servers using https from starting ([#45]).
+
+[#45]: https://github.com/stackabletech/trino-lb/pull/45
+
 ## [0.3.0] - 2024-08-15
 
 ### Added
