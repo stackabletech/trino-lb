@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix division by zero when all clusters of a cluster group are not ready to accept queries ([#47]).
+
+[#47]: https://github.com/stackabletech/trino-lb/pull/47
+
 ## [0.3.1] - 2024-08-16
 
 ### Fixed

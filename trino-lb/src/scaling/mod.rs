@@ -317,7 +317,7 @@ impl Scaler {
                     target_states.insert(to_start.name.to_owned(), ClusterState::Starting);
                 }
             }
-        } else {
+        } else if queued == 0 {
             // Determine excess clusters, this only makes sense when we don't upscale
             let cluster_query_counters = try_join_all(
                 clusters
@@ -335,7 +335,20 @@ impl Scaler {
                 .map(|(c, _)| c.max_running_queries)
                 .sum();
             let current_running_queries: u64 = cluster_query_counters.iter().sum();
-            let utilization_percent = 100 * current_running_queries / max_running_queries;
+
+            let utilization_percent = if max_running_queries == 0 {
+                // No cluster is ready to accept queries.
+                if current_running_queries == 0 {
+                    // No queries running at all
+                    0
+                } else {
+                    // All clusters busy
+                    100
+                }
+            } else {
+                // It's safe to divide by max_running_queries, as it can not be zero
+                100 * current_running_queries / max_running_queries
+            };
 
             debug!(
                 current_running_queries,
