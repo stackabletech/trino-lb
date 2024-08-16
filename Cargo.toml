@@ -63,6 +63,7 @@ reqwest = { version = "0.12", default-features = false, features = [
   "json",
   "cookies",
 ] }
+rustls = "0.23" # https://github.com/rustls/rustls/issues/1938
 rstest = "0.22"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
