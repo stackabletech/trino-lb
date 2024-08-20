@@ -24,7 +24,7 @@ Make sure you clone this repo and run the following command from the root direct
 In case you don't have any Trino cluster at hand you can start trino-lb without any Trino cluster as follows:
 
 ```bash
-docker run -p 8080:8080 -v ./example-configs/simple-no-trino.yaml:/etc/trino-lb-config.yaml --rm oci.stackable.tech/stackable/trino-lb:0.1.0
+docker run -p 8080:8080 -v ./example-configs/simple-no-trino.yaml:/etc/trino-lb-config.yaml --rm oci.stackable.tech/stackable/trino-lb:0.3.1
 ```
 
 This starts trino-lb listening on http://127.0.0.1:8080.
@@ -44,12 +44,12 @@ As you can see by `QUEUED_IN_TRINO_LB`, the query is queued in trino-lb indefini
 
 Let's assume your Trino cluster is accessible at `https://127.0.0.1:8443` using the username `admin` and password `admin`.
 
-First check the config file `example-configs/simple-single-trino.yaml` and swap out the hostname and credentials corresponding to your Trino cluster.
+First check the config file `example-configs/docker-simple-single-trino.yaml` and swap out the hostname and credentials corresponding to your Trino cluster.
 Afterwards start trino-lb using the following command.
 We are using self-signed certificates for testing purpose here.
 
 ```bash
-docker run -p 443:8443 -v ./example-configs/simple-single-trino.yaml:/etc/trino-lb-config.yaml -v ./example-configs/self-signed-certs/:/self-signed-certs/ --rm oci.stackable.tech/stackable/trino-lb:0.1.0
+docker run -p 443:8443 -v ./example-configs/docker-simple-single-trino.yaml:/etc/trino-lb-config.yaml -v ./example-configs/self-signed-certs/:/self-signed-certs/ --rm oci.stackable.tech/stackable/trino-lb:0.3.1
 ```
 
 > [!NOTE]
@@ -58,7 +58,7 @@ docker run -p 443:8443 -v ./example-configs/simple-single-trino.yaml:/etc/trino-
 We can send queries to trino-lb and it will forward them to the configured Trino cluster.
 
 ```bash
-java -jar ~/Downloads/trino-cli-435-executable.jar --server https://127.0.0.1:443 --insecure --user admin --password
+java -jar ~/Downloads/trino-cli-*-executable.jar --server https://127.0.0.1:443 --insecure --user admin --password
 Password:
 trino> select 42;
  _col0
