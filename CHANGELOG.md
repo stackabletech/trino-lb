@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.2] - 2024-08-20
+
 ### Changed
 
 - Don't use the `aws-lc-rs` crate (introduced in [#45]), as it broke the Tilt build ([#46]).
