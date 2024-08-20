@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Don't use the `aws-lc-rs` crate (introduced in [#45]), as it broke the Tilt build ([#46]).
+
+[#46]: https://github.com/stackabletech/trino-lb/pull/46
+
 ## [0.3.1] - 2024-08-16
 
 ### Fixed
