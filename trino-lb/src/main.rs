@@ -100,12 +100,6 @@ fn main() -> Result<(), MainError> {
 async fn start() -> Result<(), MainError> {
     let args = Args::parse();
 
-    // To prevent `no process-level CryptoProvider available -- call CryptoProvider::install_default() before this point`,
-    // see https://github.com/rustls/rustls/issues/1938 for details
-    rustls::crypto::aws_lc_rs::default_provider()
-        .install_default()
-        .map_err(|_| Error::InstallRustlsCryptoProvider {})?;
-
     let config = Config::read_from_file(&args.config_file)
         .await
         .context(ReadConfigSnafu)?;

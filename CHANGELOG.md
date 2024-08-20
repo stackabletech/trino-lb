@@ -4,10 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Don't use the `aws-lc-rs` crate (introduced in [#45]), as it broke the Tilt build ([#46]).
+
 ### Fixed
 
 - Fix division by zero when all clusters of a cluster group are not ready to accept queries ([#47]).
 
+[#46]: https://github.com/stackabletech/trino-lb/pull/46
 [#47]: https://github.com/stackabletech/trino-lb/pull/47
 
 ## [0.3.1] - 2024-08-16
