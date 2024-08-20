@@ -1,0 +1,94 @@
+# 1 small cluster
+{{- range untilStep 1 2 1 }}
+---
+apiVersion: trino.stackable.tech/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: trino-s-{{ . }}
+  namespace: default
+spec:
+  image:
+    productVersion: "451"
+  clusterConfig:
+    catalogLabelSelector:
+      matchLabels:
+        trino: trino
+    listenerClass: external-stable
+    authentication:
+      - authenticationClass: trino-users
+  coordinators:
+    configOverrides: &configOverrides
+      config.properties:
+        tracing.enabled: "true"
+        tracing.exporter.endpoint: http://jaeger-collector.default.svc.cluster.local:4317
+    roleGroups:
+      default:
+        replicas: 1
+  workers:
+    configOverrides: *configOverrides
+    roleGroups:
+      default:
+        replicas: 1
+{{- end }}
+# 2 medium clusters
+{{- range untilStep 1 3 1 }}
+---
+apiVersion: trino.stackable.tech/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: trino-m-{{ . }}
+  namespace: default
+spec:
+  image:
+    productVersion: "451"
+  clusterConfig:
+    catalogLabelSelector:
+      matchLabels:
+        trino: trino
+    listenerClass: external-stable
+    authentication:
+      - authenticationClass: trino-users
+  coordinators:
+    configOverrides: &configOverrides
+      config.properties:
+        tracing.enabled: "true"
+        tracing.exporter.endpoint: http://jaeger-collector.default.svc.cluster.local:4317
+    roleGroups:
+      default:
+        replicas: 1
+  workers:
+    configOverrides: *configOverrides
+    roleGroups:
+      default:
+        replicas: 1
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: trino-users
+  namespace: default
+type: kubernetes.io/opaque
+stringData:
+  admin: adminadmin
+---
+apiVersion: authentication.stackable.tech/v1alpha1
+kind: AuthenticationClass
+metadata:
+  name: trino-users
+spec:
+  provider:
+    static:
+      userCredentialsSecret:
+        name: trino-users
+---
+apiVersion: trino.stackable.tech/v1alpha1
+kind: TrinoCatalog
+metadata:
+  name: tpch
+  namespace: default
+  labels:
+    trino: trino
+spec:
+  connector:
+    tpch: {}
