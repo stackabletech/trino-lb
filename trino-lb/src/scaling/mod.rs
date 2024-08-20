@@ -336,18 +336,16 @@ impl Scaler {
                 .sum();
             let current_running_queries: u64 = cluster_query_counters.iter().sum();
 
-            let utilization_percent = if max_running_queries == 0 {
-                // No cluster is ready to accept queries.
-                if current_running_queries == 0 {
-                    // No queries running at all
-                    0
-                } else {
-                    // All clusters busy
-                    100
-                }
-            } else {
-                // It's safe to divide by max_running_queries, as it can not be zero
-                100 * current_running_queries / max_running_queries
+            let utilization_percent = match (max_running_queries, current_running_queries) {
+                // No cluster is ready to accept queries and no queries running
+                (0, 0) => 0,
+                // No cluster is ready to accept queries but there are some queries still running
+                // This means the clusters are even more utilized than they normally should have (although they e.g. can
+                // have some queries running during draining)
+                // So we set the utilization to 100%
+                (0, _) => 100,
+                // We can calculate the percentage normally, it's safe to divide by max_running_queries
+                (_, _) => 100 * current_running_queries / max_running_queries,
             };
 
             debug!(
