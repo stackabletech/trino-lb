@@ -18,13 +18,17 @@ redis-cluster:
   persistence:
     size: 4Gi
   cluster:
-# In case the master crashes, one of his slaves will be promoted to master. The slots stored by the crashed master will be unavailable until the slave finish the promotion. If a master and all his slaves crash, the cluster will be down until one of them is up again. To avoid downtime, it is possible to configure the number of Redis® nodes with cluster.nodes and the number of replicas that will be assigned to each master with cluster.replicas. For example:
-# *cluster.nodes=9 ( 3 master plus 2 replicas for each master)
-# * cluster.replicas=2
+# In case the master crashes, one of his slaves will be promoted to master.
+# The slots stored by the crashed master will be unavailable until the slave finish the promotion.
+# If a master and all his slaves crash, the cluster will be down until one of them is up again.
+# To avoid downtime, it is possible to configure the number of Redis® nodes with cluster.nodes and the number of replicas that will be assigned to each master with cluster.replicas. For example:
+# *cluster.nodes=6 ( 3 master plus 1 replica for each master)
+# * cluster.replicas=1
 #
-# So we configure the cluster to have 3 masters (minimum amount required) and, each master, will have 2 replicas.
-    nodes: 9
-    replicas: 2
+# So we configure the cluster to have 3 masters (minimum amount required) and, each master, will have 1 replicas.
+# You can obviously upper the numbers
+    nodes: 6
+    replicas: 1
   podDisruptionBudget:
     maxUnavailable: 1
   redis:
