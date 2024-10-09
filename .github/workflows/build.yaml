@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
       - name: Build and (optionally) push container image
         id: build
-        uses: stackabletech/actions/build-container-image@8946fcbf57d7e7c96398bbf669b689caff7babd4 # x.x.x
+        uses: stackabletech/actions/build-container-image@35ff882ef610f839f78ee0ff156403d745ed554e # x.x.x
         with:
           image-name: trino-lb
           image-index-manifest-tag: dev
@@ -73,18 +73,18 @@ jobs:
 
       # - name: Publish Container Image on docker.stackable.tech
       #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      #   uses: stackabletech/actions/publish-image@8946fcbf57d7e7c96398bbf669b689caff7babd4 # x.x.x
+      #   uses: stackabletech/actions/publish-image@35ff882ef610f839f78ee0ff156403d745ed554e # x.x.x
       #   with:
       #     image-registry-uri: docker.stackable.tech
       #     image-registry-username: github
       #     image-registry-password: ${{ secrets.NEXUS_PASSWORD }}
       #     image-repository: stackable/trino-lb
       #     image-manifest-tag: ${{ steps.build.outputs.image-manifest-tag }}
-      #     source-image-uri: localhost/trino-lb:${{ steps.build.outputs.image-manifest-tag }}
+      #     source-image-uri: ${{ steps.build.outputs.image-manifest-uri }}
 
       - name: Publish Container Image on oci.stackable.tech
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: stackabletech/actions/publish-image@8946fcbf57d7e7c96398bbf669b689caff7babd4 # x.x.x
+        uses: stackabletech/actions/publish-image@35ff882ef610f839f78ee0ff156403d745ed554e # x.x.x
         with:
           image-registry-uri: oci.stackable.tech
           image-registry-username: robot$stackable+github-action-build
@@ -92,7 +92,7 @@ jobs:
           # trino-lb is not (yet) a product as the SDP, but a community project, so use "stackable" instead of "sdp"
           image-repository: stackable/trino-lb
           image-manifest-tag: ${{ steps.build.outputs.image-manifest-tag }}
-          source-image-uri: localhost/trino-lb:${{ steps.build.outputs.image-manifest-tag }}
+          source-image-uri: ${{ steps.build.outputs.image-manifest-uri }}
 
   publish_manifests:
     name: Build and publish index manifest
@@ -106,7 +106,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       # - name: Publish and Sign Image Index Manifest to docker.stackable.tech
-      #   uses: stackabletech/actions/publish-index-manifest@8946fcbf57d7e7c96398bbf669b689caff7babd4 # x.x.x
+      #   uses: stackabletech/actions/publish-index-manifest@35ff882ef610f839f78ee0ff156403d745ed554e # x.x.x
       #   with:
       #     image-registry-uri: docker.stackable.tech
       #     image-registry-username: github
@@ -115,7 +115,7 @@ jobs:
       #     image-index-manifest-tag: dev
 
       - name: Publish and Sign Image Index Manifest to oci.stackable.tech
-        uses: stackabletech/actions/publish-index-manifest@8946fcbf57d7e7c96398bbf669b689caff7babd4 # x.x.x
+        uses: stackabletech/actions/publish-index-manifest@35ff882ef610f839f78ee0ff156403d745ed554e # x.x.x
         with:
           image-registry-uri: oci.stackable.tech
           image-registry-username: robot$stackable+github-action-build
