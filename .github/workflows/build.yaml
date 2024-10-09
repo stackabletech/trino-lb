@@ -87,8 +87,8 @@ jobs:
         uses: stackabletech/actions/publish-image@8946fcbf57d7e7c96398bbf669b689caff7babd4 # x.x.x
         with:
           image-registry-uri: oci.stackable.tech
-          image-registry-username: robot$sdp+github-action-build
-          image-registry-password: ${{ secrets.HARBOR_ROBOT_SDP_GITHUB_ACTION_BUILD_SECRET }}
+          image-registry-username: robot$stackable+github-action-build
+          image-registry-password: ${{ secrets.HARBOR_ROBOT_STACKABLE_GITHUB_ACTION_BUILD_SECRET }}
           # trino-lb is not (yet) a product as the SDP, but a community project, so use "stackable" instead of "sdp"
           image-repository: stackable/trino-lb
           image-manifest-tag: ${{ steps.build.outputs.image-manifest-tag }}
@@ -118,8 +118,8 @@ jobs:
         uses: stackabletech/actions/publish-index-manifest@8946fcbf57d7e7c96398bbf669b689caff7babd4 # x.x.x
         with:
           image-registry-uri: oci.stackable.tech
-          image-registry-username: robot$sdp+github-action-build
-          image-registry-password: ${{ secrets.HARBOR_ROBOT_SDP_GITHUB_ACTION_BUILD_SECRET }}
+          image-registry-username: robot$stackable+github-action-build
+          image-registry-password: ${{ secrets.HARBOR_ROBOT_STACKABLE_GITHUB_ACTION_BUILD_SECRET }}
           # trino-lb is not (yet) a product as the SDP, but a community project, so use "stackable" instead of "sdp"
           image-repository: stackable/trino-lb
           image-index-manifest-tag: dev
