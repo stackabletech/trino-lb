@@ -1,5 +1,8 @@
 name: Build pipeline
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 env:
   RUST_TOOLCHAIN_VERSION: "1.79.0"
