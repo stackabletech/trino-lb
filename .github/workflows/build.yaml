@@ -86,7 +86,7 @@ jobs:
       #     source-image-uri: ${{ steps.build.outputs.image-manifest-uri }}
 
       - name: Publish Container Image on oci.stackable.tech
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: stackabletech/actions/publish-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
         with:
           image-registry-uri: oci.stackable.tech
@@ -99,7 +99,7 @@ jobs:
 
   publish_manifests:
     name: Build and publish index manifest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [build]
     permissions:
       id-token: write
