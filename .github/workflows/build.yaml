@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
       - name: Build and (optionally) push container image
         id: build
-        uses: stackabletech/actions/build-container-image@9bd13255f286e4b7a654617268abe1b2f37c3e0a # v0.0.5
+        uses: stackabletech/actions/build-container-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
         with:
           image-name: trino-lb
           image-index-manifest-tag: dev
@@ -76,7 +76,7 @@ jobs:
 
       # - name: Publish Container Image on docker.stackable.tech
       #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      #   uses: stackabletech/actions/publish-image@9bd13255f286e4b7a654617268abe1b2f37c3e0a # v0.0.5
+      #   uses: stackabletech/actions/publish-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
       #   with:
       #     image-registry-uri: docker.stackable.tech
       #     image-registry-username: github
@@ -87,7 +87,7 @@ jobs:
 
       - name: Publish Container Image on oci.stackable.tech
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: stackabletech/actions/publish-image@9bd13255f286e4b7a654617268abe1b2f37c3e0a # v0.0.5
+        uses: stackabletech/actions/publish-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
         with:
           image-registry-uri: oci.stackable.tech
           image-registry-username: robot$stackable+github-action-build
@@ -109,7 +109,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       # - name: Publish and Sign Image Index Manifest to docker.stackable.tech
-      #   uses: stackabletech/actions/publish-index-manifest@9bd13255f286e4b7a654617268abe1b2f37c3e0a # v0.0.5
+      #   uses: stackabletech/actions/publish-index-manifest@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
       #   with:
       #     image-registry-uri: docker.stackable.tech
       #     image-registry-username: github
@@ -118,7 +118,7 @@ jobs:
       #     image-index-manifest-tag: dev
 
       - name: Publish and Sign Image Index Manifest to oci.stackable.tech
-        uses: stackabletech/actions/publish-index-manifest@9bd13255f286e4b7a654617268abe1b2f37c3e0a # v0.0.5
+        uses: stackabletech/actions/publish-index-manifest@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
         with:
           image-registry-uri: oci.stackable.tech
           image-registry-username: robot$stackable+github-action-build
