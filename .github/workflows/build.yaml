@@ -1,5 +1,8 @@
 name: Build pipeline
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 env:
   RUST_TOOLCHAIN_VERSION: "1.79.0"
@@ -50,43 +53,76 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
       - run: cargo doc --document-private-items
 
-  docker-image:
-    name: Build and push docker image
+  build:
+    name: Build and push container image
     needs: [test, clippy, fmt, docs]
+    permissions:
+      id-token: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner:
+          - ubuntu-latest
+          - ubicloud-standard-8-arm
+    steps:
+      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
+      - name: Build and (optionally) push container image
+        id: build
+        uses: stackabletech/actions/build-container-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+        with:
+          image-name: trino-lb
+          image-index-manifest-tag: dev
+          container-file: docker/Dockerfile
+
+      # - name: Publish Container Image on docker.stackable.tech
+      #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      #   uses: stackabletech/actions/publish-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+      #   with:
+      #     image-registry-uri: docker.stackable.tech
+      #     image-registry-username: github
+      #     image-registry-password: ${{ secrets.NEXUS_PASSWORD }}
+      #     image-repository: stackable/trino-lb
+      #     image-manifest-tag: ${{ steps.build.outputs.image-manifest-tag }}
+      #     source-image-uri: ${{ steps.build.outputs.image-manifest-uri }}
+
+      - name: Publish Container Image on oci.stackable.tech
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: stackabletech/actions/publish-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+        with:
+          image-registry-uri: oci.stackable.tech
+          image-registry-username: robot$stackable+github-action-build
+          image-registry-password: ${{ secrets.HARBOR_ROBOT_STACKABLE_GITHUB_ACTION_BUILD_SECRET }}
+          # trino-lb is not (yet) a product as the SDP, but a community project, so use "stackable" instead of "sdp"
+          image-repository: stackable/trino-lb
+          image-manifest-tag: ${{ steps.build.outputs.image-manifest-tag }}
+          source-image-uri: ${{ steps.build.outputs.image-manifest-uri }}
+
+  publish_manifests:
+    name: Build and publish index manifest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build]
     permissions:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
-      - name: Set up Cosign
-        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
-      - name: Login to Stackable Harbor
-        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+      - name: Checkout Repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      # - name: Publish and Sign Image Index Manifest to docker.stackable.tech
+      #   uses: stackabletech/actions/publish-index-manifest@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+      #   with:
+      #     image-registry-uri: docker.stackable.tech
+      #     image-registry-username: github
+      #     image-registry-password: ${{ secrets.NEXUS_PASSWORD }}
+      #     image-repository: stackable/trino-lb
+      #     image-index-manifest-tag: dev
+
+      - name: Publish and Sign Image Index Manifest to oci.stackable.tech
+        uses: stackabletech/actions/publish-index-manifest@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
         with:
-          registry: oci.stackable.tech
-          username: robot$stackable+github-action-build
-          password: ${{ secrets.HARBOR_ROBOT_STACKABLE_GITHUB_ACTION_BUILD_SECRET }}
-      - name: Build and (optionally) push docker image
-        env:
-          TRIGGER: ${{ github.event_name }}
-          GITHUB_REF: ${{ github.ref }}
-        run: |
+          image-registry-uri: oci.stackable.tech
+          image-registry-username: robot$stackable+github-action-build
+          image-registry-password: ${{ secrets.HARBOR_ROBOT_STACKABLE_GITHUB_ACTION_BUILD_SECRET }}
           # trino-lb is not (yet) a product as the SDP, but a community project, so use "stackable" instead of "sdp"
-          IMAGE_NAME="oci.stackable.tech/stackable/trino-lb"
-          TAG_NAME="dev"
-
-          docker build -f docker/Dockerfile . -t "$IMAGE_NAME:$TAG_NAME"
-
-          if [[ $TRIGGER == "push" && $GITHUB_REF == "refs/heads/main" ]]; then
-            # Store the output of `docker image push` into a variable, so we can parse it for the digest
-            PUSH_OUTPUT=$(docker image push "$IMAGE_NAME:$TAG_NAME" 2>&1)
-            echo "$PUSH_OUTPUT"
-
-            # Obtain the digest of the pushed image from the output of `docker image push`, because signing by tag is deprecated and will be removed from cosign in the future
-            DIGEST=$(echo "$PUSH_OUTPUT" | awk "/: digest: sha256:[a-f0-9]{64} size: [0-9]+$/ { print \$3 }")
-
-            # Refer to image via its digest (oci.stackable.tech/stackable/trino-dev@sha256:0a1b2c...)
-            # This generates a signature and publishes it to the registry, next to the image
-            # Uses the keyless signing flow with Github Actions as identity provider
-            cosign sign -y "$IMAGE_NAME@$DIGEST"
-          fi
+          image-repository: stackable/trino-lb
+          image-index-manifest-tag: dev
