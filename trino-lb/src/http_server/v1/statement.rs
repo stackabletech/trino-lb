@@ -596,7 +596,8 @@ async fn cancel_query_on_trino(
 }
 
 /// This should be a duration most setups should be able to handle without timeouts (e.g. by Nginx or similar)
-const MAX_POLL_DELAY: Duration = Duration::from_secs(10);
+/// It's a tradeoff between query responsiveness and the load (HTTP requests/s) on trino-lb.
+const MAX_POLL_DELAY: Duration = Duration::from_secs(3);
 
 fn delay_for_sequence_number(sequence_number: u64) -> Duration {
     if sequence_number == 0 {
@@ -627,14 +628,15 @@ mod tests {
     #[case(2, Duration::from_millis(512))]
     #[case(3, Duration::from_millis(1024))]
     #[case(4, Duration::from_millis(2048))]
-    #[case(5, Duration::from_millis(4096))]
-    #[case(6, Duration::from_millis(8192))]
-    #[case(7, Duration::from_secs(10))]
-    #[case(8, Duration::from_secs(10))]
-    #[case(u32::MAX as u64, Duration::from_secs(10))]
-    #[case(u32::MAX as u64 + 1, Duration::from_secs(10))]
-    #[case(u64::MAX - 1, Duration::from_secs(10))]
-    #[case(u64::MAX, Duration::from_secs(10))]
+    #[case(5, MAX_POLL_DELAY)]
+    #[case(6, MAX_POLL_DELAY)]
+    #[case(7, MAX_POLL_DELAY)]
+    #[case(8, MAX_POLL_DELAY)]
+    #[case(u32::MAX as u64 - 1, MAX_POLL_DELAY)]
+    #[case(u32::MAX as u64, MAX_POLL_DELAY)]
+    #[case(u32::MAX as u64 + 1, MAX_POLL_DELAY)]
+    #[case(u64::MAX - 1, MAX_POLL_DELAY)]
+    #[case(u64::MAX, MAX_POLL_DELAY)]
     fn test_delay_for_sequence_number(
         #[case] sequence_number: u64,
         #[case] expected_delay: Duration,
