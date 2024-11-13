@@ -1,5 +1,6 @@
 FROM debian:bookworm as builder
 
+# hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install --no-install-recommends -y curl gcc python3 libpython3-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -21,12 +22,14 @@ RUN . "$HOME/.cargo/env" && cargo build --release --all-features
 FROM debian:bookworm-slim
 
 # Install python, needed for PythonScriptRouter
+# hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install --no-install-recommends -y python3 python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
 # There are propably some users that want to use this libs in their PythonScriptRouter to e.g. make external HTTP calls
-RUN python3 -m pip install --break-system-packages requests
+# hadolint ignore=DL3013
+RUN python3 -m pip install --no-cache-dir --break-system-packages requests
 
 COPY --from=builder /trino-lb/target/release/trino-lb /trino-lb/target/release/trino-lb
 
