@@ -5,7 +5,7 @@ RUN apt update && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.79.0 && . "${HOME}/.cargo/env"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81.0 && . "${HOME}/.cargo/env"
 
 WORKDIR /trino-lb
 COPY Cargo.toml Cargo.toml
