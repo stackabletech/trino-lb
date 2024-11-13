@@ -1,10 +1,11 @@
 FROM debian:bookworm as builder
 
-RUN apt update && \
-    apt install -y curl gcc python3 libpython3-dev && \
+RUN apt-get update && \
+    apt-get install -y curl gcc python3 libpython3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81.0 && . "${HOME}/.cargo/env"
 
 WORKDIR /trino-lb
@@ -20,8 +21,8 @@ RUN . "$HOME/.cargo/env" && cargo build --release --all-features
 FROM debian:bookworm-slim
 
 # Install python, needed for PythonScriptRouter
-RUN apt update && \
-    apt install -y python3 python3-pip && \
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
 # There are propably some users that want to use this libs in their PythonScriptRouter to e.g. make external HTTP calls
