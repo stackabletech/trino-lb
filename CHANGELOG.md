@@ -4,10 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Changed
-
-- Dependency updates ([#XX]).
-
 ### Fixed
 
 - Reduce max poll delay from 10s to 3s to have better client responsiveness
