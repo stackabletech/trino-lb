@@ -216,11 +216,11 @@ where
         let mut connection = self.connection();
 
         // We can't use a pipe here, as we otherwise get "Received crossed slots in pipeline - CrossSlot"
-        connection
+        let _: () = connection
             .srem(queued_query_set_name(&queued_query.cluster_group), key)
             .await
             .context(WriteToRedisSnafu)?;
-        connection.del(key).await.context(WriteToRedisSnafu)?;
+        let _: () = connection.del(key).await.context(WriteToRedisSnafu)?;
 
         Ok(())
     }
@@ -230,7 +230,8 @@ where
         let key = query_key(&query.id);
         let value = bincode::serialize(&query).context(SerializeToBinarySnafu)?;
 
-        self.connection()
+        let _: () = self
+            .connection()
             .set(key, value)
             .await
             .context(WriteToRedisSnafu)?;
@@ -253,7 +254,8 @@ where
     #[instrument(skip(self))]
     async fn remove_query(&self, query_id: &TrinoQueryId) -> Result<(), super::Error> {
         let key = query_key(query_id);
-        self.connection()
+        let _: () = self
+            .connection()
             .del(key)
             .await
             .context(DeleteFromRedisSnafu)?;
@@ -363,7 +365,8 @@ where
     ) -> Result<(), super::Error> {
         let key = cluster_query_counter_key(cluster_name);
 
-        self.connection()
+        let _: () = self
+            .connection()
             .set(key, count)
             .await
             .context(SetClusterQueryCountSnafu { cluster_name })?;
@@ -437,7 +440,8 @@ where
             .try_into()
             .context(ConvertElapsedTimeSinceLastUpdateToMillisSnafu)?;
 
-        self.connection()
+        let _: () = self
+            .connection()
             .set(LAST_QUERY_COUNT_FETCHER_UPDATE_KEY, ms)
             .await
             .context(SetLastQueryCountFetcherUpdateSnafu)?;
@@ -454,7 +458,8 @@ where
         let key = cluster_state_key(cluster_name);
         let value = bincode::serialize(&state).context(SerializeToBinarySnafu)?;
 
-        self.connection()
+        let _: () = self
+            .connection()
             .set(key, value)
             .await
             .context(SetClusterStateSnafu)?;
