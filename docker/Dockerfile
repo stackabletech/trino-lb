@@ -7,6 +7,7 @@ RUN apt-get update && \
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# hadolint ignore=SC1091
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81.0 && . "${HOME}/.cargo/env"
 
 WORKDIR /trino-lb
@@ -16,6 +17,7 @@ COPY trino-lb-bench trino-lb-bench
 COPY trino-lb-core trino-lb-core
 COPY trino-lb-persistence trino-lb-persistence
 
+# hadolint ignore=SC1091
 RUN . "$HOME/.cargo/env" && cargo build --release --all-features
 
 # Build final image
