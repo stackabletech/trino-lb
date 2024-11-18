@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Reduce max poll delay from 10s to 3s to have better client responsiveness
+
 ## [0.3.2] - 2024-08-20
 
 ### Changed
