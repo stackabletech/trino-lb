@@ -2,7 +2,7 @@ FROM debian:bookworm AS builder
 
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y curl gcc python3 libpython3-dev && \
+    apt-get install --no-install-recommends -y ca-certificates curl gcc python3 libpython3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
