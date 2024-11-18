@@ -1,4 +1,4 @@
-FROM debian:bookworm as builder
+FROM debian:bookworm AS builder
 
 # hadolint ignore=DL3008
 RUN apt-get update && \
