@@ -2,9 +2,9 @@ allow_k8s_contexts('cluster-admin@sbernauer-demo-oidc')
 
 # If tilt_options.json exists read it and load the default_registry value from it
 settings = read_json('tilt_options.json', default={})
-registry = settings.get('default_registry', 'docker.stackable.tech/sandbox')
+registry = settings.get('default_registry', 'oci.stackable.tech/sandbox')
 
-# Configure default registry either read from config file above, or with default value of "docker.stackable.tech/sandbox"
+# Configure default registry either read from config file above, or with default value of "oci.stackable.tech/sandbox"
 default_registry(registry)
 
 # meta = read_json('nix/meta.json')
