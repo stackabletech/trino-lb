@@ -1,6 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    ffi::CString,
+};
 
 use pyo3::{
+    ffi::c_str,
     types::{IntoPyDict, PyAnyMethods, PyModule},
     Py, PyAny, Python,
 };
@@ -12,8 +16,17 @@ use crate::routing::RouterImplementationTrait;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
+    #[snafu(display("Failed to convert Python script to CString"))]
+    ConvertScriptToCString { source: std::ffi::NulError },
+
+    #[snafu(display("Failed to convert HTTP headers to Python dict"))]
+    ConvertHeadersToPythonDict { source: pyo3::PyErr },
+
     #[snafu(display("Failed to parse Python script"))]
     ParsePythonScript { source: pyo3::PyErr },
+
+    #[snafu(display("Failed to execute Python script"))]
+    ExecutePythonScript { source: pyo3::PyErr },
 
     #[snafu(display("Failed to find Python function {function_name:?}"))]
     FindPythonFunction {
@@ -34,13 +47,16 @@ impl PythonScriptRouter {
         valid_target_groups: HashSet<String>,
     ) -> Result<Self, Error> {
         let function = Python::with_gil(|py| {
-            let function: Py<PyAny> = PyModule::from_code_bound(py, &config.script, "", "")
-                .context(ParsePythonScriptSnafu)?
-                .getattr("targetClusterGroup")
-                .context(FindPythonFunctionSnafu {
-                    function_name: "targetClusterGroup",
-                })?
-                .into();
+            let script =
+                CString::new(config.script.clone()).context(ConvertScriptToCStringSnafu)?;
+            let function: Py<PyAny> =
+                PyModule::from_code(py, script.as_c_str(), c_str!(""), c_str!(""))
+                    .context(ParsePythonScriptSnafu)?
+                    .getattr("targetClusterGroup")
+                    .context(FindPythonFunctionSnafu {
+                        function_name: "targetClusterGroup",
+                    })?
+                    .into();
 
             Ok(function)
         })?;
@@ -60,8 +76,12 @@ impl RouterImplementationTrait for PythonScriptRouter {
     )]
     async fn route(&self, query: &str, headers: &http::HeaderMap) -> Option<String> {
         let result = Python::with_gil(|py| {
-            let args = (query, header_map_to_hashmap(headers).into_py_dict_bound(py));
-            self.function.call1(py, args)
+            let headers_dict = header_map_to_hashmap(headers)
+                .into_py_dict(py)
+                .context(ConvertHeadersToPythonDictSnafu)?;
+            self.function
+                .call1(py, (query, headers_dict))
+                .context(ExecutePythonScriptSnafu)
         });
         let result = match result {
             Ok(result) => result,
