@@ -1,7 +1,7 @@
 use std::{fmt::Debug, time::SystemTime};
 
 use chrono::{DateTime, Utc};
-use rand::distributions::{Alphanumeric, DistString};
+use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use url::Url;
@@ -111,7 +111,7 @@ impl Debug for QueuedQuery {
 fn new_query_id() -> TrinoLbQueryId {
     let utc: DateTime<Utc> = Utc::now();
     let time_part = utc.format("%Y%m%d_%H%M%S");
-    let rand_part = Alphanumeric.sample_string(&mut rand::thread_rng(), 8);
+    let rand_part = Alphanumeric.sample_string(&mut rand::rng(), 8);
 
     format!("{QUEUED_QUERY_ID_PREFIX}{time_part}_{rand_part}",)
 }
