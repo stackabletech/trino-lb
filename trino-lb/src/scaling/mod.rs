@@ -16,7 +16,7 @@ use tokio::{
 };
 use tracing::{debug, error, info, instrument, Instrument, Span};
 use trino_lb_core::{
-    config::{Config, ScalerConfig},
+    config::{Config, ScalerConfig, ScalerConfigImplementation},
     trino_cluster::ClusterState,
     TrinoClusterName,
 };
@@ -110,6 +110,9 @@ pub enum Error {
 
     #[snafu(display("The variable \"scaler\" is None. This should never happen, as we only run the reconciliation when a scaler is configured!"))]
     ScalerVariableIsNone {},
+
+    #[snafu(display("The scaler config is missing. This is a bug in trino-lb, as it should exist at this particular code path"))]
+    ScalerConfigMissing {},
 }
 
 /// The scaler periodically
@@ -118,6 +121,8 @@ pub enum Error {
 /// 2. In case scaling is enabled for a cluster group it supervises the load and scaled the number of clusters
 ///    accordingly
 pub struct Scaler {
+    /// The original config passed by the user
+    config: Option<ScalerConfig>,
     /// In case this is [`None`], no scaling at all is configured.
     scaler: Option<ScalerImplementation>,
     persistence: Arc<PersistenceImplementation>,
@@ -153,8 +158,8 @@ impl Scaler {
                     // Cluster groups that don't need scaling are missing from the `scaling_config`.
                 }
 
-                Some(match scaler {
-                    ScalerConfig::Stackable(scaler_config) => {
+                Some(match &scaler.implementation {
+                    ScalerConfigImplementation::Stackable(scaler_config) => {
                         StackableScaler::new(scaler_config, &config.trino_cluster_groups)
                             .await
                             .context(CreateStackableAutoscalerSnafu)?
@@ -192,13 +197,19 @@ impl Scaler {
             persistence,
             groups,
             scaling_config,
+            config: config.cluster_autoscaler.clone(),
         })
     }
 
-    pub fn start_loop(self) {
+    pub fn start_loop(self) -> Result<(), Error> {
         if self.scaler.is_some() {
             // As there is a scaler configured, let's start it normally.
-            let mut interval = time::interval(Duration::from_secs(10));
+            let interval = self
+                .config
+                .as_ref()
+                .context(ScalerConfigMissingSnafu)?
+                .reconcile_interval;
+            let mut interval = time::interval(interval);
             interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
 
             let me = Arc::new(self);
@@ -230,6 +241,8 @@ impl Scaler {
                 }
             });
         }
+
+        Ok(())
     }
 
     #[instrument(name = "Scaler::reconcile", skip(self))]
