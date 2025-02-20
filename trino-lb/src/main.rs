@@ -34,7 +34,7 @@ mod trino_client;
 #[derive(Snafu, Debug)]
 pub enum Error {
     #[snafu(display("Failed to install rustls crypto provider"))]
-    InstallRustlsCryptoProvider {},
+    InstallRustlsCryptoProvider,
 
     #[snafu(display("Failed to set up tracing"))]
     SetUpTracing { source: tracing::Error },

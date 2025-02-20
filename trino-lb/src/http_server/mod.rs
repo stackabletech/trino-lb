@@ -43,7 +43,7 @@ pub enum Error {
     #[snafu(display(
         "In case https is used the `tls.certPemFile` and `tls.keyPemFile` options must be set"
     ))]
-    CertsMissing {},
+    CertsMissing,
 }
 
 pub struct AppState {

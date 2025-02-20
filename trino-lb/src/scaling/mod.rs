@@ -109,10 +109,10 @@ pub enum Error {
     JoinGetCurrentClusterStateTask { source: JoinError },
 
     #[snafu(display("The variable \"scaler\" is None. This should never happen, as we only run the reconciliation when a scaler is configured!"))]
-    ScalerVariableIsNone {},
+    ScalerVariableIsNone,
 
     #[snafu(display("The scaler config is missing. This is a bug in trino-lb, as it should exist at this particular code path"))]
-    ScalerConfigMissing {},
+    ScalerConfigMissing,
 }
 
 /// The scaler periodically
