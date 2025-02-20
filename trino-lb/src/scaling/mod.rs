@@ -158,14 +158,15 @@ impl Scaler {
                     // Cluster groups that don't need scaling are missing from the `scaling_config`.
                 }
 
-                Some(match &scaler.implementation {
+                let scaler = match &scaler.implementation {
                     ScalerConfigImplementation::Stackable(scaler_config) => {
                         StackableScaler::new(scaler_config, &config.trino_cluster_groups)
                             .await
                             .context(CreateStackableAutoscalerSnafu)?
                             .into()
                     }
-                })
+                };
+                Some(scaler)
             }
         };
 
