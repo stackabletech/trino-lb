@@ -96,27 +96,27 @@ pub async fn start_http_server(
     let app = Router::new()
         .route("/v1/statement", post(v1::statement::post_statement))
         .route(
-            "/v1/statement/queued_in_trino_lb/:query_id/:sequence_number",
+            "/v1/statement/queued_in_trino_lb/{query_id}/{sequence_number}",
             get(v1::statement::get_trino_lb_statement),
         )
         .route(
-            "/v1/statement/queued/:query_id/:slug/:token",
+            "/v1/statement/queued/{query_id}/{slug}/{token}",
             get(v1::statement::get_trino_queued_statement),
         )
         .route(
-            "/v1/statement/executing/:query_id/:slug/:token",
+            "/v1/statement/executing/{query_id}/{slug}/{token}",
             get(v1::statement::get_trino_executing_statement),
         )
         .route(
-            "/v1/statement/queued_in_trino_lb/:query_id/:sequence_number",
+            "/v1/statement/queued_in_trino_lb/{query_id}/{sequence_number}",
             delete(v1::statement::delete_trino_lb_statement),
         )
         .route(
-            "/v1/statement/queued/:query_id/:slug/:token",
+            "/v1/statement/queued/{query_id}/{slug}/{token}",
             delete(v1::statement::delete_trino_queued_statement),
         )
         .route(
-            "/v1/statement/executing/:query_id/:slug/:token",
+            "/v1/statement/executing/{query_id}/{slug}/{token}",
             delete(v1::statement::delete_trino_executing_statement),
         )
         .route("/ui/query.html", get(ui::query::get_ui_query))
