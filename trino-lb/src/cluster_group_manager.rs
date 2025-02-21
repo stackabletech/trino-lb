@@ -13,7 +13,7 @@ use tracing::{debug, instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 use trino_lb_core::{
     config::Config, sanitization::Sanitize, trino_api::TrinoQueryApiResponse,
-    trino_query::TrinoQuery,
+    trino_cluster::ClusterState, trino_query::TrinoQuery,
 };
 use trino_lb_persistence::{Persistence, PersistenceImplementation};
 use url::Url;
@@ -72,11 +72,17 @@ pub struct ClusterGroupManager {
     http_client: Client,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct TrinoCluster {
     pub name: String,
     pub max_running_queries: u64,
     pub endpoint: Url,
+}
+
+#[derive(Clone, Debug)]
+pub struct ClusterStats {
+    pub state: ClusterState,
+    pub query_counter: u64,
 }
 
 pub enum SendToTrinoResponse {
@@ -251,13 +257,36 @@ impl ClusterGroupManager {
         Ok(())
     }
 
-    /// Tries to find the best cluster from the specified `cluster_group`. If all clusters of the requested group have reached their
-    /// configured query limit, this function returns [`None`].
+    /// Tries to find the best cluster from the specified `cluster_group`. If all clusters of the requested group have
+    /// reached their configured query limit, this function returns [`None`].
     #[instrument(skip(self))]
     pub async fn try_find_best_cluster_for_group(
         &self,
         cluster_group: &str,
     ) -> Result<Option<&TrinoCluster>, Error> {
+        let cluster_stats = self
+            .get_cluster_stats_for_cluster_group(cluster_group)
+            .await?;
+
+        let cluster_with_min_queries = cluster_stats
+            .into_iter()
+            // Only send queries to clusters that are actually able to accept them
+            .filter(|(_, stats)| stats.state.ready_to_accept_queries())
+            // Only send queries to clusters that are not already full
+            .filter(|(cluster, stats)| stats.query_counter < cluster.max_running_queries)
+            // Pick the emptiest cluster
+            .min_by_key(|(_, stats)| stats.query_counter)
+            .map(|(cluster, _)| cluster);
+
+        Ok(cluster_with_min_queries)
+    }
+
+    /// Collect statistics (such as state and query counter) for all Trino clusters in a given clusterGroup
+    #[instrument(skip(self))]
+    pub async fn get_cluster_stats_for_cluster_group(
+        &self,
+        cluster_group: &str,
+    ) -> Result<HashMap<&TrinoCluster, ClusterStats>, Error> {
         let clusters = self
             .groups
             .get(cluster_group)
@@ -273,13 +302,6 @@ impl ClusterGroupManager {
         .await
         .context(ReadCurrentClusterStateForClusterGroupFromPersistenceSnafu { cluster_group })?;
 
-        let clusters = clusters
-            .iter()
-            .zip(cluster_states)
-            .filter(|(_, state)| state.ready_to_accept_queries())
-            .map(|(c, _)| c)
-            .collect::<Vec<_>>();
-
         let cluster_query_counters = try_join_all(
             clusters
                 .iter()
@@ -288,21 +310,42 @@ impl ClusterGroupManager {
         .await
         .context(GetQueryCounterForGroupSnafu { cluster_group })?;
 
-        let debug_output = clusters
+        let cluster_stats = clusters
             .iter()
-            .map(|c| &c.name)
-            .zip(cluster_query_counters.iter())
-            .collect::<Vec<_>>();
-        debug!(query_counters = ?debug_output, "Clusters had the following query counters");
-
-        let cluster_with_min_queries = clusters
-            .into_iter()
+            .zip(cluster_states)
             .zip(cluster_query_counters)
-            .filter(|(cluster, counter)| *counter < cluster.max_running_queries)
-            .min_by_key(|(_, counter)| *counter)
-            .map(|(c, _)| c);
+            .map(|((trino_cluster, state), query_counter)| {
+                (
+                    trino_cluster,
+                    ClusterStats {
+                        state,
+                        query_counter,
+                    },
+                )
+            })
+            .collect();
 
-        Ok(cluster_with_min_queries)
+        debug!(?cluster_stats, "Clusters had the following stats");
+
+        Ok(cluster_stats)
+    }
+
+    /// Get the stats for all clusters, regardless the cluster group membership
+    pub async fn get_all_cluster_stats(
+        &self,
+    ) -> Result<HashMap<&TrinoCluster, ClusterStats>, Error> {
+        let cluster_stats = try_join_all(
+            self.groups
+                .keys()
+                .map(|cluster_group| self.get_cluster_stats_for_cluster_group(cluster_group)),
+        )
+        .await?;
+
+        let mut all_cluster_stats = HashMap::new();
+        for cluster_stat in cluster_stats {
+            all_cluster_stats.extend(cluster_stat);
+        }
+        Ok(all_cluster_stats)
     }
 }
 

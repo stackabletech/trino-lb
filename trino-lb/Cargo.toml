@@ -22,6 +22,7 @@ clap.workspace = true
 enum_dispatch.workspace = true
 futures.workspace = true
 http.workspace = true
+indoc.workspace = true
 k8s-openapi.workspace = true
 kube.workspace = true
 main_error.workspace = true

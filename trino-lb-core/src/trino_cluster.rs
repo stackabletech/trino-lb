@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use std::{fmt::Display, time::SystemTime};
 
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
@@ -21,6 +21,20 @@ pub enum ClusterState {
     Terminating,
     /// Deactivated by a system administrator (manually or programmatically), probably for maintenance
     Deactivated,
+}
+
+impl Display for ClusterState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ClusterState::Unknown => f.write_str("Unknown"),
+            ClusterState::Stopped => f.write_str("Stopped"),
+            ClusterState::Starting => f.write_str("Starting"),
+            ClusterState::Ready => f.write_str("Ready"),
+            ClusterState::Draining { .. } => f.write_str("Draining"),
+            ClusterState::Terminating => f.write_str("Terminating"),
+            ClusterState::Deactivated => f.write_str("Deactivated"),
+        }
+    }
 }
 
 impl ClusterState {

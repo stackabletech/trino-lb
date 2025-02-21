@@ -94,6 +94,7 @@ pub async fn start_http_server(
     });
 
     let app = Router::new()
+        .route("/", get(|| async { Redirect::permanent("/ui/index.html") }))
         .route("/v1/statement", post(v1::statement::post_statement))
         .route(
             "/v1/statement/queued_in_trino_lb/{query_id}/{sequence_number}",
@@ -119,6 +120,7 @@ pub async fn start_http_server(
             "/v1/statement/executing/{query_id}/{slug}/{token}",
             delete(v1::statement::delete_trino_executing_statement),
         )
+        .route("/ui/index.html", get(ui::index::get_ui_index))
         .route("/ui/query.html", get(ui::query::get_ui_query))
         .with_state(app_state);
 
