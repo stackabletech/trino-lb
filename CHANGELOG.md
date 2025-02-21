@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Support configuring the scaler reconcile interval ([#61]).
 - Add simple web-based dashboard that shows the current state and query counts of all clusters.
   This makes it easier to debug state transitions of clusters ([#62]).
 
@@ -18,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Reduce max poll delay from 10s to 3s to have better client responsiveness
 
 [#57]: https://github.com/stackabletech/trino-lb/pull/57
+[#61]: https://github.com/stackabletech/trino-lb/pull/61
 [#62]: https://github.com/stackabletech/trino-lb/pull/62
 
 ## [0.3.2] - 2024-08-20

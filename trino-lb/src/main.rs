@@ -34,7 +34,7 @@ mod trino_client;
 #[derive(Snafu, Debug)]
 pub enum Error {
     #[snafu(display("Failed to install rustls crypto provider"))]
-    InstallRustlsCryptoProvider {},
+    InstallRustlsCryptoProvider,
 
     #[snafu(display("Failed to set up tracing"))]
     SetUpTracing { source: tracing::Error },
@@ -61,6 +61,9 @@ pub enum Error {
 
     #[snafu(display("Failed to create scaler"))]
     CreateScaler { source: scaling::Error },
+
+    #[snafu(display("Failed to start scaler"))]
+    StartScaler { source: scaling::Error },
 
     #[snafu(display("Failed to start HTTP server"))]
     StartHttpServer { source: http_server::Error },
@@ -157,7 +160,7 @@ async fn start() -> Result<(), MainError> {
     let scaler = Scaler::new(&config, Arc::clone(&persistence))
         .await
         .context(CreateScalerSnafu)?;
-    scaler.start_loop();
+    scaler.start_loop().context(StartScalerSnafu)?;
 
     let query_count_fetcher = QueryCountFetcher::new(
         Arc::clone(&persistence),

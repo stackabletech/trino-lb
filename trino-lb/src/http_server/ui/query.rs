@@ -16,7 +16,7 @@ use crate::http_server::AppState;
 #[derive(Snafu, Debug)]
 pub enum Error {
     #[snafu(display("Query ID missing. It needs to be specified as query parameter such as https://127.0.0.1:8443/ui/query.html?trino_lb_20231227_122313_2JzDa3bT"))]
-    QueryIdMissing {},
+    QueryIdMissing,
 
     #[snafu(display("Query with ID {query_id:?} not found. Maybe the query is not queued any more but was handed over to a Trino cluster."))]
     QueryIdNotFound {

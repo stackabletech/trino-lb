@@ -8,7 +8,7 @@ metadata:
   namespace: default
 spec:
   image:
-    productVersion: "451"
+    productVersion: "455"
   clusterConfig:
     catalogLabelSelector:
       matchLabels:
@@ -40,7 +40,7 @@ metadata:
   namespace: default
 spec:
   image:
-    productVersion: "451"
+    productVersion: "455"
   clusterConfig:
     catalogLabelSelector:
       matchLabels:
