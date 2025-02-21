@@ -270,7 +270,11 @@ impl ClusterGroupManager {
 
         let cluster_with_min_queries = cluster_stats
             .into_iter()
+            // Only send queries to clusters that are actually able to accept them
+            .filter(|(_, stats)| stats.state.ready_to_accept_queries())
+            // Only send queries to clusters that are not already full
             .filter(|(cluster, stats)| stats.query_counter < cluster.max_running_queries)
+            // Pick the emptiest cluster
             .min_by_key(|(_, stats)| stats.query_counter)
             .map(|(cluster, _)| cluster);
 
