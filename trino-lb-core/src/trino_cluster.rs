@@ -12,6 +12,8 @@ pub enum ClusterState {
     Starting,
     /// Up and running, ready to get queries
     Ready,
+    /// Up, but not ready to accept queries. It should not be started or stopped, as it's healing itself.
+    Unhealthy,
     /// No new queries should be submitted. Once all running queries are finished and a certain time period has passed
     /// go to `Terminating`
     Draining {
@@ -30,6 +32,7 @@ impl Display for ClusterState {
             ClusterState::Stopped => f.write_str("Stopped"),
             ClusterState::Starting => f.write_str("Starting"),
             ClusterState::Ready => f.write_str("Ready"),
+            ClusterState::Unhealthy => f.write_str("Unhealthy"),
             ClusterState::Draining { .. } => f.write_str("Draining"),
             ClusterState::Terminating => f.write_str("Terminating"),
             ClusterState::Deactivated => f.write_str("Deactivated"),
@@ -45,6 +48,7 @@ impl ClusterState {
             | ClusterState::Starting
             | ClusterState::Terminating => ClusterState::Starting,
             ClusterState::Ready | ClusterState::Draining { .. } => ClusterState::Ready,
+            ClusterState::Unhealthy => ClusterState::Unhealthy,
             ClusterState::Deactivated => ClusterState::Deactivated,
         }
     }
@@ -55,6 +59,7 @@ impl ClusterState {
             ClusterState::Unknown
             // No, because it is already started
             | ClusterState::Starting
+            | ClusterState::Unhealthy
             | ClusterState::Ready
             | ClusterState::Terminating
             | ClusterState::Deactivated => false,
@@ -64,6 +69,7 @@ impl ClusterState {
     pub fn ready_to_accept_queries(&self) -> bool {
         match self {
             ClusterState::Unknown
+            | ClusterState::Unhealthy
             | ClusterState::Stopped
             | ClusterState::Draining { .. }
             | ClusterState::Terminating
