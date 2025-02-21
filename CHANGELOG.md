@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Support configuring the scaler reconcile interval ([#61]).
+
 ### Changed
 
 - Set defaults to oci ([#57]).
@@ -13,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - Reduce max poll delay from 10s to 3s to have better client responsiveness
 
 [#57]: https://github.com/stackabletech/trino-lb/pull/57
+[#61]: https://github.com/stackabletech/trino-lb/pull/61
 
 ## [0.3.2] - 2024-08-20
 

@@ -137,7 +137,7 @@ impl Default for TrinoLbPortsConfig {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub enum PersistenceConfig {
-    InMemory {},
+    InMemory,
     Redis(RedisConfig),
     Postgres(PostgresConfig),
 }
@@ -298,7 +298,23 @@ pub enum TagMatchingStrategy {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
-pub enum ScalerConfig {
+pub struct ScalerConfig {
+    #[serde(
+        with = "humantime_serde",
+        default = "default_scaler_reconcile_interval"
+    )]
+    pub reconcile_interval: Duration,
+    #[serde(flatten)]
+    pub implementation: ScalerConfigImplementation,
+}
+
+fn default_scaler_reconcile_interval() -> Duration {
+    Duration::from_secs(5)
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub enum ScalerConfigImplementation {
     Stackable(StackableScalerConfig),
 }
 

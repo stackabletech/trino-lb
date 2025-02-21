@@ -16,7 +16,7 @@ pub enum Error {
     InvalidTimeRange { time_range: String },
 
     #[snafu(display("Any weekdays other tha \"Mon - Son\" are not supported yet"))]
-    WeekdaysNotSupportedYet {},
+    WeekdaysNotSupportedYet,
 
     #[snafu(display(
         "Please configure a drainIdleDurationBeforeShutdown of at least {min_duration:?}"

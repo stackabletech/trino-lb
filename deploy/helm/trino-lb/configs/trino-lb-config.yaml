@@ -55,12 +55,12 @@ trinoClusterGroups:
       - name: trino-m-2
         endpoint: https://trino-m-2-coordinator-default.default.svc.cluster.local:8443
         credentials: *common-credentials
-  oidc:
-    maxRunningQueries: 3
-    trinoClusters:
-      - name: trino-oidc-1
-        endpoint: https://5.250.182.203:8443
-        credentials: *common-credentials
+  # oidc:
+  #   maxRunningQueries: 3
+  #   trinoClusters:
+  #     - name: trino-oidc-1
+  #       endpoint: https://5.250.182.203:8443
+  #       credentials: *common-credentials
 trinoClusterGroupsIgnoreCert: true
 
 routers:
@@ -100,6 +100,7 @@ routers:
 routingFallback: m
 
 clusterAutoscaler:
+  reconcileInterval: 1s
   stackable:
     clusters:
       trino-s-1:
