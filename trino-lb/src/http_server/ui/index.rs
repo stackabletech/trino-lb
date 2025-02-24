@@ -66,8 +66,5 @@ pub async fn get_ui_index(State(state): State<Arc<AppState>>) -> Result<Html<Str
     let index = IndexTemplate {
         cluster_stats: &cluster_stats,
     };
-    index
-        .render()
-        .context(RenderTemplateSnafu)
-        .map(|html| Html(html))
+    index.render().context(RenderTemplateSnafu).map(Html)
 }
