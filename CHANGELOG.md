@@ -9,6 +9,11 @@ All notable changes to this project will be documented in this file.
 - Support configuring the scaler reconcile interval ([#61]).
 - Add simple web-based dashboard that shows the current state and query counts of all clusters.
   This makes it easier to debug state transitions of clusters ([#62]).
+- Add a new cluster state `Unhealthy`.
+  This state is entered once the readiness check of a `Ready` cluster fails (the check is implemented in the scaler implementation).
+  The `Unhealthy` state is kept until the scaler marks that Cluster as ready again.
+  `Unhealthy` clusters won't get any new queries, if all queries are unhealthy queries are queued.
+  <br>Note: Use the now configurable scaler reconcile interval to detect cluster changes quickly ([#63]).
 
 ### Changed
 
@@ -21,6 +26,7 @@ All notable changes to this project will be documented in this file.
 [#57]: https://github.com/stackabletech/trino-lb/pull/57
 [#61]: https://github.com/stackabletech/trino-lb/pull/61
 [#62]: https://github.com/stackabletech/trino-lb/pull/62
+[#63]: https://github.com/stackabletech/trino-lb/pull/63
 
 ## [0.3.2] - 2024-08-20
 
