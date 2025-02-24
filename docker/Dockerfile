@@ -12,13 +12,14 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 
 WORKDIR /trino-lb
 COPY Cargo.toml Cargo.toml
+COPY Cargo.lock Cargo.lock
 COPY trino-lb trino-lb
 COPY trino-lb-bench trino-lb-bench
 COPY trino-lb-core trino-lb-core
 COPY trino-lb-persistence trino-lb-persistence
 
 # hadolint ignore=SC1091
-RUN . "$HOME/.cargo/env" && cargo build --release --all-features
+RUN . "$HOME/.cargo/env" && cargo build --locked --release --all-features
 
 # Build final image
 FROM debian:bookworm-slim
