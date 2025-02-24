@@ -1,0 +1,16 @@
+<h1>Cluster stats</h1>
+<table>
+    <tr>
+        <th>Cluster</th>
+        <th>State</th>
+        <th>Query counter</th>
+    </tr>
+
+    {% for entry in cluster_stats %}
+        <tr>
+            <td>{{entry.0}}</td>
+            <td>{{entry.1.state}}</td>
+            <td>{{entry.1.query_counter}}</td>
+        </tr>
+    {% endfor %}
+</table>

@@ -137,7 +137,7 @@ impl Default for TrinoLbPortsConfig {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub enum PersistenceConfig {
-    InMemory,
+    InMemory {},
     Redis(RedisConfig),
     Postgres(PostgresConfig),
 }
