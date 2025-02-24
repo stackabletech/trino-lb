@@ -1,16 +1,19 @@
 use std::{collections::BTreeMap, sync::Arc};
 
+use askama::Template;
 use axum::{
     extract::State,
     response::{Html, IntoResponse, Response},
 };
 use http::StatusCode;
-use indoc::{formatdoc, indoc};
 use opentelemetry::KeyValue;
 use snafu::{ResultExt, Snafu};
 use tracing::{instrument, warn};
 
-use crate::{cluster_group_manager, http_server::AppState};
+use crate::{
+    cluster_group_manager::{self, ClusterStats},
+    http_server::AppState,
+};
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -18,6 +21,9 @@ pub enum Error {
     GetAllClusterStates {
         source: cluster_group_manager::Error,
     },
+
+    #[snafu(display("Failed to render template"))]
+    RenderTemplate { source: askama::Error },
 }
 
 impl IntoResponse for Error {
@@ -25,9 +31,16 @@ impl IntoResponse for Error {
         warn!(error = ?self, "Error while processing ui query request");
         let status_code = match self {
             Error::GetAllClusterStates { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::RenderTemplate { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (status_code, format!("{self}")).into_response()
     }
+}
+
+#[derive(Template)]
+#[template(path = "index.html")]
+struct IndexTemplate<'a> {
+    cluster_stats: &'a BTreeMap<&'a String, ClusterStats>,
 }
 
 /// Show some information to the user about the query state
@@ -50,34 +63,11 @@ pub async fn get_ui_index(State(state): State<Arc<AppState>>) -> Result<Html<Str
         .map(|(cluster, stats)| (&cluster.name, stats))
         .collect();
 
-    let mut html: String = indoc! {"
-        <h1>Cluster stats</h1>
-        <br>
-        <table>
-        <tr>
-            <th>Cluster</th>
-            <th>State</th>
-            <th>Query counter</th>
-        </tr>
-    "}
-    .to_owned();
-
-    for (cluster, stats) in cluster_stats {
-        html.push_str(&formatdoc! {"
-            <tr>
-                <td>{cluster}</td>
-                <td>{state}</td>
-                <td>{query_counter}</td>
-            </tr>
-            ",
-            state = stats.state,
-            query_counter = stats.query_counter,
-        });
-    }
-
-    html.push_str(indoc! {"
-        </table>
-    "});
-
-    Ok(Html(html))
+    let index = IndexTemplate {
+        cluster_stats: &cluster_stats,
+    };
+    index
+        .render()
+        .context(RenderTemplateSnafu)
+        .map(|html| Html(html))
 }
