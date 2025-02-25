@@ -553,7 +553,7 @@ impl Scaler {
     #[instrument(
         name = "Scaler::apply_cluster_target_state",
         skip(self, cluster),
-        fields(cluster_name = cluster.name)
+        fields(%cluster.name)
     )]
     async fn apply_cluster_target_state(
         self: Arc<Self>,
