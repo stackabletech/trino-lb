@@ -148,6 +148,12 @@ impl QueryCountFetcher {
         }
     }
 
+    /// Update the query counter for the given cluster.
+    ///
+    /// In case the cluster should be reachable, we fetch the current counter and store that.
+    /// In case we know there is no point in fetching the counter (as e.g. the cluster is turned off), we store a query
+    /// count of zero (0) to avoid having dangling clusters with non-zero query counts (when in fact they are not
+    /// executing any query at all).
     #[instrument(skip(self, cluster), fields(cluster_name = cluster.name))]
     async fn process_cluster(&self, cluster: &TrinoClusterConfig, state: ClusterState) {
         match state {
