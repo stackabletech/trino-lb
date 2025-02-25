@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 - Add a new cluster state `Unhealthy`.
   This state is entered once the readiness check of a `Ready` cluster fails (the check is implemented in the scaler implementation).
   The `Unhealthy` state is kept until the scaler marks that Cluster as ready again.
-  `Unhealthy` clusters won't get any new queries, if all queries are unhealthy queries are queued.
+  `Unhealthy` clusters won't get any new queries, if all clusters are unhealthy, queries are queued.
   <br>Note: Use the now configurable scaler reconcile interval to detect cluster changes quickly ([#63]).
 
 ### Changed
