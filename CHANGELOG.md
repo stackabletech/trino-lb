@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-02-28
+
 ### Added
 
 - Support configuring the scaler reconcile interval ([#61]).
