@@ -8,7 +8,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.3.2"
+version = "0.4.0"
 authors = ["Stackable GmbH <info@stackable.tech>"]
 license = "Apache-2.0"
 edition = "2021"
@@ -79,7 +79,7 @@ sqlx = { version = "0.8.2", features = [
   "chrono",
   "postgres",
 ] }
-strum = { version = "0.26", features = ["derive"] }
+strum = { version = "0.27", features = ["derive"] }
 tokio = "1.39"
 tower = "0.5"
 tracing = "0.1"
