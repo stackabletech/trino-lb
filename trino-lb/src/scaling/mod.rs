@@ -14,7 +14,7 @@ use tokio::{
     task::{JoinError, JoinSet},
     time,
 };
-use tracing::{debug, error, info, instrument, Instrument, Span};
+use tracing::{debug, error, info, instrument, warn, Instrument, Span};
 use trino_lb_core::{
     config::{Config, ScalerConfig, ScalerConfigImplementation},
     trino_cluster::ClusterState,
@@ -266,7 +266,7 @@ impl Scaler {
         Ok(())
     }
 
-    #[instrument(name = "Scaler::reconcile_cluster_group", skip(self))]
+    #[instrument(name = "Scaler::reconcile_cluster_group", skip(self, clusters))]
     pub async fn reconcile_cluster_group(
         self: Arc<Self>,
         cluster_group: String,
@@ -435,7 +435,7 @@ impl Scaler {
         Ok(())
     }
 
-    #[instrument(name = "Scaler::get_current_state", skip(self))]
+    #[instrument(name = "Scaler::get_current_state", skip(self, scaling_config))]
     async fn get_current_cluster_state(
         self: Arc<Self>,
         cluster_name: TrinoClusterName,
@@ -461,8 +461,8 @@ impl Scaler {
                 // State not known in persistence, so let's determine current state
                 match (activated, ready) {
                     (true, true) => ClusterState::Ready,
-                    // It could also be Terminating, but in that case it would need to be stored as Terminating
-                    // in the persistence
+                    // It could also be Terminating or Unhealthy, but in that case it would need to be stored as
+                    // Terminating or Unhealthy in the persistence
                     (true, false) => ClusterState::Starting,
                     // This might happen for very short time periods. E.g. for the Stackable scaler, this can be
                     // the case when spec.clusterOperation.stopped was just set to true, but trino-operator did
@@ -480,8 +480,18 @@ impl Scaler {
                 }
             }
             ClusterState::Ready => {
-                // In the future we might want to check if the cluster is healthy and have a state `Unhealthy`.
-                ClusterState::Ready
+                if ready {
+                    ClusterState::Ready
+                } else {
+                    ClusterState::Unhealthy
+                }
+            }
+            ClusterState::Unhealthy => {
+                if ready {
+                    ClusterState::Ready
+                } else {
+                    ClusterState::Unhealthy
+                }
             }
             ClusterState::Draining {
                 last_time_seen_with_queries,
@@ -540,7 +550,11 @@ impl Scaler {
         Ok((cluster_name, current_state))
     }
 
-    #[instrument(name = "Scaler::apply_target_states", skip(self))]
+    #[instrument(
+        name = "Scaler::apply_cluster_target_state",
+        skip(self, cluster),
+        fields(%cluster.name)
+    )]
     async fn apply_cluster_target_state(
         self: Arc<Self>,
         cluster: TrinoCluster,
@@ -555,7 +569,10 @@ impl Scaler {
             ClusterState::Stopped | ClusterState::Terminating => {
                 scaler.deactivate(&cluster.name).await?;
             }
-            ClusterState::Starting | ClusterState::Ready | ClusterState::Draining { .. } => {
+            ClusterState::Starting
+            | ClusterState::Unhealthy
+            | ClusterState::Ready
+            | ClusterState::Draining { .. } => {
                 scaler.activate(&cluster.name).await?;
             }
             ClusterState::Deactivated => {

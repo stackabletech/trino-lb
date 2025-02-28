@@ -136,11 +136,7 @@ impl QueryCountFetcher {
                     self.clusters
                         .iter()
                         .zip(cluster_states)
-                        .filter_map(|(cluster, state)| match state{
-                            ClusterState::Unknown | ClusterState::Stopped | ClusterState::Starting | ClusterState::Terminating | ClusterState::Deactivated => None,
-                            ClusterState::Ready | ClusterState::Draining{ .. } => Some(cluster),
-                        })
-                        .map(|cluster| self.process_cluster(cluster)),
+                        .map(|(cluster, state)| self.process_cluster(cluster, state))
                 )
                 .await;
 
@@ -152,8 +148,40 @@ impl QueryCountFetcher {
         }
     }
 
-    #[instrument(skip(self))]
-    async fn process_cluster(&self, cluster: &TrinoClusterConfig) {
+    /// Update the query count for the given cluster.
+    ///
+    /// - In case the cluster is reachable, fetch the current query count and store it.
+    /// - In case we know the cluster is not reachable (e.g. the cluster is turned off or currently
+    ///   starting), store a query count of zero (0) to avoid dangling clusters with non-zero query
+    ///   counts.
+    #[instrument(skip(self, cluster), fields(cluster_name = cluster.name))]
+    async fn process_cluster(&self, cluster: &TrinoClusterConfig, state: ClusterState) {
+        match state {
+            ClusterState::Ready | ClusterState::Unhealthy | ClusterState::Draining { .. } => {
+                self.fetch_and_store_query_count(cluster).await;
+            }
+            ClusterState::Unknown
+            | ClusterState::Stopped
+            | ClusterState::Starting
+            | ClusterState::Terminating
+            | ClusterState::Deactivated => {
+                if let Err(err) = self
+                    .persistence
+                    .set_cluster_query_count(&cluster.name, 0)
+                    .await
+                {
+                    error!(
+                        cluster = cluster.name,
+                        ?err,
+                        "QueryCountFetcher: Failed to set current cluster query count to zero"
+                    );
+                }
+            }
+        }
+    }
+
+    #[instrument(skip(self, cluster), fields(cluster_name = cluster.name))]
+    async fn fetch_and_store_query_count(&self, cluster: &TrinoClusterConfig) {
         let cluster_info =
             get_cluster_info(&cluster.endpoint, self.ignore_certs, &cluster.credentials).await;
 
