@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-03-03
+
+### Fixed
+
+- Fix the container image not containing the `libpython3-dev` package.
+  This prevented the startup of trino-lb ([#66]).
+
+[#66]: https://github.com/stackabletech/trino-lb/pull/66
+
 ## [0.4.0] - 2025-02-28
 
 ### Added
