@@ -17,17 +17,19 @@ A highly available load balancer with support for queueing, routing and auto-sca
   * [Stackable](./docs/scaling/stackable.md)
 
 ## Try it out locally
+
 The easiest way to use trino-lb is by using the available container image.
 Make sure you clone this repo and run the following command from the root directory of it.
 
 ### Without Trino clusters
+
 In case you don't have any Trino cluster at hand you can start trino-lb without any Trino cluster as follows:
 
 ```bash
 docker run -p 8080:8080 -v ./example-configs/simple-no-trino.yaml:/etc/trino-lb-config.yaml --rm oci.stackable.tech/stackable/trino-lb:0.4.0
 ```
 
-This starts trino-lb listening on http://127.0.0.1:8080.
+This starts trino-lb listening on <http://127.0.0.1:8080>.
 
 You can submit a test-query using [trino-cli](https://trino.io/docs/current/client/cli.html) by calling the following command and entering `select 42;`:
 
@@ -72,4 +74,5 @@ You can test this out by executing multiple long running queries in parallel.
 Also this is just the starting point without any routing, load-balancing or autoscaling. Read on the [design guide](./docs/design.md) on what trino-lb can do.
 
 ## Example configs
+
 Please have a look at the `example-configs` folder to get an inspiration on what you can configure.
