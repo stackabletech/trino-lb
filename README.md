@@ -26,7 +26,7 @@ Make sure you clone this repo and run the following command from the root direct
 In case you don't have any Trino cluster at hand you can start trino-lb without any Trino cluster as follows:
 
 ```bash
-docker run -p 8080:8080 -v ./example-configs/simple-no-trino.yaml:/etc/trino-lb-config.yaml --rm oci.stackable.tech/stackable/trino-lb:0.4.0
+docker run -p 8080:8080 -v ./example-configs/simple-no-trino.yaml:/etc/trino-lb-config.yaml --rm oci.stackable.tech/stackable/trino-lb:0.4.1
 ```
 
 This starts trino-lb listening on <http://127.0.0.1:8080>.
@@ -51,7 +51,7 @@ Afterwards start trino-lb using the following command.
 We are using self-signed certificates for testing purpose here.
 
 ```bash
-docker run -p 443:8443 -v ./example-configs/docker-simple-single-trino.yaml:/etc/trino-lb-config.yaml -v ./example-configs/self-signed-certs/:/self-signed-certs/ --rm oci.stackable.tech/stackable/trino-lb:0.4.0
+docker run -p 443:8443 -v ./example-configs/docker-simple-single-trino.yaml:/etc/trino-lb-config.yaml -v ./example-configs/self-signed-certs/:/self-signed-certs/ --rm oci.stackable.tech/stackable/trino-lb:0.4.1
 ```
 
 > [!NOTE]
