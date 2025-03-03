@@ -8,8 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Fix the container image not containing the `libpython3-dev` package.
-  This prevented the startup of trino-lb ([#66]).
+- Add the `libpython3-dev` package to the container image. This prevented the startup of trino-lb ([#66]).
 
 [#66]: https://github.com/stackabletech/trino-lb/pull/66
 
