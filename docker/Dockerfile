@@ -27,7 +27,7 @@ FROM debian:bookworm-slim
 # Install python, needed for PythonScriptRouter
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y python3 python3-pip && \
+    apt-get install --no-install-recommends -y python3 python3-pip libpython3-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # There are propably some users that want to use this libs in their PythonScriptRouter to e.g. make external HTTP calls
