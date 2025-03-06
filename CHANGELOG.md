@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- The Stackable scaler now ensures that a `TrinoCluster` has changed to `ready` more than 5 seconds
+  ago before marking it as `ready` ([#XX]).
+
 ## [0.4.1] - 2025-03-03
 
 ### Fixed
