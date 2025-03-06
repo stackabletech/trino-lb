@@ -82,7 +82,7 @@ fn main() -> Result<(), MainError> {
             assert!(n > 0, "{ENV_WORKER_THREADS:?} cannot be set to 0");
             n
         }
-        // We default to at least 2 workers
+        // We default to at least 3 workers
         Err(std::env::VarError::NotPresent) => usize::max(3, num_cpus::get()),
         Err(std::env::VarError::NotUnicode(e)) => {
             panic!("{ENV_WORKER_THREADS:?} must be valid unicode, error: {e:?}")
