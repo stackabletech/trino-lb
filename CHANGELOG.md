@@ -7,7 +7,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - The Stackable scaler now ensures that a `TrinoCluster` has changed to `ready` more than 5 seconds
-  ago before marking it as `ready` ([#XX]).
+  ago before marking it as `ready` ([#68]).
+
+[#68]: https://github.com/stackabletech/trino-lb/pull/68
 
 ## [0.4.1] - 2025-03-03
 
