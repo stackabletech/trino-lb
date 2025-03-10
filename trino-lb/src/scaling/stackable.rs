@@ -339,8 +339,8 @@ impl ScalerTrait for StackableScaler {
             return Ok(false);
         }
 
-        // Careful investigation has show that trino-lb can quickly react to TrinoClusters coming
-        // available. When trying to immediately hand queries to Trino we got error such as
+        // Careful investigation has shown that trino-lb can quickly react to TrinoClusters coming
+        // available. When trying to immediately send queries to Trino we encountered errors such as:
         //
         // WARN trino_lb::http_server::v1::statement: Error while processing request
         // error=SendQueryToTrino { source: ContactTrinoPostQuery { source: reqwest::Error { kind: Request,
@@ -348,10 +348,10 @@ impl ScalerTrait for StackableScaler {
         // source: hyper_util::client::legacy::Error(Connect, ConnectError("dns error", Custom { kind: Uncategorized,
         // error: "failed to lookup address information: Name or service not known" })) } } }
         //
-        // This kind of makes sense, as the coordinator is ready but it might take some ms/s for the
+        // This is because the coordinator is ready but it might take some additional time for the
         // DNS record of the Service to propagate.
-        // To prevent that we only consider TrinoClusters healthy, that did not get ready in the
-        // last X seconds.
+        // To prevent that we only consider TrinoClusters healthy if a minimum amount of seconds
+        // passed after it was marked as healthy.
 
         // It's valid for the lastTransitionTime to be not set, we assume the cluster is old in this
         // case
