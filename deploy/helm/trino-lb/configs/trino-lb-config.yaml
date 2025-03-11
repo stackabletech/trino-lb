@@ -15,9 +15,10 @@ trinoLb:
   refreshQueryCounterInterval: 30s # It is low for testing purpose and to get frequent running queries metrics
   tracing:
     enabled: true
-    # helm install jaeger jaegertracing/jaeger --set 'collector.service.otlp.grpc.name=otlp-grpc,collector.service.otlp.grpc.port=4317,collector.service.otlp.http.name=otlp-http,collector.service.otlp.http.port=4318'
+    # helm install jaeger jaegertracing/jaeger --set 'collector.service.otlp.grpc.name=otlp-grpc,collector.service.otlp.grpc.port=4317,collector.service.otlp.http.name=otlp-http,collector.service.otlp.http.port=4318,collector.cmdlineParams.collector\.grpc-server\.max-message-size=419430400'
     OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger-collector.default.svc.cluster.local:4317
     OTEL_EXPORTER_OTLP_PROTOCOL: Grpc
+    OTEL_EXPORTER_OTLP_COMPRESSION: Gzip # TODO: This might be renamed to gzip
     # In case endpoint and protocol are not set here, they will still be read from the env vars
     # OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_EXPORTER_OTLP_PROTOCOL
 

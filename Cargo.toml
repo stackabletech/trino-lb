@@ -43,7 +43,7 @@ number_prefix = "0.4"
 opentelemetry = "0.24"
 opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
 opentelemetry-http = "0.13"
-opentelemetry-otlp = { version = "0.17", features = ["serialize"] }
+opentelemetry-otlp = { version = "0.17", features = ["serialize", "gzip-tonic"] }
 opentelemetry-prometheus = "0.17"
 prometheus = "0.13"
 prusto = "0.5"

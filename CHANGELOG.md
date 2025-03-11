@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Support configuring compression for OTEL ([#70]).
+
+[#70]: https://github.com/stackabletech/trino-lb/pull/70
+
 ## [0.4.1] - 2025-03-03
 
 ### Fixed

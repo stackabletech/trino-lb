@@ -138,6 +138,9 @@ fn exporter(tracing_config: &TrinoLbTracingConfig) -> TonicExporterBuilder {
     if let Some(protocol) = tracing_config.otlp_protocol {
         exporter = exporter.with_protocol(protocol);
     }
+    if let Some(compression) = tracing_config.otlp_compression {
+        exporter = exporter.with_compression(compression);
+    }
 
     // In case endpoint and protocol are not set here, they will still be read from the env vars
     // OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_EXPORTER_OTLP_PROTOCOL

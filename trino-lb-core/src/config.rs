@@ -93,6 +93,12 @@ pub struct TrinoLbTracingConfig {
 
     #[serde(rename = "OTEL_EXPORTER_OTLP_PROTOCOL")]
     pub otlp_protocol: Option<opentelemetry_otlp::Protocol>,
+
+    /// TODO: Ideally [`opentelemetry_otlp::Compression`] would serialize and deserialize to
+    /// `gzip`. However, they currently de/ser to `Gzip`, which differs from `opentelemetry_otlp::Compression::from_str`
+    /// We should raise an upstream issue
+    #[serde(rename = "OTEL_EXPORTER_OTLP_COMPRESSION")]
+    pub otlp_compression: Option<opentelemetry_otlp::Compression>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
