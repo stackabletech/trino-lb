@@ -28,6 +28,7 @@ pub struct QueryCountFetcher {
 }
 
 impl QueryCountFetcher {
+    // Intentionally including the config here, this is only logged on startup
     #[instrument(skip(persistence, metrics))]
     pub fn new(
         persistence: Arc<PersistenceImplementation>,
@@ -154,7 +155,7 @@ impl QueryCountFetcher {
     /// - In case we know the cluster is not reachable (e.g. the cluster is turned off or currently
     ///   starting), store a query count of zero (0) to avoid dangling clusters with non-zero query
     ///   counts.
-    #[instrument(skip(self, cluster), fields(cluster_name = cluster.name))]
+    #[instrument(skip(self, cluster), fields(cluster.name))]
     async fn process_cluster(&self, cluster: &TrinoClusterConfig, state: ClusterState) {
         match state {
             ClusterState::Ready | ClusterState::Unhealthy | ClusterState::Draining { .. } => {
@@ -180,7 +181,7 @@ impl QueryCountFetcher {
         }
     }
 
-    #[instrument(skip(self, cluster), fields(cluster_name = cluster.name))]
+    #[instrument(skip(self, cluster), fields(cluster.name))]
     async fn fetch_and_store_query_count(&self, cluster: &TrinoClusterConfig) {
         let cluster_info =
             get_cluster_info(&cluster.endpoint, self.ignore_certs, &cluster.credentials).await;

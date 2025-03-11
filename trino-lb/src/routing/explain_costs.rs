@@ -27,6 +27,7 @@ pub struct ExplainCostsRouter {
 }
 
 impl ExplainCostsRouter {
+    // Intentionally including the config here, this is only logged on startup
     #[instrument(name = "ExplainCostsRouter::new")]
     pub fn new(
         config: &ExplainCostsRouterConfig,

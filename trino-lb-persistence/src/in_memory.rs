@@ -54,7 +54,7 @@ impl Default for InMemoryPersistence {
 }
 
 impl Persistence for InMemoryPersistence {
-    #[instrument(skip(self))]
+    #[instrument(skip(self, queued_query))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {
         let mut queued_queries = self.queued_queries.write().await;
         queued_queries.insert(queued_query.id.clone(), queued_query);
@@ -74,7 +74,7 @@ impl Persistence for InMemoryPersistence {
             .clone())
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self, queued_query))]
     async fn remove_queued_query(&self, queued_query: &QueuedQuery) -> Result<(), super::Error> {
         let mut queued_queries = self.queued_queries.write().await;
         queued_queries.remove(&queued_query.id);
@@ -82,7 +82,7 @@ impl Persistence for InMemoryPersistence {
         Ok(())
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self, query))]
     async fn store_query(&self, query: TrinoQuery) -> Result<(), super::Error> {
         let mut queries = self.queries.write().await;
         queries.insert(query.id.clone(), query);

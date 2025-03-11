@@ -139,7 +139,7 @@ impl TrinoClient {
     }
 }
 
-#[instrument]
+#[instrument(skip(config))]
 fn trino_client_builder_from_config(config: &TrinoClientConfig) -> Result<ClientBuilder, Error> {
     Ok(ClientBuilder::new(
         &config.username,
