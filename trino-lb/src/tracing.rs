@@ -99,7 +99,6 @@ fn otel_tracer(tracing_config: &TrinoLbTracingConfig) -> Result<trace::Tracer, E
             trace::Config::default()
                 .with_sampler(Sampler::AlwaysOn)
                 .with_id_generator(RandomIdGenerator::default())
-                .with_max_events_per_span(64)
                 .with_max_attributes_per_span(16)
                 .with_max_events_per_span(16)
                 .with_resource(Resource::new(vec![KeyValue::new(

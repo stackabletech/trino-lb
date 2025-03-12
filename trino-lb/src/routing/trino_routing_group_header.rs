@@ -11,6 +11,7 @@ pub struct TrinoRoutingGroupHeaderRouter {
 }
 
 impl TrinoRoutingGroupHeaderRouter {
+    // Intentionally including the config here, this is only logged on startup
     #[instrument(name = "TrinoRoutingGroupHeaderRouter::new")]
     pub fn new(
         config: &TrinoRoutingGroupHeaderRouterConfig,

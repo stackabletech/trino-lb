@@ -9,7 +9,7 @@ use futures::future::try_join_all;
 use http::{HeaderMap, StatusCode};
 use reqwest::Client;
 use snafu::{OptionExt, ResultExt, Snafu};
-use tracing::{debug, instrument};
+use tracing::{debug, info_span, instrument, Instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 use trino_lb_core::{
     config::Config, sanitization::Sanitize, trino_api::TrinoQueryApiResponse,
@@ -36,6 +36,12 @@ pub enum Error {
 
     #[snafu(display("Failed to decode Trino API response"))]
     DecodeTrinoResponse { source: reqwest::Error },
+
+    #[snafu(display("Failed to get the bytes of the Trino API response"))]
+    GetTrinoResponseBytes { source: reqwest::Error },
+
+    #[snafu(display("Failed to parse Trino API response as JSON"))]
+    ParseTrinoResponse { source: serde_json::Error },
 
     #[snafu(display("Configuration error: A specific Trino cluster can only be part of a single clusterGroup. Please make sure the Trino cluster {cluster_name:?} only is part of a single clusterGroup."))]
     ConfigErrorTrinoClusterInMultipleClusterGroups { cluster_name: String },
@@ -111,6 +117,7 @@ impl IntoResponse for SendToTrinoResponse {
 }
 
 impl ClusterGroupManager {
+    // Intentionally including the config here, this is only logged on startup
     #[instrument(skip(persistence))]
     pub fn new(
         persistence: Arc<PersistenceImplementation>,
@@ -152,7 +159,10 @@ impl ClusterGroupManager {
         })
     }
 
-    #[instrument(skip(self))]
+    #[instrument(
+        skip(self, cluster),
+        fields(cluster.name, headers = ?headers.sanitize())
+    )]
     pub async fn send_query_to_cluster(
         &self,
         query: String,
@@ -188,7 +198,7 @@ impl ClusterGroupManager {
             let body = response
                 .bytes()
                 .await
-                .context(DecodeTrinoResponseSnafu)?
+                .context(GetTrinoResponseBytesSnafu)?
                 .into();
             return Ok(SendToTrinoResponse::Unauthorized { headers, body });
         }
@@ -217,12 +227,19 @@ impl ClusterGroupManager {
             .get(next_uri)
             .headers(headers)
             .send()
+            .instrument(info_span!("Send HTTP get to Trino"))
             .await
             .context(ContactTrinoPostQuerySnafu)?;
         let headers = response.headers();
-
         let headers = filter_to_trino_headers(headers);
-        let trino_query_api_response = response.json().await.context(DecodeTrinoResponseSnafu)?;
+
+        let bytes = response
+            .bytes()
+            .instrument(info_span!("Get response bytes"))
+            .await
+            .context(GetTrinoResponseBytesSnafu)?;
+        let trino_query_api_response = info_span!("Parse JSON response", bytes = bytes.len())
+            .in_scope(|| serde_json::from_slice(&bytes).context(ParseTrinoResponseSnafu))?;
 
         Ok((trino_query_api_response, headers))
     }

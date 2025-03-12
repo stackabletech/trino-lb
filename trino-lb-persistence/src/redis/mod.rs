@@ -174,7 +174,7 @@ impl<R> Persistence for RedisPersistence<R>
 where
     R: AsyncCommands + Clone,
 {
-    #[instrument(skip(self))]
+    #[instrument(skip(self, queued_query))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {
         let key = queued_query_key(&queued_query.id);
         let value = bincode::serialize(&queued_query).context(SerializeToBinarySnafu)?;
@@ -210,7 +210,7 @@ where
         Ok(bincode::deserialize(&value).context(DeserializeFromBinarySnafu)?)
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self, queued_query))]
     async fn remove_queued_query(&self, queued_query: &QueuedQuery) -> Result<(), super::Error> {
         let key = queued_query_key(&queued_query.id);
         let mut connection = self.connection();
@@ -225,7 +225,7 @@ where
         Ok(())
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self, query))]
     async fn store_query(&self, query: TrinoQuery) -> Result<(), super::Error> {
         let key = query_key(&query.id);
         let value = bincode::serialize(&query).context(SerializeToBinarySnafu)?;

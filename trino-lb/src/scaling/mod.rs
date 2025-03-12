@@ -134,6 +134,7 @@ pub struct Scaler {
 }
 
 impl Scaler {
+    // Intentionally including the config here, this is only logged on startup
     #[instrument(skip(persistence))]
     pub async fn new(
         config: &Config,
@@ -553,7 +554,7 @@ impl Scaler {
     #[instrument(
         name = "Scaler::apply_cluster_target_state",
         skip(self, cluster),
-        fields(%cluster.name)
+        fields(cluster.name)
     )]
     async fn apply_cluster_target_state(
         self: Arc<Self>,
@@ -606,7 +607,7 @@ impl Scaler {
         Ok(())
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self, scaling_config))]
     fn get_current_min_cluster_count(
         &self,
         scaling_config: &TrinoClusterGroupAutoscaling,

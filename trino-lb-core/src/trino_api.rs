@@ -82,6 +82,7 @@ pub struct Stat {
 
 impl TrinoQueryApiResponse {
     #[instrument(
+        skip(query),
         fields(trino_lb_addr = %trino_lb_addr),
     )]
     pub fn new_from_queued_query(
@@ -151,6 +152,7 @@ impl TrinoQueryApiResponse {
     }
 
     #[instrument(
+        skip(self),
         fields(trino_lb_addr = %trino_lb_addr),
     )]
     pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: &Url) -> Result<(), Error> {

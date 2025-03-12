@@ -138,6 +138,7 @@ struct StackableTrinoCluster {
 }
 
 impl StackableScaler {
+    // Intentionally including the config here, this is only logged on startup
     #[instrument(name = "StackableScaler::new")]
     pub async fn new(
         config: &StackableScalerConfig,

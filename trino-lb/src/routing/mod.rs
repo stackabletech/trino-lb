@@ -42,6 +42,7 @@ pub struct Router {
 }
 
 impl Router {
+    // Intentionally including the config here, this is only logged on startup
     #[instrument]
     pub fn new(config: &Config) -> Result<Self, Error> {
         let mut routers = Vec::with_capacity(config.routers.len());

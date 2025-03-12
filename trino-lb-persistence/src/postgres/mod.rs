@@ -135,7 +135,7 @@ struct HeaderMapWrapper {
 }
 
 impl Persistence for PostgresPersistence {
-    #[instrument(skip(self))]
+    #[instrument(skip(self, queued_query))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {
         query!(
             r#"INSERT INTO queued_queries (id, query, headers, creation_time, last_accessed, cluster_group)
@@ -185,7 +185,7 @@ impl Persistence for PostgresPersistence {
         Ok(queued_query)
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self, queued_query))]
     async fn remove_queued_query(&self, queued_query: &QueuedQuery) -> Result<(), super::Error> {
         query!(
             r#"DELETE FROM queued_queries
@@ -199,7 +199,7 @@ impl Persistence for PostgresPersistence {
         Ok(())
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self, query))]
     async fn store_query(&self, query: TrinoQuery) -> Result<(), super::Error> {
         query!(
             r#"INSERT INTO queries (id, trino_cluster, trino_endpoint, creation_time, delivered_time)
