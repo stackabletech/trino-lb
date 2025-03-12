@@ -12,10 +12,11 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Improve tracing for running queries on Trino, adding spans for the request to Trino and parsing ([#71]).
-- Improve performance by using [`serde_json::value::RawValue`](https://docs.rs/serde_json/latest/serde_json/value/struct.RawValue.html) for the `data` and `columns` attributes to avoid unended deserialization and serialization of them ([#XX]).
+- Improve performance by using [`serde_json::value::RawValue`](https://docs.rs/serde_json/latest/serde_json/value/struct.RawValue.html) for the `data` and `columns` attributes to avoid unneeded deserialization and serialization of them ([#73]).
 
 [#70]: https://github.com/stackabletech/trino-lb/pull/70
 [#71]: https://github.com/stackabletech/trino-lb/pull/71
+[#73]: https://github.com/stackabletech/trino-lb/pull/73
 
 ## [0.4.1] - 2025-03-03
 
