@@ -82,6 +82,7 @@ sqlx = { version = "0.8.2", features = [
 strum = { version = "0.27", features = ["derive"] }
 tokio = "1.39"
 tower = "0.5"
+tower-http = { version = "0.6", features = ["tracing"] }
 tracing = "0.1"
 tracing-opentelemetry = "0.25"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
