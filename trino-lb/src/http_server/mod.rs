@@ -15,7 +15,7 @@ use axum_server::{tls_rustls::RustlsConfig, Handle};
 use futures::FutureExt;
 use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::time::sleep;
-use tower_http::trace::TraceLayer;
+use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 use tracing::info;
 use trino_lb_persistence::PersistenceImplementation;
 
@@ -124,6 +124,7 @@ pub async fn start_http_server(
         .route("/ui/index.html", get(ui::index::get_ui_index))
         .route("/ui/query.html", get(ui::query::get_ui_query))
         .layer(TraceLayer::new_for_http())
+        .layer(CompressionLayer::new())
         .with_state(app_state);
 
     if tls_config.enabled {

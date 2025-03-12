@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 
 - Support configuring compression for OTEL ([#70]).
 - Improve tracing details by adding a `tower_http::trace::TraceLayer` that creates spans for every HTTP request ([#71]).
+- Support compressing HTTP contents, previously the content was always uncompressed.
+  This consumes more CPU, but also reduces the data amount sent to Trino clients.
+  E.g. `trino-cli` by default asks for `gzip` compressed content ([#74]).
 
 ### Changed
 
@@ -17,6 +20,7 @@ All notable changes to this project will be documented in this file.
 [#70]: https://github.com/stackabletech/trino-lb/pull/70
 [#71]: https://github.com/stackabletech/trino-lb/pull/71
 [#73]: https://github.com/stackabletech/trino-lb/pull/73
+[#74]: https://github.com/stackabletech/trino-lb/pull/74
 
 ## [0.4.1] - 2025-03-03
 
