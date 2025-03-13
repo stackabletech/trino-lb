@@ -8,7 +8,7 @@ RUN apt-get update && \
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=SC1091
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.84.1 && . "${HOME}/.cargo/env"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.85.0 && . "${HOME}/.cargo/env"
 
 WORKDIR /trino-lb
 COPY Cargo.toml Cargo.toml

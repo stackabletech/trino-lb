@@ -25,6 +25,8 @@ use crate::Persistence;
 
 const LAST_QUERY_COUNT_FETCHER_UPDATE_KEY: &str = "lastQueryCountFetcherUpdate";
 
+const BINCODE_CONFIG: bincode::config::Configuration = bincode::config::standard();
+
 #[derive(Snafu, Debug)]
 pub enum Error {
     #[snafu(display("Failed to extract redis host from endpoint {endpoint}"))]
@@ -34,10 +36,10 @@ pub enum Error {
     CreateClient { source: RedisError },
 
     #[snafu(display("Failed to serialize to binary representation"))]
-    SerializeToBinary { source: bincode::Error },
+    SerializeToBinary { source: bincode::error::EncodeError },
 
     #[snafu(display("Failed to deserialize from binary representation"))]
-    DeserializeFromBinary { source: bincode::Error },
+    DeserializeFromBinary { source: bincode::error::DecodeError },
 
     #[snafu(display("Failed to write to redis"))]
     WriteToRedis { source: RedisError },
@@ -177,7 +179,9 @@ where
     #[instrument(skip(self, queued_query))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {
         let key = queued_query_key(&queued_query.id);
-        let value = bincode::serialize(&queued_query).context(SerializeToBinarySnafu)?;
+
+        let value = bincode::serde::encode_to_vec(&queued_query, BINCODE_CONFIG)
+            .context(SerializeToBinarySnafu)?;
 
         let mut connection_1 = self.connection();
         let mut connection_2 = self.connection();
@@ -207,7 +211,9 @@ where
             .await
             .context(ReadFromRedisSnafu)?;
 
-        Ok(bincode::deserialize(&value).context(DeserializeFromBinarySnafu)?)
+        Ok(bincode::serde::decode_from_slice(&value, BINCODE_CONFIG)
+            .context(DeserializeFromBinarySnafu)?
+            .0)
     }
 
     #[instrument(skip(self, queued_query))]
@@ -228,7 +234,8 @@ where
     #[instrument(skip(self, query))]
     async fn store_query(&self, query: TrinoQuery) -> Result<(), super::Error> {
         let key = query_key(&query.id);
-        let value = bincode::serialize(&query).context(SerializeToBinarySnafu)?;
+        let value = bincode::serde::encode_to_vec(&query, BINCODE_CONFIG)
+            .context(SerializeToBinarySnafu)?;
 
         let _: () = self
             .connection()
@@ -248,7 +255,9 @@ where
             .await
             .context(ReadFromRedisSnafu)?;
 
-        Ok(bincode::deserialize(&value).context(DeserializeFromBinarySnafu)?)
+        Ok(bincode::serde::decode_from_slice(&value, BINCODE_CONFIG)
+            .context(DeserializeFromBinarySnafu)?
+            .0)
     }
 
     #[instrument(skip(self))]
@@ -456,7 +465,8 @@ where
         state: ClusterState,
     ) -> Result<(), super::Error> {
         let key = cluster_state_key(cluster_name);
-        let value = bincode::serialize(&state).context(SerializeToBinarySnafu)?;
+        let value = bincode::serde::encode_to_vec(&state, BINCODE_CONFIG)
+            .context(SerializeToBinarySnafu)?;
 
         let _: () = self
             .connection()
@@ -482,7 +492,9 @@ where
 
         Ok(match cluster_state {
             Some(cluster_state) => {
-                bincode::deserialize(&cluster_state).context(DeserializeFromBinarySnafu)?
+                bincode::serde::decode_from_slice(&cluster_state, BINCODE_CONFIG)
+                    .context(DeserializeFromBinarySnafu)?
+                    .0
             }
             None => ClusterState::Unknown,
         })
