@@ -1,2 +1,4 @@
 [toolchain]
+# Please note that as of 2025-03-13 "make run-dev" still uses Rust 1.84.1, however everything works fine
+# Because of this we did not switch to Rust 2024 yet
 channel = "1.85.0"
