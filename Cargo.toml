@@ -43,7 +43,7 @@ number_prefix = "0.4"
 opentelemetry = "0.24"
 opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
 opentelemetry-http = "0.13"
-opentelemetry-otlp = { version = "0.17", features = ["serialize"] }
+opentelemetry-otlp = { version = "0.17", features = ["serialize", "gzip-tonic"] }
 opentelemetry-prometheus = "0.17"
 prometheus = "0.13"
 prusto = "0.5"
@@ -82,6 +82,7 @@ sqlx = { version = "0.8.2", features = [
 strum = { version = "0.27", features = ["derive"] }
 tokio = "1.39"
 tower = "0.5"
+tower-http = { version = "0.6", features = ["compression-full", "tracing"] }
 tracing = "0.1"
 tracing-opentelemetry = "0.25"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

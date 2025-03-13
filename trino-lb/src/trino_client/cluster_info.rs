@@ -52,7 +52,7 @@ pub struct ClusterInfo {
     pub total_cpu_time_secs: u64,
 }
 
-#[instrument]
+#[instrument(skip(credentials))]
 pub async fn get_cluster_info(
     endpoint: &Url,
     ignore_certs: bool,

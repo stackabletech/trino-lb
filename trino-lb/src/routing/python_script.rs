@@ -41,6 +41,7 @@ pub struct PythonScriptRouter {
 }
 
 impl PythonScriptRouter {
+    // Intentionally including the config here, this is only logged on startup
     #[instrument(name = "PythonScriptRouter::new")]
     pub fn new(
         config: &PythonScriptRouterConfig,

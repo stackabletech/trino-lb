@@ -25,6 +25,7 @@ pub struct ClientTagsRouter {
 }
 
 impl ClientTagsRouter {
+    // Intentionally including the config here, this is only logged on startup
     #[instrument(name = "ClientTagsRouter::new")]
     pub fn new(
         config: &ClientTagsRouterConfig,

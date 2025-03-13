@@ -5,6 +5,7 @@ use std::{
 
 use prusto::{QueryError, Warning};
 use serde::{Deserialize, Serialize};
+use serde_json::value::RawValue;
 use snafu::{ResultExt, Snafu};
 use tracing::instrument;
 use url::Url;
@@ -42,8 +43,8 @@ pub struct TrinoQueryApiResponse {
     pub info_uri: String,
     pub partial_cancel_uri: Option<String>,
 
-    pub columns: Option<serde_json::Value>,
-    pub data: Option<serde_json::Value>,
+    pub columns: Option<Box<RawValue>>,
+    pub data: Option<Box<RawValue>>,
 
     pub error: Option<QueryError>,
     pub warnings: Vec<Warning>,
@@ -82,6 +83,7 @@ pub struct Stat {
 
 impl TrinoQueryApiResponse {
     #[instrument(
+        skip(query),
         fields(trino_lb_addr = %trino_lb_addr),
     )]
     pub fn new_from_queued_query(
@@ -151,6 +153,7 @@ impl TrinoQueryApiResponse {
     }
 
     #[instrument(
+        skip(self),
         fields(trino_lb_addr = %trino_lb_addr),
     )]
     pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: &Url) -> Result<(), Error> {

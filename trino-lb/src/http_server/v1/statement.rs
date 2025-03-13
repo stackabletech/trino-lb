@@ -235,7 +235,7 @@ pub async fn get_trino_executing_statement(
     handle_query_running_on_trino(&state, headers, query_id, uri.path()).await
 }
 
-#[instrument(skip(state))]
+#[instrument(skip(state, queued_query))]
 async fn queue_or_hand_over_query(
     state: &Arc<AppState>,
     queued_query: QueuedQuery,

@@ -48,6 +48,7 @@ snafu.workspace = true
 strum.workspace = true
 tokio.workspace = true
 tower.workspace = true
+tower-http.workspace = true
 tracing-opentelemetry.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true

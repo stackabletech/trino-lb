@@ -99,7 +99,6 @@ fn otel_tracer(tracing_config: &TrinoLbTracingConfig) -> Result<trace::Tracer, E
             trace::Config::default()
                 .with_sampler(Sampler::AlwaysOn)
                 .with_id_generator(RandomIdGenerator::default())
-                .with_max_events_per_span(64)
                 .with_max_attributes_per_span(16)
                 .with_max_events_per_span(16)
                 .with_resource(Resource::new(vec![KeyValue::new(
@@ -137,6 +136,9 @@ fn exporter(tracing_config: &TrinoLbTracingConfig) -> TonicExporterBuilder {
     }
     if let Some(protocol) = tracing_config.otlp_protocol {
         exporter = exporter.with_protocol(protocol);
+    }
+    if let Some(compression) = tracing_config.otlp_compression {
+        exporter = exporter.with_compression(compression);
     }
 
     // In case endpoint and protocol are not set here, they will still be read from the env vars
