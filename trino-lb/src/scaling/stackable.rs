@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
 use kube::{
+    Api, Client, Discovery,
     api::{Patch, PatchParams},
     core::{DynamicObject, GroupVersionKind},
-    Api, Client, Discovery,
 };
 use serde_json::Value;
 use snafu::{OptionExt, ResultExt, Snafu};
-use tracing::{debug_span, instrument, Instrument};
+use tracing::{Instrument, debug_span, instrument};
 use trino_lb_core::{
-    config::{StackableScalerConfig, TrinoClusterGroupConfig},
     TrinoClusterName,
+    config::{StackableScalerConfig, TrinoClusterGroupConfig},
 };
 
 use super::ScalerTrait;
@@ -102,7 +102,9 @@ pub enum Error {
         namespace: String,
     },
 
-    #[snafu(display("The Trino cluster {cluster:?} has no information on how to be scaled, as it is missing from the Stackable clusterAutoscaler list"))]
+    #[snafu(display(
+        "The Trino cluster {cluster:?} has no information on how to be scaled, as it is missing from the Stackable clusterAutoscaler list"
+    ))]
     ClusterWithNoScalingInformation { cluster: TrinoClusterName },
 
     #[snafu(display("The Trino cluster {cluster:?} in namespace {namespace:?} was not found"))]

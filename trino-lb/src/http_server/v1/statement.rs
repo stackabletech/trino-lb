@@ -7,21 +7,21 @@ use std::{
 };
 
 use axum::{
+    Json,
     extract::{Path, State},
     response::{IntoResponse, Response},
-    Json,
 };
 use futures::TryFutureExt;
 use http::{HeaderMap, StatusCode, Uri};
 use opentelemetry::KeyValue;
 use snafu::{ResultExt, Snafu};
 use tokio::time::Instant;
-use tracing::{debug, info, info_span, instrument, warn, Instrument};
+use tracing::{Instrument, debug, info, info_span, instrument, warn};
 use trino_lb_core::{
+    TrinoLbQueryId, TrinoQueryId,
     sanitization::Sanitize,
     trino_api::TrinoQueryApiResponse,
     trino_query::{QueuedQuery, TrinoQuery},
-    TrinoLbQueryId, TrinoQueryId,
 };
 use trino_lb_persistence::Persistence;
 use url::Url;
@@ -366,10 +366,10 @@ async fn queue_or_hand_over_query(
             return Ok(send_to_trino_response);
         } else {
             debug!(
-                    cluster = cluster.name,
-                    "The cluster had enough space when asked for the best cluster, but inc_cluster_query_count returned None, \
+                cluster = cluster.name,
+                "The cluster had enough space when asked for the best cluster, but inc_cluster_query_count returned None, \
                     probably because the cluster has reached its maximum query count in the meantime"
-                );
+            );
         }
     }
 

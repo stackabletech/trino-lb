@@ -9,9 +9,9 @@ use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::sync::RwLock;
 use tracing::{error, info, instrument};
 use trino_lb_core::{
+    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
     trino_cluster::ClusterState,
     trino_query::{QueuedQuery, TrinoQuery},
-    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
 };
 
 use crate::Persistence;
@@ -35,7 +35,9 @@ pub enum Error {
     #[snafu(display("Failed to determined elapsed time since last queryCountFetcher update"))]
     DetermineElapsedTimeSinceLastUpdate { source: SystemTimeError },
 
-    #[snafu(display("Failed to store determined elapsed time since last queryCountFetcher update as millis in a u64"))]
+    #[snafu(display(
+        "Failed to store determined elapsed time since last queryCountFetcher update as millis in a u64"
+    ))]
     ConvertElapsedTimeSinceLastUpdateToMillis { source: TryFromIntError },
 }
 
@@ -115,37 +117,40 @@ impl Persistence for InMemoryPersistence {
     ) -> Result<bool, super::Error> {
         let current_counts = self.cluster_query_counts.read().await;
 
-        if let Some(count) = current_counts.get(cluster_name) {
-            let mut current = count.load(Ordering::SeqCst);
-            loop {
-                if current + 1 > max_allowed_count {
-                    return Ok(false);
-                }
-
-                match count.compare_exchange_weak(
-                    current,
-                    current + 1,
-                    Ordering::SeqCst,
-                    // [`Ordering::Relaxed`] should be sufficient here, but better safe than sorry
-                    Ordering::SeqCst,
-                ) {
-                    Ok(_) => {
-                        return Ok(true);
+        match current_counts.get(cluster_name) {
+            Some(count) => {
+                let mut current = count.load(Ordering::SeqCst);
+                loop {
+                    if current + 1 > max_allowed_count {
+                        return Ok(false);
                     }
-                    Err(x) => current = x,
+
+                    match count.compare_exchange_weak(
+                        current,
+                        current + 1,
+                        Ordering::SeqCst,
+                        // [`Ordering::Relaxed`] should be sufficient here, but better safe than sorry
+                        Ordering::SeqCst,
+                    ) {
+                        Ok(_) => {
+                            return Ok(true);
+                        }
+                        Err(x) => current = x,
+                    }
                 }
             }
-        } else {
-            // We need to drop `current_counts` here to release the read lock it holds :)
-            // Otherwise the [`RwLock::write`] call will block forever.
-            drop(current_counts);
+            _ => {
+                // We need to drop `current_counts` here to release the read lock it holds :)
+                // Otherwise the [`RwLock::write`] call will block forever.
+                drop(current_counts);
 
-            self.cluster_query_counts
-                .write()
-                .await
-                .insert(cluster_name.clone(), AtomicU64::new(1));
+                self.cluster_query_counts
+                    .write()
+                    .await
+                    .insert(cluster_name.clone(), AtomicU64::new(1));
 
-            Ok(true)
+                Ok(true)
+            }
         }
     }
 
@@ -154,16 +159,21 @@ impl Persistence for InMemoryPersistence {
         &self,
         cluster_name: &TrinoClusterName,
     ) -> Result<(), super::Error> {
-        if let Some(count) = self.cluster_query_counts.read().await.get(cluster_name) {
-            if count.fetch_sub(1, Ordering::SeqCst) == 0 {
-                error!(
-                    cluster_name,
-                    "Persistence was asked to decrement the number of queries for the given cluster, but it would result in a negative amount of queries. Setting it to 0 instead."
-                );
-                count.store(0, Ordering::SeqCst);
+        match self.cluster_query_counts.read().await.get(cluster_name) {
+            Some(count) => {
+                if count.fetch_sub(1, Ordering::SeqCst) == 0 {
+                    error!(
+                        cluster_name,
+                        "Persistence was asked to decrement the number of queries for the given cluster, but it would result in a negative amount of queries. Setting it to 0 instead."
+                    );
+                    count.store(0, Ordering::SeqCst);
+                }
             }
-        } else {
-            error!("Persistence was asked to decrement the number of queries, but no query count for this cluster was not known. This should not happen.")
+            _ => {
+                error!(
+                    "Persistence was asked to decrement the number of queries, but no query count for this cluster was not known. This should not happen."
+                )
+            }
         }
 
         Ok(())
@@ -176,15 +186,18 @@ impl Persistence for InMemoryPersistence {
         count: u64,
     ) -> Result<(), super::Error> {
         let current_counts = self.cluster_query_counts.read().await;
-        if let Some(current_count) = current_counts.get(cluster_name) {
-            current_count.store(count, Ordering::SeqCst);
-        } else {
-            drop(current_counts);
+        match current_counts.get(cluster_name) {
+            Some(current_count) => {
+                current_count.store(count, Ordering::SeqCst);
+            }
+            _ => {
+                drop(current_counts);
 
-            self.cluster_query_counts
-                .write()
-                .await
-                .insert(cluster_name.clone(), AtomicU64::from(count));
+                self.cluster_query_counts
+                    .write()
+                    .await
+                    .insert(cluster_name.clone(), AtomicU64::from(count));
+            }
         }
 
         Ok(())

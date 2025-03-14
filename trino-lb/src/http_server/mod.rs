@@ -7,11 +7,11 @@ use std::{
 };
 
 use axum::{
+    Router,
     response::Redirect,
     routing::{delete, get, post},
-    Router,
 };
-use axum_server::{tls_rustls::RustlsConfig, Handle};
+use axum_server::{Handle, tls_rustls::RustlsConfig};
 use futures::FutureExt;
 use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::time::sleep;

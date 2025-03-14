@@ -6,8 +6,8 @@ use std::{
 
 use futures::future::try_join_all;
 use opentelemetry::{
-    metrics::{Counter, Histogram, MetricsError},
     KeyValue,
+    metrics::{Counter, Histogram, MetricsError},
 };
 use prometheus::Registry;
 use snafu::{ResultExt, Snafu};
@@ -17,9 +17,9 @@ use tokio::{
 };
 use tracing::error;
 use trino_lb_core::{
+    TrinoClusterName,
     config::{Config, TrinoClusterGroupConfig},
     trino_cluster::ClusterState,
-    TrinoClusterName,
 };
 use trino_lb_persistence::{Persistence, PersistenceImplementation};
 

@@ -119,10 +119,10 @@ impl MinClusters {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use chrono::TimeZone;
     use rstest::rstest;
+
+    use super::*;
 
     #[rstest]
     #[case("00:00:00 - 23:59:59", Utc.with_ymd_and_hms(2023, 12, 8, 0, 0, 0).unwrap(), true)]
