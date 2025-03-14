@@ -10,7 +10,7 @@ use serde::Deserialize;
 use snafu::{ResultExt, Snafu};
 use url::Url;
 
-use crate::{trino_query_plan::QueryPlanEstimation, TrinoClusterName};
+use crate::{TrinoClusterName, trino_query_plan::QueryPlanEstimation};
 
 #[derive(Snafu, Debug)]
 pub enum Error {

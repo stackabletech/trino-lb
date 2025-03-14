@@ -4,12 +4,12 @@ use std::{
     sync::Arc,
 };
 
-use axum::{body::Body, response::IntoResponse, Json};
+use axum::{Json, body::Body, response::IntoResponse};
 use futures::future::try_join_all;
 use http::{HeaderMap, StatusCode};
 use reqwest::Client;
 use snafu::{OptionExt, ResultExt, Snafu};
-use tracing::{debug, info_span, instrument, Instrument};
+use tracing::{Instrument, debug, info_span, instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 use trino_lb_core::{
     config::Config, sanitization::Sanitize, trino_api::TrinoQueryApiResponse,
@@ -43,7 +43,9 @@ pub enum Error {
     #[snafu(display("Failed to parse Trino API response as JSON"))]
     ParseTrinoResponse { source: serde_json::Error },
 
-    #[snafu(display("Configuration error: A specific Trino cluster can only be part of a single clusterGroup. Please make sure the Trino cluster {cluster_name:?} only is part of a single clusterGroup."))]
+    #[snafu(display(
+        "Configuration error: A specific Trino cluster can only be part of a single clusterGroup. Please make sure the Trino cluster {cluster_name:?} only is part of a single clusterGroup."
+    ))]
     ConfigErrorTrinoClusterInMultipleClusterGroups { cluster_name: String },
 
     #[snafu(display(

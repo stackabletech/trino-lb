@@ -4,11 +4,11 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use futures::{future::join_all, TryFutureExt};
+use futures::{TryFutureExt, future::join_all};
 use snafu::Snafu;
 use tokio::time;
-use tracing::{error, info, info_span, instrument, Instrument};
-use trino_lb_core::{config::TrinoClusterConfig, trino_cluster::ClusterState, TrinoClusterName};
+use tracing::{Instrument, error, info, info_span, instrument};
+use trino_lb_core::{TrinoClusterName, config::TrinoClusterConfig, trino_cluster::ClusterState};
 use trino_lb_persistence::{Persistence, PersistenceImplementation};
 
 use crate::{config::TrinoClusterGroupConfig, metrics::Metrics, trino_client::get_cluster_info};

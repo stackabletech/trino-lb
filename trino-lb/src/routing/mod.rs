@@ -26,13 +26,17 @@ pub enum Error {
     #[snafu(display("Failed to create client tags router"))]
     CreateClientTagsRouter { source: client_tags::Error },
 
-    #[snafu(display("Configuration error: The router {router:?} is configured to route to trinoClusterGroup {trino_cluster_group:?} which does not exist"))]
+    #[snafu(display(
+        "Configuration error: The router {router:?} is configured to route to trinoClusterGroup {trino_cluster_group:?} which does not exist"
+    ))]
     ConfigErrorClusterGroupDoesNotExist {
         router: String,
         trino_cluster_group: String,
     },
 
-    #[snafu(display("Configuration error: The routingFallback is configured to route to trinoClusterGroup {routing_fallback:?} which does not exist"))]
+    #[snafu(display(
+        "Configuration error: The routingFallback is configured to route to trinoClusterGroup {routing_fallback:?} which does not exist"
+    ))]
     ConfigErrorRoutingFallbackDoesNotExist { routing_fallback: String },
 }
 

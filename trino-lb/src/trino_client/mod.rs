@@ -1,5 +1,5 @@
 use http::HeaderMap;
-use prusto::{auth::Auth, Client, ClientBuilder, DataSet};
+use prusto::{Client, ClientBuilder, DataSet, auth::Auth};
 use snafu::{OptionExt, ResultExt, Snafu};
 use tracing::instrument;
 use trino_lb_core::{
@@ -9,7 +9,7 @@ use trino_lb_core::{
 use url::Url;
 
 use crate::config::TrinoClientConfig;
-pub use cluster_info::{get_cluster_info, ClusterInfo};
+pub use cluster_info::{ClusterInfo, get_cluster_info};
 use workarounds::query_estimation_workarounds;
 
 mod cluster_info;

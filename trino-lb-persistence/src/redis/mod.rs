@@ -4,20 +4,20 @@ use std::{
     time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH},
 };
 
-use futures::{future::try_join_all, TryFutureExt};
+use futures::{TryFutureExt, future::try_join_all};
 use redis::{
+    AsyncCommands, Client, RedisError, Script,
     aio::{ConnectionManager, MultiplexedConnection},
     cluster::ClusterClientBuilder,
     cluster_async::ClusterConnection,
-    AsyncCommands, Client, RedisError, Script,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
-use tracing::{debug, debug_span, info, instrument, Instrument};
+use tracing::{Instrument, debug, debug_span, info, instrument};
 use trino_lb_core::{
+    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
     config::RedisConfig,
     trino_cluster::ClusterState,
     trino_query::{QueuedQuery, TrinoQuery},
-    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
 };
 use url::Url;
 
@@ -78,7 +78,9 @@ pub enum Error {
         cluster_name: TrinoClusterName,
     },
 
-    #[snafu(display("Failed to convert retrieved cluster query count {retrieved:?} to an u64 for cluster {cluster_name:?}"))]
+    #[snafu(display(
+        "Failed to convert retrieved cluster query count {retrieved:?} to an u64 for cluster {cluster_name:?}"
+    ))]
     ConvertClusterQueryCountToU64 {
         source: TryFromIntError,
         cluster_name: TrinoClusterName,
@@ -94,7 +96,9 @@ pub enum Error {
     #[snafu(display("Failed to determined elapsed time since last queryCountFetcher update"))]
     DetermineElapsedTimeSinceLastUpdate { source: SystemTimeError },
 
-    #[snafu(display("Failed to store determined elapsed time since last queryCountFetcher update as millis in a u64"))]
+    #[snafu(display(
+        "Failed to store determined elapsed time since last queryCountFetcher update as millis in a u64"
+    ))]
     ConvertElapsedTimeSinceLastUpdateToMillis { source: TryFromIntError },
 
     #[snafu(display("Failed to set cluster state"))]
@@ -292,8 +296,11 @@ where
             debug!(current, "Current counter is");
 
             if current + 1 > max_allowed_count {
-                debug!(current, max_allowed_count,
-                    "Rejected increasing the cluster query count, as the current count + 1 is bigger than the max allowed count");
+                debug!(
+                    current,
+                    max_allowed_count,
+                    "Rejected increasing the cluster query count, as the current count + 1 is bigger than the max allowed count"
+                );
                 return Ok(false);
             }
 

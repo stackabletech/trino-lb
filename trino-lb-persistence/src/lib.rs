@@ -3,9 +3,9 @@ use std::{fmt::Debug, time::SystemTime};
 use enum_dispatch::enum_dispatch;
 use snafu::Snafu;
 use trino_lb_core::{
+    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
     trino_cluster::ClusterState,
     trino_query::{QueuedQuery, TrinoQuery},
-    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
 };
 
 pub mod in_memory;

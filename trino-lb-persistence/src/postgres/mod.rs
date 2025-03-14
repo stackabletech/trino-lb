@@ -7,18 +7,18 @@ use http::HeaderMap;
 use serde::{Deserialize, Serialize};
 use snafu::{ResultExt, Snafu};
 use sqlx::{
+    Pool, Postgres,
     migrate::MigrateError,
     postgres::PgPoolOptions,
     query,
     types::chrono::{DateTime, Utc},
-    Pool, Postgres,
 };
 use tracing::{debug, info, instrument, warn};
 use trino_lb_core::{
+    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
     config::PostgresConfig,
     trino_cluster::ClusterState,
     trino_query::{QueuedQuery, TrinoQuery},
-    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
 };
 use url::Url;
 
@@ -111,7 +111,9 @@ pub struct PostgresPersistence {
 
 impl PostgresPersistence {
     pub async fn new(config: &PostgresConfig) -> Result<Self, Error> {
-        warn!("Please note that the Postgres persistence is experimental! We have seen a few queries too much being send to the Trino clusters, probably related to some transactional problems");
+        warn!(
+            "Please note that the Postgres persistence is experimental! We have seen a few queries too much being send to the Trino clusters, probably related to some transactional problems"
+        );
 
         let pool = PgPoolOptions::new()
             .max_connections(config.max_connections)
@@ -281,8 +283,11 @@ impl Persistence for PostgresPersistence {
         debug!(?current, "Current counter is");
 
         if current + 1 > max_allowed_count {
-            debug!(current, max_allowed_count,
-                "Rejected increasing the cluster query count, as the current count + 1 is bigger than the max allowed count");
+            debug!(
+                current,
+                max_allowed_count,
+                "Rejected increasing the cluster query count, as the current count + 1 is bigger than the max allowed count"
+            );
             transaction
                 .rollback()
                 .await

@@ -3,7 +3,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use tokio::time;
-use tracing::{debug, error, info, info_span, Instrument};
+use tracing::{Instrument, debug, error, info, info_span};
 #[cfg(doc)]
 use trino_lb_core::trino_query::QueuedQuery;
 use trino_lb_persistence::{Persistence, PersistenceImplementation};

@@ -4,9 +4,9 @@ use std::{
 };
 
 use pyo3::{
+    Py, PyAny, Python,
     ffi::c_str,
     types::{IntoPyDict, PyAnyMethods, PyModule},
-    Py, PyAny, Python,
 };
 use snafu::{ResultExt, Snafu};
 use tracing::{error, instrument, warn};

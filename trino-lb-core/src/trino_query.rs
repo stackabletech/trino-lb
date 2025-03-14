@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use url::Url;
 
-use crate::{sanitization::Sanitize, TrinoClusterName, TrinoLbQueryId, TrinoQueryId};
+use crate::{TrinoClusterName, TrinoLbQueryId, TrinoQueryId, sanitization::Sanitize};
 
 pub const QUEUED_QUERY_ID_PREFIX: &str = "trino_lb_";
 
