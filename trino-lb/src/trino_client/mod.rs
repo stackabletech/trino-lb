@@ -8,9 +8,8 @@ use trino_lb_core::{
 };
 use url::Url;
 
-use crate::config::TrinoClientConfig;
-pub use cluster_info::{ClusterInfo, get_cluster_info};
-use workarounds::query_estimation_workarounds;
+pub use crate::trino_client::cluster_info::{ClusterInfo, get_cluster_info};
+use crate::{config::TrinoClientConfig, trino_client::workarounds::query_estimation_workarounds};
 
 mod cluster_info;
 mod workarounds;

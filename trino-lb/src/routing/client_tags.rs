@@ -79,10 +79,10 @@ impl RouterImplementationTrait for ClientTagsRouter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use http::{HeaderMap, HeaderName};
     use rstest::rstest;
+
+    use super::*;
 
     #[rstest]
     #[case(None, None)]

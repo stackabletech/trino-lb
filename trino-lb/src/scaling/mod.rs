@@ -22,9 +22,8 @@ use trino_lb_core::{
 };
 use trino_lb_persistence::{Persistence, PersistenceImplementation};
 
-use crate::cluster_group_manager::TrinoCluster;
-
 use self::config::TrinoClusterGroupAutoscaling;
+use crate::cluster_group_manager::TrinoCluster;
 
 pub mod config;
 pub mod stackable;
