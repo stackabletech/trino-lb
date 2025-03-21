@@ -13,10 +13,10 @@ use scaling::Scaler;
 use snafu::{ResultExt, Snafu};
 use trino_lb_core::config::{self, Config, PersistenceConfig};
 use trino_lb_persistence::{
+    PersistenceImplementation,
     in_memory::InMemoryPersistence,
     postgres::{self, PostgresPersistence},
     redis::{self, RedisPersistence},
-    PersistenceImplementation,
 };
 
 use crate::{args::Args, http_server::start_http_server};

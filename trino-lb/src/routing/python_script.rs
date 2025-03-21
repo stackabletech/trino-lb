@@ -4,9 +4,9 @@ use std::{
 };
 
 use pyo3::{
+    Py, PyAny, Python,
     ffi::c_str,
     types::{IntoPyDict, PyAnyMethods, PyModule},
-    Py, PyAny, Python,
 };
 use snafu::{ResultExt, Snafu};
 use tracing::{error, instrument, warn};
@@ -130,11 +130,11 @@ fn header_map_to_hashmap(headers: &http::HeaderMap) -> HashMap<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use http::{HeaderMap, HeaderName};
     use indoc::indoc;
     use rstest::rstest;
+
+    use super::*;
 
     fn create_router(script: String) -> PythonScriptRouter {
         let valid_target_groups = HashSet::from([

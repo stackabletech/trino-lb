@@ -4,26 +4,28 @@ use std::{
     time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH},
 };
 
-use futures::{future::try_join_all, TryFutureExt};
+use futures::{TryFutureExt, future::try_join_all};
 use redis::{
+    AsyncCommands, Client, RedisError, Script,
     aio::{ConnectionManager, MultiplexedConnection},
     cluster::ClusterClientBuilder,
     cluster_async::ClusterConnection,
-    AsyncCommands, Client, RedisError, Script,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
-use tracing::{debug, debug_span, info, instrument, Instrument};
+use tracing::{Instrument, debug, debug_span, info, instrument};
 use trino_lb_core::{
+    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
     config::RedisConfig,
     trino_cluster::ClusterState,
     trino_query::{QueuedQuery, TrinoQuery},
-    TrinoClusterName, TrinoLbQueryId, TrinoQueryId,
 };
 use url::Url;
 
 use crate::Persistence;
 
 const LAST_QUERY_COUNT_FETCHER_UPDATE_KEY: &str = "lastQueryCountFetcherUpdate";
+
+const BINCODE_CONFIG: bincode::config::Configuration = bincode::config::standard();
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -34,10 +36,10 @@ pub enum Error {
     CreateClient { source: RedisError },
 
     #[snafu(display("Failed to serialize to binary representation"))]
-    SerializeToBinary { source: bincode::Error },
+    SerializeToBinary { source: bincode::error::EncodeError },
 
     #[snafu(display("Failed to deserialize from binary representation"))]
-    DeserializeFromBinary { source: bincode::Error },
+    DeserializeFromBinary { source: bincode::error::DecodeError },
 
     #[snafu(display("Failed to write to redis"))]
     WriteToRedis { source: RedisError },
@@ -76,7 +78,9 @@ pub enum Error {
         cluster_name: TrinoClusterName,
     },
 
-    #[snafu(display("Failed to convert retrieved cluster query count {retrieved:?} to an u64 for cluster {cluster_name:?}"))]
+    #[snafu(display(
+        "Failed to convert retrieved cluster query count {retrieved:?} to an u64 for cluster {cluster_name:?}"
+    ))]
     ConvertClusterQueryCountToU64 {
         source: TryFromIntError,
         cluster_name: TrinoClusterName,
@@ -92,7 +96,9 @@ pub enum Error {
     #[snafu(display("Failed to determined elapsed time since last queryCountFetcher update"))]
     DetermineElapsedTimeSinceLastUpdate { source: SystemTimeError },
 
-    #[snafu(display("Failed to store determined elapsed time since last queryCountFetcher update as millis in a u64"))]
+    #[snafu(display(
+        "Failed to store determined elapsed time since last queryCountFetcher update as millis in a u64"
+    ))]
     ConvertElapsedTimeSinceLastUpdateToMillis { source: TryFromIntError },
 
     #[snafu(display("Failed to set cluster state"))]
@@ -177,7 +183,9 @@ where
     #[instrument(skip(self, queued_query))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {
         let key = queued_query_key(&queued_query.id);
-        let value = bincode::serialize(&queued_query).context(SerializeToBinarySnafu)?;
+
+        let value = bincode::serde::encode_to_vec(&queued_query, BINCODE_CONFIG)
+            .context(SerializeToBinarySnafu)?;
 
         let mut connection_1 = self.connection();
         let mut connection_2 = self.connection();
@@ -207,7 +215,9 @@ where
             .await
             .context(ReadFromRedisSnafu)?;
 
-        Ok(bincode::deserialize(&value).context(DeserializeFromBinarySnafu)?)
+        Ok(bincode::serde::decode_from_slice(&value, BINCODE_CONFIG)
+            .context(DeserializeFromBinarySnafu)?
+            .0)
     }
 
     #[instrument(skip(self, queued_query))]
@@ -228,7 +238,8 @@ where
     #[instrument(skip(self, query))]
     async fn store_query(&self, query: TrinoQuery) -> Result<(), super::Error> {
         let key = query_key(&query.id);
-        let value = bincode::serialize(&query).context(SerializeToBinarySnafu)?;
+        let value = bincode::serde::encode_to_vec(&query, BINCODE_CONFIG)
+            .context(SerializeToBinarySnafu)?;
 
         let _: () = self
             .connection()
@@ -248,7 +259,9 @@ where
             .await
             .context(ReadFromRedisSnafu)?;
 
-        Ok(bincode::deserialize(&value).context(DeserializeFromBinarySnafu)?)
+        Ok(bincode::serde::decode_from_slice(&value, BINCODE_CONFIG)
+            .context(DeserializeFromBinarySnafu)?
+            .0)
     }
 
     #[instrument(skip(self))]
@@ -283,8 +296,11 @@ where
             debug!(current, "Current counter is");
 
             if current + 1 > max_allowed_count {
-                debug!(current, max_allowed_count,
-                    "Rejected increasing the cluster query count, as the current count + 1 is bigger than the max allowed count");
+                debug!(
+                    current,
+                    max_allowed_count,
+                    "Rejected increasing the cluster query count, as the current count + 1 is bigger than the max allowed count"
+                );
                 return Ok(false);
             }
 
@@ -456,7 +472,8 @@ where
         state: ClusterState,
     ) -> Result<(), super::Error> {
         let key = cluster_state_key(cluster_name);
-        let value = bincode::serialize(&state).context(SerializeToBinarySnafu)?;
+        let value = bincode::serde::encode_to_vec(&state, BINCODE_CONFIG)
+            .context(SerializeToBinarySnafu)?;
 
         let _: () = self
             .connection()
@@ -482,7 +499,9 @@ where
 
         Ok(match cluster_state {
             Some(cluster_state) => {
-                bincode::deserialize(&cluster_state).context(DeserializeFromBinarySnafu)?
+                bincode::serde::decode_from_slice(&cluster_state, BINCODE_CONFIG)
+                    .context(DeserializeFromBinarySnafu)?
+                    .0
             }
             None => ClusterState::Unknown,
         })

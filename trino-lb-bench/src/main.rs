@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 use args::Args;
 use clap::Parser;
 use indicatif::{MultiProgress, ProgressBar};
-use prusto::{auth::Auth, ClientBuilder, Row};
+use prusto::{ClientBuilder, Row, auth::Auth};
 use tokio::time;
 
 mod args;

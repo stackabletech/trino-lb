@@ -15,8 +15,8 @@ impl Sanitize for http::HeaderMap {
 #[cfg(test)]
 mod tests {
     use http::{
-        header::{CONTENT_LENGTH, HOST},
         HeaderMap, HeaderValue,
+        header::{CONTENT_LENGTH, HOST},
     };
 
     use super::*;

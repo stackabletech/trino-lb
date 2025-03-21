@@ -10,7 +10,7 @@ use snafu::{ResultExt, Snafu};
 use tracing::instrument;
 use url::Url;
 
-use crate::{trino_query::QueuedQuery, TrinoQueryId};
+use crate::{TrinoQueryId, trino_query::QueuedQuery};
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -23,10 +23,14 @@ pub enum Error {
     #[snafu(display("Failed to parse nextUri Trino send us"))]
     ParseNextUriFromTrino { source: url::ParseError },
 
-    #[snafu(display("Failed to determine the elapsed time of a queued query. Are all system clocks of trino-lb instances in sync?"))]
+    #[snafu(display(
+        "Failed to determine the elapsed time of a queued query. Are all system clocks of trino-lb instances in sync?"
+    ))]
     DetermineElapsedTime { source: SystemTimeError },
 
-    #[snafu(display("The queued time {queued_time:?} is too big to be send to trino, as the trino API only accepts an 64bit number for queued_time_millis"))]
+    #[snafu(display(
+        "The queued time {queued_time:?} is too big to be send to trino, as the trino API only accepts an 64bit number for queued_time_millis"
+    ))]
     ElapsedTimeTooBig {
         source: TryFromIntError,
         queued_time: Duration,

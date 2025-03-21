@@ -14,17 +14,16 @@ use tokio::{
     task::{JoinError, JoinSet},
     time,
 };
-use tracing::{debug, error, info, instrument, warn, Instrument, Span};
+use tracing::{Instrument, Span, debug, error, info, instrument, warn};
 use trino_lb_core::{
+    TrinoClusterName,
     config::{Config, ScalerConfig, ScalerConfigImplementation},
     trino_cluster::ClusterState,
-    TrinoClusterName,
 };
 use trino_lb_persistence::{Persistence, PersistenceImplementation};
 
-use crate::cluster_group_manager::TrinoCluster;
-
 use self::config::TrinoClusterGroupAutoscaling;
+use crate::cluster_group_manager::TrinoCluster;
 
 pub mod config;
 pub mod stackable;
@@ -35,7 +34,9 @@ pub enum Error {
     #[allow(clippy::enum_variant_names)]
     StackableError { source: stackable::Error },
 
-    #[snafu(display("Configuration error: A specific Trino cluster can only be part of a single clusterGroup. Please make sure the Trino cluster {cluster_name:?} only is part of a single clusterGroup."))]
+    #[snafu(display(
+        "Configuration error: A specific Trino cluster can only be part of a single clusterGroup. Please make sure the Trino cluster {cluster_name:?} only is part of a single clusterGroup."
+    ))]
     ConfigErrorTrinoClusterInMultipleClusterGroups { cluster_name: String },
 
     #[snafu(display("Failed to create Stackable autoscaler"))]
@@ -108,10 +109,14 @@ pub enum Error {
     #[snafu(display("Failed to join get current cluster state task"))]
     JoinGetCurrentClusterStateTask { source: JoinError },
 
-    #[snafu(display("The variable \"scaler\" is None. This should never happen, as we only run the reconciliation when a scaler is configured!"))]
+    #[snafu(display(
+        "The variable \"scaler\" is None. This should never happen, as we only run the reconciliation when a scaler is configured!"
+    ))]
     ScalerVariableIsNone,
 
-    #[snafu(display("The scaler config is missing. This is a bug in trino-lb, as it should exist at this particular code path"))]
+    #[snafu(display(
+        "The scaler config is missing. This is a bug in trino-lb, as it should exist at this particular code path"
+    ))]
     ScalerConfigMissing,
 }
 
@@ -565,7 +570,11 @@ impl Scaler {
 
         match target_state {
             ClusterState::Unknown => {
-                error!(cluster = cluster.name, ?target_state, "After calculating the new target states the state was \"Unknown\", so we did not enabled or disable the cluster. This should not happen!")
+                error!(
+                    cluster = cluster.name,
+                    ?target_state,
+                    "After calculating the new target states the state was \"Unknown\", so we did not enabled or disable the cluster. This should not happen!"
+                )
             }
             ClusterState::Stopped | ClusterState::Terminating => {
                 scaler.deactivate(&cluster.name).await?;

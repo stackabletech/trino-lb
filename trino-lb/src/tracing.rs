@@ -1,25 +1,24 @@
 use std::{sync::Arc, time::Duration};
 
 use opentelemetry::{
-    global,
+    Context, KeyValue, global,
     metrics::MetricsError,
     trace::{TraceError, TracerProvider},
-    Context, KeyValue,
 };
 use opentelemetry_http::HeaderInjector;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::{
+    Resource,
     metrics::{
-        reader::{DefaultAggregationSelector, DefaultTemporalitySelector},
         Aggregation, Instrument, SdkMeterProvider, Stream,
+        reader::{DefaultAggregationSelector, DefaultTemporalitySelector},
     },
     propagation::TraceContextPropagator,
     trace::{self, RandomIdGenerator, Sampler},
-    Resource,
 };
 use snafu::{ResultExt, Snafu};
 use tracing::{level_filters::LevelFilter, subscriber::SetGlobalDefaultError};
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Layer};
+use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt};
 use trino_lb_core::config::{Config, TrinoLbTracingConfig};
 use trino_lb_persistence::PersistenceImplementation;
 
