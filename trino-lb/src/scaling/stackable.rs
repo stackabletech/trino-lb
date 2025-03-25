@@ -127,7 +127,9 @@ pub enum Error {
         namespace: String,
     },
 
-    #[snafu(display("Could not parse the lastTransitionTime {last_transition_time:?} for the Trino cluster {cluster:?} in namespace {namespace:?}"))]
+    #[snafu(display(
+        "Could not parse the lastTransitionTime {last_transition_time:?} for the Trino cluster {cluster:?} in namespace {namespace:?}"
+    ))]
     ParseLastTransitionTime {
         source: serde_json::Error,
         last_transition_time: Value,
