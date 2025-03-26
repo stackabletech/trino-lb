@@ -4,12 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- The Stackable scaler now ensures that a `TrinoCluster` has changed to `ready` more than 5 seconds
+  ago before marking it as `ready` ([#68]).
+
+[#68]: https://github.com/stackabletech/trino-lb/pull/68
+
 ## [0.5.0] - 2025-03-14
 
 ### Added
 
-- The Stackable scaler now ensures that a `TrinoCluster` has changed to `ready` more than 5 seconds
-  ago before marking it as `ready` ([#68]).
 - Support configuring compression for OTEL ([#70]).
 - Improve tracing details by adding a `tower_http::trace::TraceLayer` that creates spans for every HTTP request ([#71]).
 - Support compressing HTTP contents, previously the content was always uncompressed.
@@ -22,7 +25,6 @@ All notable changes to this project will be documented in this file.
 - Improve performance by using [`serde_json::value::RawValue`](https://docs.rs/serde_json/latest/serde_json/value/struct.RawValue.html) for the `data` and `columns` attributes to avoid unneeded deserialization and serialization of them ([#73]).
 - Bumped to Rust 2024 edition ([#76]).
 
-[#68]: https://github.com/stackabletech/trino-lb/pull/68
 [#70]: https://github.com/stackabletech/trino-lb/pull/70
 [#71]: https://github.com/stackabletech/trino-lb/pull/71
 [#73]: https://github.com/stackabletech/trino-lb/pull/73
