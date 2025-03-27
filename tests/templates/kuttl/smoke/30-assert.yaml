@@ -1,0 +1,7 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: send-queries
+status:
+  succeeded: 1
