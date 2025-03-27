@@ -17,9 +17,6 @@ dimensions:
       # To use a custom image, add a comma and the full name after the product version
       # - 470,oci.stackable.tech/sdp/trino:470-stackable0.0.0-dev
       # However, watch out, you need to tweak the trino-cli image
-  - name: keycloak
-    values:
-      - 25.0.0
   - name: trino-lb-https
     values:
       - "true"
@@ -30,7 +27,7 @@ tests:
       - trino-lb
       - trino
       - trino-use-authentication
-  # - name: oidc
-  #   dimensions:
-  #     - trino-latest
-  #     - keycloak
+
+# TODOS
+# 1. Test storage backend redis and postgres
+#   a. Also restart trino-lb deployment to make sure persistence is kept

@@ -3,4 +3,5 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 timeout: 720
 commands:
-  - script: kubectl -n $NAMESPACE wait --for=condition=available=true trinoclusters.trino.stackable.tech/trino-default-1 --timeout 719s
+  - script: kubectl -n $NAMESPACE wait --for=condition=available=true trinoclusters.trino.stackable.tech/trino-s-1 --timeout 719s
+  - script: kubectl -n $NAMESPACE wait --for=condition=available=true trinoclusters.trino.stackable.tech/trino-m-1 --timeout 719s

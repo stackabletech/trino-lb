@@ -9,6 +9,9 @@ kind: Deployment
 metadata:
   name: trino-lb
 spec:
+  # I'm a bit surprised that 3 replicas work in combination with inMemory persistence :)
+  # Maybe Kubernetes is sticky for some reason, maybe trino-clients will retry call until they get
+  # to the correct trino-lb instance...
   replicas: 3
   selector:
     matchLabels:
