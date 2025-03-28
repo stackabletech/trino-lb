@@ -15,7 +15,9 @@ use axum_server::{Handle, tls_rustls::RustlsConfig};
 use futures::FutureExt;
 use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::time::sleep;
-use tower_http::{compression::CompressionLayer, trace::TraceLayer};
+use tower_http::{
+    compression::CompressionLayer, decompression::RequestDecompressionLayer, trace::TraceLayer,
+};
 use tracing::info;
 use trino_lb_persistence::PersistenceImplementation;
 
@@ -121,9 +123,16 @@ pub async fn start_http_server(
             "/v1/statement/executing/{query_id}/{slug}/{token}",
             delete(v1::statement::delete_trino_executing_statement),
         )
+        .route(
+            "/v1/trino-event-listener",
+            post(v1::trino_event_listener::post_trino_event_listener),
+        )
         .route("/ui/index.html", get(ui::index::get_ui_index))
         .route("/ui/query.html", get(ui::query::get_ui_query))
         .layer(TraceLayer::new_for_http())
+        // E.g. "/v1/trino-event-listener" get's compressed data from Trino
+        .layer(RequestDecompressionLayer::new())
+        // Trino clients can ask for compressed data
         .layer(CompressionLayer::new())
         .with_state(app_state);
 

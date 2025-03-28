@@ -20,7 +20,7 @@ use tracing::{Instrument, debug, info, info_span, instrument, warn};
 use trino_lb_core::{
     TrinoLbQueryId, TrinoQueryId,
     sanitization::Sanitize,
-    trino_api::TrinoQueryApiResponse,
+    trino_api::queries::TrinoQueryApiResponse,
     trino_query::{QueuedQuery, TrinoQuery},
 };
 use trino_lb_persistence::Persistence;
@@ -36,12 +36,12 @@ use crate::{
 pub enum Error {
     #[snafu(display("Failed to modify nextUri trino send us to point tu trino-lb"))]
     ModifyNextUri {
-        source: trino_lb_core::trino_api::Error,
+        source: trino_lb_core::trino_api::queries::Error,
     },
 
     #[snafu(display("Failed to convert queued query to trino query"))]
     ConvertQueuedQueryToTrinoQuery {
-        source: trino_lb_core::trino_api::Error,
+        source: trino_lb_core::trino_api::queries::Error,
     },
 
     #[snafu(display("Failed to store queued query in persistence"))]

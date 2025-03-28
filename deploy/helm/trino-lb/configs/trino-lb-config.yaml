@@ -1,9 +1,9 @@
 trinoLb:
-  externalAddress: https://5.250.179.64:8443
+  externalAddress: https://85.215.178.111:8443
   tls:
     enabled: true
-    certPemFile: /certificates/cert.pem
-    keyPemFile: /certificates/key.pem
+    certPemFile: /certificates/tls.crt
+    keyPemFile: /certificates/tls.key
   persistence:
     redis:
       clusterMode: true
@@ -101,7 +101,7 @@ routers:
 routingFallback: m
 
 clusterAutoscaler:
-  reconcileInterval: 1s
+  # reconcileInterval: 1s
   stackable:
     clusters:
       trino-s-1:

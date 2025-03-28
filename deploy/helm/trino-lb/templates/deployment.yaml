@@ -22,6 +22,9 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["trino-lb", "--config-file", "/etc/stackable/trino-lb/config/trino-lb-config.yaml"]
+          # env:
+          #   - name: RUST_LOG
+          #     value: debug
           ports:
             - containerPort: 8443
             - containerPort: 9090
@@ -36,7 +39,22 @@ spec:
         - name: config
           secret:
             secretName: {{ .Release.Name }}-config
+        # - name: certificates
+        #   secret:
+        #     secretName: {{ .Release.Name }}-certificates
         - name: certificates
-          secret:
-            secretName: {{ .Release.Name }}-certificates
+          ephemeral:
+            volumeClaimTemplate:
+              metadata:
+                annotations:
+                  secrets.stackable.tech/class: tls
+                  secrets.stackable.tech/scope: pod,service=trino-lb
+                  secrets.stackable.tech/format: tls-pem
+              spec:
+                storageClassName: secrets.stackable.tech
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: "1"
       serviceAccountName: {{ .Release.Name }}
