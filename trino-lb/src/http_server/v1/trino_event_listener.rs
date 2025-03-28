@@ -22,12 +22,11 @@ pub enum Error {}
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        warn!(error = ?self, "Error while processing Trino event");
+        warn!(error = ?self, "Error while processing Trino HTTP event");
         (StatusCode::INTERNAL_SERVER_ERROR, format!("{self:?}")).into_response()
     }
 }
 
-/// This function gets a new query and decided wether to queue it or to send it to a Trino cluster directly.
 #[instrument(
     name = "POST /v1/trino-event-listener",
     skip(state, trino_event),
