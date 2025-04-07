@@ -56,6 +56,9 @@ pub struct TrinoLbConfig {
     #[serde(default)]
     pub tls: TrinoLbTlsConfig,
 
+    #[serde(default = "default_proxy_mode")]
+    pub proxy_mode: TrinoLbProxyMode,
+
     #[serde(
         default = "default_refresh_query_counter_interval",
         with = "humantime_serde"
@@ -72,6 +75,10 @@ fn default_refresh_query_counter_interval() -> Duration {
     Duration::from_secs(60)
 }
 
+fn default_proxy_mode() -> TrinoLbProxyMode {
+    TrinoLbProxyMode::ProxyAllCalls
+}
+
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoLbTlsConfig {
@@ -80,6 +87,13 @@ pub struct TrinoLbTlsConfig {
 
     pub cert_pem_file: Option<PathBuf>,
     pub key_pem_file: Option<PathBuf>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields, rename_all = "PascalCase")]
+pub enum TrinoLbProxyMode {
+    ProxyAllCalls,
+    ProxyFirstCall,
 }
 
 #[derive(Clone, Debug, Deserialize)]

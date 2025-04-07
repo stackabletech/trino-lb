@@ -1,32 +1,50 @@
+use std::fmt::Display;
+
 use serde::Deserialize;
+use url::Url;
 
 use crate::TrinoQueryId;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OriginalTrinoEvent {
-    metadata: OriginalTrinoEventMetadata,
+pub struct TrinoEvent {
+    pub metadata: TrinoEventMetadata,
 }
 
-impl OriginalTrinoEvent {
-    pub fn is_finished(&self) -> bool {
-        self.metadata.query_state == OriginalQueryState::Finished
+impl TrinoEvent {
+    pub fn query_state(&self) -> &TrinoQueryState {
+        &self.metadata.query_state
+    }
+
+    pub fn query_id(&self) -> &TrinoQueryId {
+        &self.metadata.query_id
     }
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OriginalTrinoEventMetadata {
+pub struct TrinoEventMetadata {
+    pub uri: Url,
     pub query_id: TrinoQueryId,
-    pub query_state: OriginalQueryState,
+    pub query_state: TrinoQueryState,
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum OriginalQueryState {
+pub enum TrinoQueryState {
     Queued,
     Executing,
     Finished,
+}
+
+impl Display for TrinoQueryState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TrinoQueryState::Queued => write!(f, "queued"),
+            TrinoQueryState::Executing => write!(f, "executing"),
+            TrinoQueryState::Finished => write!(f, "finished"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -35,22 +53,15 @@ mod tests {
 
     #[test]
     fn test_deserialization() {
-        let query_crated: OriginalTrinoEvent =
+        let query_crated: TrinoEvent =
             serde_json::from_str(include_str!("sample_trino_events/query_created.json"))
                 .expect("Failed to deserialize query created event");
-        assert_eq!(
-            query_crated.metadata.query_id,
-            "20250328_101456_00000_gt85c"
-        );
-        assert_eq!(
-            query_crated.metadata.query_state,
-            OriginalQueryState::Queued,
-        );
-        assert!(!query_crated.is_finished());
+        assert_eq!(query_crated.query_id(), "20250328_101456_00000_gt85c");
+        assert_eq!(query_crated.query_state(), &TrinoQueryState::Queued);
 
-        let query_finished: OriginalTrinoEvent =
+        let query_finished: TrinoEvent =
             serde_json::from_str(include_str!("sample_trino_events/query_finished.json"))
                 .expect("Failed to deserialize query finished event");
-        assert!(query_finished.is_finished());
+        assert_eq!(query_finished.query_state(), &TrinoQueryState::Finished);
     }
 }

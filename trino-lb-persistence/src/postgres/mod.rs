@@ -220,16 +220,23 @@ impl Persistence for PostgresPersistence {
     }
 
     #[instrument(skip(self))]
-    async fn load_query(&self, query_id: &TrinoQueryId) -> Result<TrinoQuery, super::Error> {
+    async fn load_query(
+        &self,
+        query_id: &TrinoQueryId,
+    ) -> Result<Option<TrinoQuery>, super::Error> {
         let result = query!(
             r#"SELECT id, trino_cluster, trino_endpoint, creation_time, delivered_time
             FROM queries
             WHERE id = $1"#,
             query_id,
         )
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await
         .context(LoadQuerySnafu)?;
+
+        let Some(result) = result else {
+            return Ok(None);
+        };
 
         let query = TrinoQuery {
             id: result.id,
@@ -240,7 +247,7 @@ impl Persistence for PostgresPersistence {
             delivered_time: result.delivered_time.into(),
         };
 
-        Ok(query)
+        Ok(Some(query))
     }
 
     #[instrument(skip(self))]
