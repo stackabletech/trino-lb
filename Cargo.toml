@@ -80,7 +80,7 @@ sqlx = { version = "0.8.2", features = [
   "postgres",
 ] }
 strum = { version = "0.27", features = ["derive"] }
-tokio = "1.39"
+tokio = "1.44"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["compression-full", "tracing"] }
 tracing = "0.1"
