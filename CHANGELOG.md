@@ -6,8 +6,11 @@ All notable changes to this project will be documented in this file.
 
 - The Stackable scaler now ensures that a `TrinoCluster` has changed to `ready` more than 5 seconds
   ago before marking it as `ready` ([#68]).
+- Support two different proxy modes: `ProxyAllCalls` (default) and `ProxyFirstCall`.
+  Read the [proxy modes docs](./docs/proxy-modes.md) for details ([#82]).
 
 [#68]: https://github.com/stackabletech/trino-lb/pull/68
+[#82]: https://github.com/stackabletech/trino-lb/pull/82
 
 ## [0.5.0] - 2025-03-14
 
