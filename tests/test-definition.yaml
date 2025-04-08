@@ -3,6 +3,8 @@ dimensions:
   - name: trino-lb
     values:
       - oci.stackable.tech/stackable/trino-lb:0.5.0
+      # docker build -f docker/Dockerfile . -t oci.stackable.tech/sandbox/trino-lb:2025-04-08
+      # - oci.stackable.tech/sandbox/trino-lb:2025-04-08
   - name: trino
     values:
       - "451"

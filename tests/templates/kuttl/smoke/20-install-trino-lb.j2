@@ -47,8 +47,20 @@ spec:
           secret:
             secretName: trino-lb-config
         - name: certificates
-          secret:
-            secretName: trino-lb-certificates
+          ephemeral:
+            volumeClaimTemplate:
+              metadata:
+                annotations:
+                  secrets.stackable.tech/class: tls
+                  secrets.stackable.tech/scope: pod,service=trino-lb
+                  secrets.stackable.tech/format: tls-pem
+              spec:
+                storageClassName: secrets.stackable.tech
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: "1"
       serviceAccountName: trino-lb
 ---
 apiVersion: v1

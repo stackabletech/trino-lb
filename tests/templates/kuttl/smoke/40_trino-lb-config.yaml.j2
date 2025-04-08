@@ -2,8 +2,8 @@ trinoLb:
   externalAddress: https://trino-lb:8443
   tls:
     enabled: true
-    certPemFile: /certificates/cert.pem
-    keyPemFile: /certificates/key.pem
+    certPemFile: /certificates/tls.crt
+    keyPemFile: /certificates/tls.key
   persistence:
     inMemory: {}
 trinoClusterGroups:

@@ -28,10 +28,28 @@ spec:
         cpu:
           min: 250m
           max: "1"
-        memory:
-          limit: 2Gi
       logging:
         enableVectorAgent: {{ lookup('env', 'VECTOR_AGGREGATOR') | length > 0 }}
+    configOverrides: &configOverrides
+      config.properties:
+        event-listener.config-files: /tmp/http-event-listener.properties
+    podOverrides: &podOverrides
+      spec:
+        containers:
+          - name: trino
+            env:
+              - name: NAMESPACE
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+            volumeMounts:
+              - name: http-event-listener-config
+                mountPath: /tmp/http-event-listener.properties
+                subPath: http-event-listener.properties
+        volumes:
+          - name: http-event-listener-config
+            configMap:
+              name: trino-http-event-listener-config
     roleGroups:
       default:
         replicas: 1
@@ -41,15 +59,32 @@ spec:
         cpu:
           min: 250m
           max: "1"
-        memory:
-          limit: 3Gi
       gracefulShutdownTimeout: 60s # Let the test run faster
       logging:
         enableVectorAgent: {{ lookup('env', 'VECTOR_AGGREGATOR') | length > 0 }}
+    configOverrides: *configOverrides
+    podOverrides: *podOverrides
     roleGroups:
       default:
         replicas: 1
 {% endfor %}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trino-http-event-listener-config
+data:
+  http-event-listener.properties: |
+    event-listener.name=http
+
+    http-event-listener.connect-ingest-uri=https://trino-lb.${ENV:NAMESPACE}.svc.cluster.local:8443/v1/trino-event-listener
+    http-event-listener.connect-retry-count=10
+    http-event-listener.http-client.trust-store-path=/stackable/server_tls/truststore.p12
+    http-event-listener.http-client.trust-store-password=changeit
+
+    http-event-listener.log-created=true
+    http-event-listener.log-completed=true
+    http-event-listener.log-split=false
 ---
 apiVersion: authentication.stackable.tech/v1alpha1
 kind: AuthenticationClass

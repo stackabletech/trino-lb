@@ -2,12 +2,12 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: test-queries
+  name: test-proxy-mode
 spec:
   template:
     spec:
       containers:
-        - name: test-queries
+        - name: test-proxy-mode
           image: oci.stackable.tech/sdp/trino-cli:{{ test_scenario['values']['trino'] }}-stackable0.0.0-dev
           command:
             - /bin/bash
