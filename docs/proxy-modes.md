@@ -40,7 +40,6 @@ Downsides:
 * It requires active configuration on the Trino side, namely setting up the HTTP event listener
 * Trino clients need to have network access to the coordinators
 
-
 A sample configuration in Trino can look something like the following.
 Please have a look at the [kuttl tests](https://github.com/stackabletech/trino-lb/tree/feat/trino-query-events/tests/templates/kuttl/) for complete examples.
 
