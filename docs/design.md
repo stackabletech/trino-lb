@@ -94,6 +94,13 @@ Currently the following autoscalers are implemented:
 
 Read on the [scaling page](./scaling/index.md) for more details.
 
+## 6. Proxy modes
+
+trino-lb can either proxy all calls to the underlying Trino clusters or only the initial `POST` and than hand of to the Trino cluster.
+It also needs to keep track of all started and finished queries on the Trino clusters, so that it can correctly calculate the number of running queries.
+
+Read on the [proxy modes page](./proxy-modes.md) for more details.
+
 ## Monitoring
 
 trino-lb emits [OpenTelemetry Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/), which (for now) are only exposed as [Prometheus](https://prometheus.io/) metrics on `http://0.0.0.0:9090/metrics`.
@@ -156,7 +163,7 @@ sequenceDiagram
         lb ->>+ persistence: Store query
         persistence ->>- lb: # Don't strip space
 
-        lb ->> lb: Change nextUri to point to trino-lb
+        lb ->> lb: Change nextUri to point to trino-lb in case all requests should be proxied
     end
 
     lb ->>- client: Response containing nextUri
