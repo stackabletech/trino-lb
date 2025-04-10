@@ -27,8 +27,7 @@ Downsides:
 
 In this mode, the client only sends the initial `POST` to trino-lb. All following requests will be send to the Trino cluster directly.
 
-As trino-lb can not "sniff" the traffic to get informed about started and finished queries we need to hook it up as [HTTP event listener](https://trino.io/docs/current/admin/event-listeners-http.html) in Trino.
-This way trino-lb will get informed about all query starts and completions.
+As trino-lb cannot inspect the traffic in the subsequent calls, it would have no knowledge of the started and finished queries. However, an [HTTP event listener](https://trino.io/docs/current/admin/event-listeners-http.html) can be configured in Trino to inform trino-lb about all query starts and completions.
 
 Benefits:
 
