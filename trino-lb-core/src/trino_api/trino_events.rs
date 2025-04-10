@@ -5,7 +5,7 @@ use url::Url;
 
 use crate::TrinoQueryId;
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrinoEvent {
     pub metadata: TrinoEventMetadata,
@@ -21,7 +21,7 @@ impl TrinoEvent {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrinoEventMetadata {
     pub uri: Url,
@@ -29,7 +29,7 @@ pub struct TrinoEventMetadata {
     pub query_state: TrinoQueryState,
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum TrinoQueryState {
     Queued,
