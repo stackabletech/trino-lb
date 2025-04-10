@@ -319,7 +319,7 @@ async fn queue_or_hand_over_query(
                             },
                         )?;
 
-                        // Only change the nextURI to trino-lb in case we should proxy all calls
+                        // Only change the nextURI to trino-lb in case it should proxy all calls
                         if state.config.trino_lb.proxy_mode == TrinoLbProxyMode::ProxyAllCalls {
                             trino_query_api_response
                                 .change_next_uri_to_trino_lb(
@@ -464,7 +464,7 @@ async fn handle_query_running_on_trino(
         .context(AskTrinoForQueryStateSnafu)?;
 
     if trino_query_api_response.next_uri.is_some() {
-        // Only change the nextURI to trino-lb in case we should proxy all calls
+        // Only change the nextURI to trino-lb in case it should proxy all calls
         if state.config.trino_lb.proxy_mode == TrinoLbProxyMode::ProxyAllCalls {
             trino_query_api_response
                 .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
