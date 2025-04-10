@@ -16,34 +16,34 @@ In this mode, the client will make all requests through trino-lb, not only the i
 
 Benefits:
 
-* Counting queries can be achieved by "sniffing" the traffic
-* Trino clients don't need network access to coordinator
+- Counting queries can be achieved by inspecting the traffic
+- Trino clients do not require network access to coordinator
 
 Downsides:
 
-* Query runtimes can be increased in case many data is transferred from the Trino coordinator to the Trino client due to network delay added by trino-lb (have a look at [a performance research task](https://github.com/stackabletech/trino-lb/issues/72) for details)
+- Query run times can be increased in when a lot of data is transferred from the Trino coordinator to the Trino client due to network delay added by trino-lb (see the [performance research task](https://github.com/stackabletech/trino-lb/issues/72) for details)
 
 ## Proxy first call
 
-Only the initial `POST` is proxied, all following requests will be send to the Trino cluster directly.
+In this mode, the client only sends the initial `POST` to trino-lb. All following requests will be send to the Trino cluster directly.
 
 As trino-lb can not "sniff" the traffic to get informed about started and finished queries we need to hook it up as [HTTP event listener](https://trino.io/docs/current/admin/event-listeners-http.html) in Trino.
 This way trino-lb will get informed about all query starts and completions.
 
 Benefits:
 
-* Better performance, as there is no network delay added by trino-lb
-* In the future more advanced features can be build based on information from the Trino events
+- Better performance, as there is no network delay added by trino-lb
+- In the future more advanced features can be built based on information from the Trino events
 
 Downsides:
 
-* It requires active configuration on the Trino side, namely setting up the HTTP event listener
-* Trino clients need to have network access to the coordinators
+- It requires active configuration on the Trino side, namely setting up the HTTP event listener
+- Trino clients require network access to the coordinator
 
 A sample configuration in Trino can look something like the following.
-Please have a look at the [kuttl tests](https://github.com/stackabletech/trino-lb/tree/feat/trino-query-events/tests/templates/kuttl/) for complete examples.
+Please have a look at the [kuttl tests](https://github.com/stackabletech/trino-lb/tree/main/tests/templates/kuttl/) for complete examples.
 
-Please note that you can not disable the TLS certificate check, in this case secret-operator from the Stackable Data Platform is used to automatically provision valid TLS certificates.
+Please note that you cannot disable the TLS certificate check. In the example below, the secret-operator from the Stackable Data Platform is used to provision valid TLS certificates automatically.
 
 ```yaml
 apiVersion: trino.stackable.tech/v1alpha1
