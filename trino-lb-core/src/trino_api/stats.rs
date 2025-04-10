@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Copied from [`prusto::Stat`], but with `root_stage`
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Stat {
     pub completed_splits: u32,
