@@ -97,7 +97,6 @@ Read on the [scaling page](./scaling/index.md) for more details.
 ## 6. Proxy modes
 
 trino-lb can be configured to either proxy all calls to the underlying Trino clusters or only the initial `POST` and instruct the client to connect directly to the Trino cluster for the subsequent polling requests.
-It also needs to keep track of all started and finished queries on the Trino clusters, so that it can correctly calculate the number of running queries.
 
 Read on the [proxy modes page](./proxy-modes.md) for more details.
 
