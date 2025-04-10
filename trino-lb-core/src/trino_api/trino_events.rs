@@ -53,15 +53,17 @@ mod tests {
 
     #[test]
     fn test_deserialization() {
-        let query_crated: TrinoEvent =
-            serde_json::from_str(include_str!("sample_trino_events/query_created.json"))
-                .expect("Failed to deserialize query created event");
+        let query_crated: TrinoEvent = serde_json::from_str(include_str!(
+            "../../tests/sample_trino_events/query_created.json"
+        ))
+        .expect("Failed to deserialize query created event");
         assert_eq!(query_crated.query_id(), "20250328_101456_00000_gt85c");
         assert_eq!(query_crated.query_state(), &TrinoQueryState::Queued);
 
-        let query_finished: TrinoEvent =
-            serde_json::from_str(include_str!("sample_trino_events/query_finished.json"))
-                .expect("Failed to deserialize query finished event");
+        let query_finished: TrinoEvent = serde_json::from_str(include_str!(
+            "../../tests/sample_trino_events/query_finished.json"
+        ))
+        .expect("Failed to deserialize query finished event");
         assert_eq!(query_finished.query_state(), &TrinoQueryState::Finished);
     }
 }
