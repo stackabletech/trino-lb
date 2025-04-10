@@ -126,6 +126,40 @@ This enables nice tracing across trino-lb and trino (as seen in the screenshot b
 This flowchart represents a Trino client submitting a query.
 It might be send to a Trino clusters or queued if all clusters are full.
 
+**General flow**
+
+```mermaid
+sequenceDiagram
+    actor client as Trino client
+    participant lb as trino-lb
+    participant trino as Trino
+
+    client ->>+ lb: Submit query using <br/> POST /v1/statement
+    lb ->> lb: Determine if query should be queued<br/>or which Trino cluster it should be routed to.<br/>See below diagram for details
+    lb ->>- client: # Don't strip space
+
+    loop While queued
+        client ->>+ lb: Poll
+        lb ->>- client: # Don't strip space
+    end
+
+    alt Proxy mode: Proxy all calls
+        loop While query running
+            client ->>+ lb: Poll
+            lb -->+ trino: # Don't strip space
+            trino ->>- lb: # Don't strip space
+            lb ->>- client: # Don<>'t strip space
+        end
+    else Proxy mode: Proxy first call
+        loop While query running
+            client ->>+ trino: Poll
+            trino ->>- client: # Don't strip space
+        end
+    end
+```
+
+**Detailed initial `POST /v1/statement`**
+
 ```mermaid
 sequenceDiagram
     actor client as Trino client
@@ -149,7 +183,7 @@ sequenceDiagram
 
     lb ->> lb: Determine cluster with the fewest running queries
 
-    alt All active clusters full
+    alt All active clusters full or all clusters unhealthy
         lb ->>+ persistence: Store queued query
         persistence ->>- lb: # Don't strip space
 
