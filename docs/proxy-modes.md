@@ -12,7 +12,7 @@ trinoLb:
 
 ## Proxy all calls (default)
 
-All calls will be proxied, not only the initial `POST`.
+In this mode, the client will make all requests through trino-lb, not only the initial `POST`.
 
 Benefits:
 
