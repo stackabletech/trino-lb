@@ -126,7 +126,7 @@ This enables nice tracing across trino-lb and trino (as seen in the screenshot b
 This flowchart represents a Trino client submitting a query.
 It might be send to a Trino clusters or queued if all clusters are full.
 
-**General flow**
+### General flow
 
 ```mermaid
 sequenceDiagram
@@ -158,7 +158,7 @@ sequenceDiagram
     end
 ```
 
-**Detailed initial `POST /v1/statement`**
+### Detailed initial `POST /v1/statement`
 
 ```mermaid
 sequenceDiagram
