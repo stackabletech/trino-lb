@@ -1,6 +1,6 @@
 # Proxy mode
 
-trino-lb can either proxy all calls to the underlying Trino clusters or only the initial `POST` and than hand of to the Trino cluster.
+trino-lb can be configured to either proxy all calls to the underlying Trino clusters or only the initial `POST` and instruct the client to connect directly to the Trino cluster for the subsequent polling requests.
 It also needs to keep track of all started and finished queries on the Trino clusters, so that it can correctly calculate the number of running queries.
 
 You can configure the proxy mode using
