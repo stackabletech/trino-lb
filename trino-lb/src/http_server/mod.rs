@@ -130,9 +130,16 @@ pub async fn start_http_server(
         .route("/ui/index.html", get(ui::index::get_ui_index))
         .route("/ui/query.html", get(ui::query::get_ui_query))
         .layer(TraceLayer::new_for_http())
-        // The Trino HTTP events (received at `/v1/trino-event-listener`) are compressed by default, so we need to need
-        // to be able to accept compressed content
+        // Transparently decompress request bodies based on the
+        // Content-Encoding header.
+        //
+        // The Trino HTTP events (received at `/v1/trino-event-listener`) are
+        // compressed by default, so we need to be able to accept compressed
+        // content.
         .layer(RequestDecompressionLayer::new())
+        // Compress response bodies if the associated request had an
+        // Accept-Encoding header.
+        //
         // Trino clients can ask for compressed data, so we should support compressing the response
         .layer(CompressionLayer::new())
         .with_state(app_state);
