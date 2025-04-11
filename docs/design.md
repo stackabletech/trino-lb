@@ -94,6 +94,12 @@ Currently the following autoscalers are implemented:
 
 Read on the [scaling page](./scaling/index.md) for more details.
 
+## 6. Proxy modes
+
+trino-lb can be configured to either proxy all calls to the underlying Trino clusters or only the initial `POST` request and instruct the client to connect directly to the Trino cluster for the subsequent polling requests.
+
+Read on the [proxy modes page](./proxy-modes.md) for more details.
+
 ## Monitoring
 
 trino-lb emits [OpenTelemetry Metrics](https://opentelemetry.io/docs/concepts/signals/metrics/), which (for now) are only exposed as [Prometheus](https://prometheus.io/) metrics on `http://0.0.0.0:9090/metrics`.
@@ -107,6 +113,7 @@ Also, the cluster `trino-s-1` was started on demand, executed the 60 queries and
 ![Grafana screenshot](./assets/grafana-screenshot.png)
 
 ## Tracing
+
 trino-lb emits [OpenTelemetry Traces](https://opentelemetry.io/docs/concepts/signals/traces/) to [OTLP](https://opentelemetry.io/docs/specs/otel/protocol/) endpoints such as [Jaeger](https://www.jaegertracing.io/).
 When proxy-ing requests to Trino we take care of [OpenTelemetry Propagation](https://opentelemetry.io/docs/instrumentation/js/propagation/), so that the Trino spans will show up within the trino-lb spans.
 This enables nice tracing across trino-lb and trino (as seen in the screenshot below)
@@ -117,6 +124,40 @@ This enables nice tracing across trino-lb and trino (as seen in the screenshot b
 
 This flowchart represents a Trino client submitting a query.
 It might be send to a Trino clusters or queued if all clusters are full.
+
+### General flow
+
+```mermaid
+sequenceDiagram
+    actor client as Trino client
+    participant lb as trino-lb
+    participant trino as Trino
+
+    client ->>+ lb: Submit query using <br/> POST /v1/statement
+    lb ->> lb: Determine if query should be queued<br/>or which Trino cluster it should be routed to.<br/>See below diagram for details
+    lb ->>- client: # Don't strip space
+
+    loop While queued
+        client ->>+ lb: Poll
+        lb ->>- client: # Don't strip space
+    end
+
+    alt Proxy mode: Proxy all calls
+        loop While query running
+            client ->>+ lb: Poll
+            lb -->+ trino: # Don't strip space
+            trino ->>- lb: # Don't strip space
+            lb ->>- client: # Don<>'t strip space
+        end
+    else Proxy mode: Proxy first call
+        loop While query running
+            client ->>+ trino: Poll
+            trino ->>- client: # Don't strip space
+        end
+    end
+```
+
+### Detailed initial `POST /v1/statement`
 
 ```mermaid
 sequenceDiagram
@@ -141,7 +182,7 @@ sequenceDiagram
 
     lb ->> lb: Determine cluster with the fewest running queries
 
-    alt All active clusters full
+    alt All active clusters reached query limit or all clusters unhealthy
         lb ->>+ persistence: Store queued query
         persistence ->>- lb: # Don't strip space
 
@@ -156,7 +197,7 @@ sequenceDiagram
         lb ->>+ persistence: Store query
         persistence ->>- lb: # Don't strip space
 
-        lb ->> lb: Change nextUri to point to trino-lb
+        lb ->> lb: Change nextUri to point to trino-lb in case all requests should be proxied
     end
 
     lb ->>- client: Response containing nextUri

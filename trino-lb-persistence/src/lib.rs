@@ -37,7 +37,7 @@ pub trait Persistence {
     async fn remove_queued_query(&self, query: &QueuedQuery) -> Result<(), Error>;
 
     async fn store_query(&self, query: TrinoQuery) -> Result<(), Error>;
-    async fn load_query(&self, query_id: &TrinoQueryId) -> Result<TrinoQuery, Error>;
+    async fn load_query(&self, query_id: &TrinoQueryId) -> Result<Option<TrinoQuery>, Error>;
     async fn remove_query(&self, query_id: &TrinoQueryId) -> Result<(), Error>;
 
     /// `max_allowed_count` is the (inclusive) maximum count that is allowed *after* the increment.

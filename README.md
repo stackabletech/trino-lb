@@ -15,6 +15,7 @@ A highly available load balancer with support for queueing, routing and auto-sca
   * [Postgres](./docs/persistence/postgres.md)
 * [Scaling](./docs/scaling/index.md)
   * [Stackable](./docs/scaling/stackable.md)
+* [Proxy modes](./docs/proxy-modes.md)
 
 ## Try it out locally
 

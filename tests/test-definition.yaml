@@ -1,0 +1,24 @@
+---
+dimensions:
+  - name: trino-lb
+    values:
+      - oci.stackable.tech/stackable/trino-lb:0.5.0
+      # docker build -f docker/Dockerfile . -t oci.stackable.tech/sandbox/trino-lb:2025-04-08
+      # - oci.stackable.tech/sandbox/trino-lb:2025-04-08
+  - name: trino
+    values:
+      - "451"
+      - "455"
+      - "470"
+      # To use a custom image, add a comma and the full name after the product version
+      # - 470,oci.stackable.tech/sdp/trino:470-stackable0.0.0-dev
+      # However, watch out, you need to tweak the trino-cli image
+tests:
+  - name: smoke
+    dimensions:
+      - trino-lb
+      - trino
+
+# TODOS
+# 1. Test storage backend redis and postgres
+#   a. Also restart trino-lb deployment to make sure persistence is kept

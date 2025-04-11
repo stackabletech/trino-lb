@@ -12,7 +12,7 @@ use snafu::{OptionExt, ResultExt, Snafu};
 use tracing::{Instrument, debug, info_span, instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 use trino_lb_core::{
-    config::Config, sanitization::Sanitize, trino_api::TrinoQueryApiResponse,
+    config::Config, sanitization::Sanitize, trino_api::queries::TrinoQueryApiResponse,
     trino_cluster::ClusterState, trino_query::TrinoQuery,
 };
 use trino_lb_persistence::{Persistence, PersistenceImplementation};

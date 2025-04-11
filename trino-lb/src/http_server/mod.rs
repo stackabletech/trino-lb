@@ -15,7 +15,9 @@ use axum_server::{Handle, tls_rustls::RustlsConfig};
 use futures::FutureExt;
 use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::time::sleep;
-use tower_http::{compression::CompressionLayer, trace::TraceLayer};
+use tower_http::{
+    compression::CompressionLayer, decompression::RequestDecompressionLayer, trace::TraceLayer,
+};
 use tracing::info;
 use trino_lb_persistence::PersistenceImplementation;
 
@@ -121,9 +123,24 @@ pub async fn start_http_server(
             "/v1/statement/executing/{query_id}/{slug}/{token}",
             delete(v1::statement::delete_trino_executing_statement),
         )
+        .route(
+            "/v1/trino-event-listener",
+            post(v1::trino_event_listener::post_trino_event_listener),
+        )
         .route("/ui/index.html", get(ui::index::get_ui_index))
         .route("/ui/query.html", get(ui::query::get_ui_query))
         .layer(TraceLayer::new_for_http())
+        // Transparently decompress request bodies based on the
+        // Content-Encoding header.
+        //
+        // The Trino HTTP events (received at `/v1/trino-event-listener`) are
+        // compressed by default, so we need to be able to accept compressed
+        // content.
+        .layer(RequestDecompressionLayer::new())
+        // Compress response bodies if the associated request had an
+        // Accept-Encoding header.
+        //
+        // Trino clients can ask for compressed data, so we should support compressing the response
         .layer(CompressionLayer::new())
         .with_state(app_state);
 
