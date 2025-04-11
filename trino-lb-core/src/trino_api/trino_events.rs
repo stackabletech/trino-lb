@@ -39,10 +39,11 @@ pub enum TrinoQueryState {
 
 impl Display for TrinoQueryState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Sticking to Trino casing for consistency
         match self {
-            TrinoQueryState::Queued => write!(f, "queued"),
-            TrinoQueryState::Executing => write!(f, "executing"),
-            TrinoQueryState::Finished => write!(f, "finished"),
+            TrinoQueryState::Queued => write!(f, "QUEUED"),
+            TrinoQueryState::Executing => write!(f, "EXECUTING"),
+            TrinoQueryState::Finished => write!(f, "FINISHED"),
         }
     }
 }
