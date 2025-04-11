@@ -4,4 +4,3 @@ kind: TestStep
 commands:
   - script: kubectl -n $NAMESPACE rollout restart deployment trino-lb
   - script: kubectl -n $NAMESPACE rollout status deployment trino-lb --watch
-  - script: sleep 2
