@@ -182,7 +182,7 @@ sequenceDiagram
 
     lb ->> lb: Determine cluster with the fewest running queries
 
-    alt All active clusters full or all clusters unhealthy
+    alt All active clusters reached query limit or all clusters unhealthy
         lb ->>+ persistence: Store queued query
         persistence ->>- lb: # Don't strip space
 
