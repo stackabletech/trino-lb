@@ -1,0 +1,39 @@
+{
+  "createTime": "2025-03-28T10:14:56.382Z",
+  "context": {
+    "user": "admin",
+    "originalUser": "admin",
+    "principal": "admin",
+    "enabledRoles": [],
+    "groups": [],
+    "remoteClientAddress": "100.103.68.12",
+    "userAgent": "StatementClientV1/447",
+    "clientTags": [],
+    "clientCapabilities": [
+      "PATH",
+      "PARAMETRIC_DATETIME",
+      "SESSION_AUTHORIZATION"
+    ],
+    "source": "trino-cli",
+    "timezone": "Europe/Berlin",
+    "resourceGroupId": [
+      "global"
+    ],
+    "sessionProperties": {},
+    "resourceEstimates": {},
+    "serverAddress": "trino-m-1-coordinator-default-0.trino-m-1-coordinator-default.default.svc.cluster.local",
+    "serverVersion": "455",
+    "environment": "trino_m_1",
+    "queryType": "SELECT",
+    "retryPolicy": "NONE"
+  },
+  "metadata": {
+    "queryId": "20250328_101456_00000_gt85c",
+    "transactionId": "68e63b73-2b3a-4b21-be2d-b5750cad22ac",
+    "query": "select count(*) from tpch.sf1.customer",
+    "queryState": "QUEUED",
+    "tables": [],
+    "routines": [],
+    "uri": "http://trino-m-1-coordinator-default-0.trino-m-1-coordinator-default.default.svc.cluster.local:8080/v1/query/20250328_101456_00000_gt85c"
+  }
+}
