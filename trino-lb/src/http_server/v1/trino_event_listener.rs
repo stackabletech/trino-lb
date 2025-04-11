@@ -150,7 +150,7 @@ async fn handle_finished_query(state: Arc<AppState>, trino_event: TrinoEvent) ->
         ),
     }
 
-    todo!()
+    Ok(())
 }
 
 /// This function *should* be called for every new query on Trino.
