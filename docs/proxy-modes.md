@@ -1,6 +1,6 @@
 # Proxy mode
 
-trino-lb can be configured to either proxy all calls to the underlying Trino clusters or only the initial `POST` and instruct the client to connect directly to the Trino cluster for the subsequent polling requests.
+trino-lb can be configured to either proxy all calls to the underlying Trino clusters or only the initial `POST` request and instruct the client to connect directly to the Trino cluster for the subsequent polling requests.
 It also needs to keep track of all started and finished queries on the Trino clusters, so that it can correctly calculate the number of running queries.
 
 You can configure the proxy mode using
@@ -21,11 +21,11 @@ Benefits:
 
 Downsides:
 
-- Query run times can be increased in when a lot of data is transferred from the Trino coordinator to the Trino client due to network delay added by trino-lb (see the [performance research task](https://github.com/stackabletech/trino-lb/issues/72) for details)
+- Increased query run times when a lot of data is transferred from the Trino coordinator to the Trino client due to network delay added by trino-lb (see the [performance research task](https://github.com/stackabletech/trino-lb/issues/72) for details)
 
 ## Proxy first call
 
-In this mode, the client only sends the initial `POST` to trino-lb. All following requests will be send to the Trino cluster directly.
+In this mode, the client only sends the initial `POST` request to trino-lb. All following requests will be send to the Trino cluster directly.
 
 As trino-lb cannot inspect the traffic in the subsequent calls, it would have no knowledge of the started and finished queries. However, an [HTTP event listener](https://trino.io/docs/current/admin/event-listeners-http.html) can be configured in Trino to inform trino-lb about all query starts and completions.
 
