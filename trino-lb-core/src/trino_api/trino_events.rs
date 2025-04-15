@@ -9,6 +9,7 @@ use crate::TrinoQueryId;
 #[serde(rename_all = "camelCase")]
 pub struct TrinoEvent {
     pub metadata: TrinoEventMetadata,
+    pub context: TrinoEventContext,
 }
 
 impl TrinoEvent {
@@ -19,6 +20,14 @@ impl TrinoEvent {
     pub fn query_id(&self) -> &TrinoQueryId {
         &self.metadata.query_id
     }
+
+    pub fn uri(&self) -> &Url {
+        &self.metadata.uri
+    }
+
+    pub fn server_address(&self) -> &str {
+        &self.context.server_address
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -27,6 +36,15 @@ pub struct TrinoEventMetadata {
     pub uri: Url,
     pub query_id: TrinoQueryId,
     pub query_state: TrinoQueryState,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrinoEventContext {
+    /// We can not use [`url::Url`] or [`url::Host`] here, as we otherwise get
+    /// `Error("relative URL without a base: \"trino-m-1-coordinator-default-0.trino-m-1-coordinator-default.default.svc.cluster.local\"", line: 24, column: 110)`
+    pub server_address: String,
+    pub environment: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]

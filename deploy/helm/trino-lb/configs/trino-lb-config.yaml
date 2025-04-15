@@ -12,7 +12,7 @@ trinoLb:
     #   # helm install postgres bitnami/postgresql --version 13.2.18 --set auth.username=trino-lb,auth.password=trino-lb,auth.database=trino_lb
     #   url: postgres://trino-lb:trino-lb@postgres-postgresql.default.svc.cluster.local/trino_lb
     #   maxConnections: 10
-  proxyMode: ProxyAllCalls
+  proxyMode: ProxyFirstCall # ProxyFirstCall
   refreshQueryCounterInterval: 30s # It is low for testing purpose and to get frequent running queries metrics
   tracing:
     enabled: true

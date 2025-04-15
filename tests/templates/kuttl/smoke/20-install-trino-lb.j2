@@ -12,7 +12,7 @@ spec:
   # I'm a bit surprised that 3 replicas work in combination with inMemory persistence :)
   # Maybe Kubernetes is sticky for some reason, maybe trino-clients will retry call until they get
   # to the correct trino-lb instance...
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: trino-lb
@@ -26,6 +26,9 @@ spec:
           image: {{ test_scenario['values']['trino-lb'] }}
           imagePullPolicy: IfNotPresent
           command: ["trino-lb", "--config-file", "/etc/stackable/trino-lb/config/trino-lb-config.yaml"]
+          # env:
+          #   - name: RUST_LOG
+          #     value: debug
           ports:
             - containerPort: 8080
             - containerPort: 8443
@@ -68,7 +71,7 @@ kind: Service
 metadata:
   name: trino-lb
 spec:
-  type: ClusterIP
+  type: NodePort # to access it for debugging purposes
   selector:
     app.kubernetes.io/name: trino-lb
   ports:

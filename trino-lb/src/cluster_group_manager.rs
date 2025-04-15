@@ -247,7 +247,7 @@ impl ClusterGroupManager {
     }
 
     #[instrument(
-        skip(self),
+        skip(self, query, requested_path),
         fields(request_headers = ?request_headers.sanitize())
     )]
     pub async fn cancel_query_on_trino(

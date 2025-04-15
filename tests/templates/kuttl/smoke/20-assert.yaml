@@ -4,5 +4,5 @@ kind: Deployment
 metadata:
   name: trino-lb
 status:
-  replicas: 3
-  readyReplicas: 3
+  replicas: 1
+  readyReplicas: 1

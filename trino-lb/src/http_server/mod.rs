@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fmt::Debug,
     net::{Ipv6Addr, SocketAddr},
     path::PathBuf,
@@ -19,7 +20,9 @@ use tower_http::{
     compression::CompressionLayer, decompression::RequestDecompressionLayer, trace::TraceLayer,
 };
 use tracing::info;
+use trino_lb_core::config::TrinoClusterConfig;
 use trino_lb_persistence::PersistenceImplementation;
+use url::Url;
 
 use crate::{
     cluster_group_manager::ClusterGroupManager, config::Config, metrics::Metrics, routing,
@@ -31,6 +34,19 @@ mod v1;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
+    #[snafu(display("Failed to extract Trino host from given Trino endpoint {endpoint}"))]
+    ExtractTrinoHostFromEndpoint { endpoint: Url },
+
+    #[snafu(display(
+        "The clusters \"{first_cluster}\" and \"{second_cluster}\" share the same host \"{host}\". \
+        This is bad, because we don't know from which cluster a certain Trino HTTP even was send from"
+    ))]
+    DuplicateTrinoClusterHost {
+        first_cluster: String,
+        second_cluster: String,
+        host: String,
+    },
+
     #[snafu(display(
         "Failed configure HTTP server PEM cert at {cert_pem_file:?} and PEM key at {key_pem_file:?}"
     ))]
@@ -54,6 +70,8 @@ pub struct AppState {
     persistence: Arc<PersistenceImplementation>,
     cluster_group_manager: ClusterGroupManager,
     router: routing::Router,
+    /// Maps from the Cluster host to the name of the cluster
+    cluster_name_for_host: HashMap<String, String>,
     metrics: Arc<Metrics>,
 }
 
@@ -66,11 +84,35 @@ pub async fn start_http_server(
 ) -> Result<(), Error> {
     let tls_config = config.trino_lb.tls.clone();
     let ports_config = config.trino_lb.ports.clone();
+
+    let mut cluster_name_for_host = HashMap::new();
+    let clusters = config
+        .trino_cluster_groups
+        .values()
+        .flat_map(|group_config| &group_config.trino_clusters);
+    for TrinoClusterConfig { name, endpoint, .. } in clusters {
+        let host = endpoint
+            .host_str()
+            .with_context(|| ExtractTrinoHostFromEndpointSnafu {
+                endpoint: endpoint.clone(),
+            })?;
+        if let Some(first_cluster) = cluster_name_for_host.insert(host.to_owned(), name.to_owned())
+        {
+            DuplicateTrinoClusterHostSnafu {
+                first_cluster,
+                second_cluster: name,
+                host,
+            }
+            .fail()?;
+        }
+    }
+
     let app_state = Arc::new(AppState {
         config,
         persistence,
         cluster_group_manager,
         router,
+        cluster_name_for_host,
         metrics,
     });
 

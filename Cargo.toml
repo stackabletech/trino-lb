@@ -94,4 +94,4 @@ urlencoding = "2.1"
 indicatif = "0.17"
 
 [patch.crates-io]
-prusto = { git = "https://github.com/sbernauer/prusto.git", branch = "feat/derive-name-attribute" }
+prusto = { git = "https://github.com/sbernauer/prusto.git", branch = "feat/derive-name-attribute-2" }

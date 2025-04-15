@@ -267,7 +267,7 @@ impl Scaler {
         while let Some(res) = join_set.join_next().await {
             res.context(JoinReconcileClusterGroupTaskSnafu)??;
         }
-        info!("All cluster groups reconciled");
+        info!("All cluster groups successfully reconciled");
 
         Ok(())
     }
@@ -436,7 +436,7 @@ impl Scaler {
         while let Some(res) = join_set.join_next().await {
             res.context(JoinApplyClusterTargetStateTaskSnafu)??;
         }
-        info!("Applied all target cluster states");
+        debug!("Applied all target cluster states");
 
         Ok(())
     }

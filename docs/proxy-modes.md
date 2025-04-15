@@ -44,6 +44,9 @@ Please have a look at the [kuttl tests](https://github.com/stackabletech/trino-l
 
 Please note that you cannot disable the TLS certificate check. In the example below, the secret-operator from the Stackable Data Platform is used to provision valid TLS certificates automatically.
 
+Please also note that you need to use the FQDN for the configured Trino clusters in your trino-lb config.
+This is needed, because we need to determine which Trino cluster send the Trino HTTP event based on the `uri`.
+
 ```yaml
 apiVersion: trino.stackable.tech/v1alpha1
 kind: TrinoCluster

@@ -155,7 +155,7 @@ impl QueryCountFetcher {
     /// - In case we know the cluster is not reachable (e.g. the cluster is turned off or currently
     ///   starting), store a query count of zero (0) to avoid dangling clusters with non-zero query
     ///   counts.
-    #[instrument(skip(self, cluster), fields(cluster.name))]
+    #[instrument(skip(self, cluster, state), fields(cluster.name))]
     async fn process_cluster(&self, cluster: &TrinoClusterConfig, state: ClusterState) {
         match state {
             ClusterState::Ready | ClusterState::Unhealthy | ClusterState::Draining { .. } => {

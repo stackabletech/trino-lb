@@ -2418,6 +2418,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "paste"
+version = "1.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
 name = "pem"
 version = "3.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2669,8 +2675,8 @@ checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
 
 [[package]]
 name = "prusto"
-version = "0.5.1"
-source = "git+https://github.com/sbernauer/prusto.git?branch=feat%2Fderive-name-attribute#8a3ba043f4315f03f44becaf9094effce765643b"
+version = "0.5.2"
+source = "git+https://github.com/sbernauer/prusto.git?branch=feat%2Fderive-name-attribute-2#5752bc9a591127dab277ea1b41397b775789a565"
 dependencies = [
  "bigdecimal",
  "chrono",
@@ -2681,6 +2687,7 @@ dependencies = [
  "iterable",
  "lazy_static",
  "log",
+ "paste",
  "prusto-macros",
  "regex",
  "reqwest 0.11.27",
@@ -2694,8 +2701,8 @@ dependencies = [
 
 [[package]]
 name = "prusto-macros"
-version = "0.2.0"
-source = "git+https://github.com/sbernauer/prusto.git?branch=feat%2Fderive-name-attribute#8a3ba043f4315f03f44becaf9094effce765643b"
+version = "0.2.1"
+source = "git+https://github.com/sbernauer/prusto.git?branch=feat%2Fderive-name-attribute-2#5752bc9a591127dab277ea1b41397b775789a565"
 dependencies = [
  "proc-macro2",
  "quote",
