@@ -46,6 +46,19 @@ Please note that you cannot disable the TLS certificate check. In the example be
 
 Please also note that you need to use the FQDN for the configured Trino clusters in your trino-lb config.
 This is needed, because we need to determine which Trino cluster send the Trino HTTP event based on the `uri`.
+If you get Trino HTTP events from a Trino cluster trino-lb does not know about, you can give Trino clusters a list of alternative names it might be using:
+
+```yaml
+trinoClusterGroups:
+  default:
+    maxRunningQueries: 1
+    trinoClusters:
+      - name: my-trino-cluster
+        endpoint: https://1.2.3.4:8443
+        alternativeHostnames:
+          - my-trino-cluster.internal.corp
+          - trino-s-1-coordinator-default-0.trino-s-1-coordinator-default.default.svc.cluster.local
+```
 
 ```yaml
 apiVersion: trino.stackable.tech/v1alpha1

@@ -90,20 +90,30 @@ pub async fn start_http_server(
         .trino_cluster_groups
         .values()
         .flat_map(|group_config| &group_config.trino_clusters);
-    for TrinoClusterConfig { name, endpoint, .. } in clusters {
+    for TrinoClusterConfig {
+        name,
+        alternative_hostnames,
+        endpoint,
+        ..
+    } in clusters
+    {
         let host = endpoint
             .host_str()
             .with_context(|| ExtractTrinoHostFromEndpointSnafu {
                 endpoint: endpoint.clone(),
             })?;
-        if let Some(first_cluster) = cluster_name_for_host.insert(host.to_owned(), name.to_owned())
-        {
-            DuplicateTrinoClusterHostSnafu {
-                first_cluster,
-                second_cluster: name,
-                host,
+
+        for name in std::iter::once(name).chain(alternative_hostnames.iter()) {
+            if let Some(first_cluster) =
+                cluster_name_for_host.insert(host.to_owned(), name.to_owned())
+            {
+                DuplicateTrinoClusterHostSnafu {
+                    first_cluster,
+                    second_cluster: name,
+                    host,
+                }
+                .fail()?;
             }
-            .fail()?;
         }
     }
 

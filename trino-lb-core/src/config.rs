@@ -193,7 +193,12 @@ pub struct TrinoClusterGroupConfig {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoClusterConfig {
     pub name: String,
+
+    #[serde(default)]
+    pub alternative_hostnames: Vec<String>,
+
     pub endpoint: Url,
+
     pub credentials: TrinoClusterCredentialsConfig,
 }
 
