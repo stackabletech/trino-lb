@@ -7,10 +7,12 @@ use prusto::{QueryError, Warning};
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use snafu::{ResultExt, Snafu};
-use tracing::instrument;
+use tracing::{debug, instrument, warn};
 use url::Url;
 
 use crate::{TrinoQueryId, trino_query::QueuedQuery};
+
+use super::stats::Stat;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -57,32 +59,6 @@ pub struct TrinoQueryApiResponse {
 
     pub update_type: Option<String>,
     pub update_count: Option<u64>,
-}
-
-/// Copied from [`prusto::Stat`], but with `root_stage`
-#[derive(Deserialize, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Stat {
-    pub completed_splits: u32,
-    pub cpu_time_millis: u64,
-    pub elapsed_time_millis: u64,
-    pub nodes: u32,
-    pub peak_memory_bytes: u64,
-    pub physical_input_bytes: u64,
-    pub processed_bytes: u64,
-    pub processed_rows: u64,
-    pub progress_percentage: Option<f32>,
-    pub queued_splits: u32,
-    pub queued_time_millis: u64,
-    pub queued: bool,
-    pub root_stage: Option<serde_json::Value>,
-    pub running_percentage: Option<f32>,
-    pub running_splits: u32,
-    pub scheduled: bool,
-    pub spilled_bytes: u64,
-    pub state: String,
-    pub total_splits: u32,
-    pub wall_time_millis: u64,
 }
 
 impl TrinoQueryApiResponse {
@@ -156,22 +132,34 @@ impl TrinoQueryApiResponse {
         })
     }
 
-    #[instrument(
-        skip(self),
-        fields(trino_lb_addr = %trino_lb_addr),
-    )]
+    #[instrument(skip(self, trino_lb_addr))]
     pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: &Url) -> Result<(), Error> {
         if let Some(next_uri) = &self.next_uri {
             let next_uri = Url::parse(next_uri).context(ParseNextUriFromTrinoSnafu)?;
-            self.next_uri = Some(change_next_uri_to_trino_lb(&next_uri, trino_lb_addr).to_string());
+            self.next_uri =
+                Some(change_next_uri_to_base_addr(&next_uri, trino_lb_addr).to_string());
+
+            debug!(self.next_uri, "Changed nextUri to trino-lb");
+        }
+
+        Ok(())
+    }
+
+    #[instrument(skip(self, trino_addr))]
+    pub fn change_next_uri_to_trino(&mut self, trino_addr: &Url) -> Result<(), Error> {
+        if let Some(next_uri) = &self.next_uri {
+            let next_uri = Url::parse(next_uri).context(ParseNextUriFromTrinoSnafu)?;
+            self.next_uri = Some(change_next_uri_to_base_addr(&next_uri, trino_addr).to_string());
+
+            debug!(self.next_uri, "Changed nextUri to Trino");
         }
 
         Ok(())
     }
 }
 
-fn change_next_uri_to_trino_lb(next_uri: &Url, trino_lb_addr: &Url) -> Url {
-    let mut result = trino_lb_addr.clone();
+fn change_next_uri_to_base_addr(next_uri: &Url, base_addr: &Url) -> Url {
+    let mut result = base_addr.clone();
     result.set_path(next_uri.path());
     result
 }
@@ -207,7 +195,7 @@ mod tests {
     ) {
         let next_uri = Url::parse(&next_uri).unwrap();
         let trino_lb_addr = Url::parse(&trino_lb_addr).unwrap();
-        let result = change_next_uri_to_trino_lb(&next_uri, &trino_lb_addr);
+        let result = change_next_uri_to_base_addr(&next_uri, &trino_lb_addr);
         assert_eq!(result.to_string(), expected);
     }
 }

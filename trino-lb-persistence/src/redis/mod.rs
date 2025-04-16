@@ -251,17 +251,26 @@ where
     }
 
     #[instrument(skip(self))]
-    async fn load_query(&self, query_id: &TrinoQueryId) -> Result<TrinoQuery, super::Error> {
+    async fn load_query(
+        &self,
+        query_id: &TrinoQueryId,
+    ) -> Result<Option<TrinoQuery>, super::Error> {
         let key = query_key(query_id);
-        let value: Vec<u8> = self
+
+        let value: Option<Vec<u8>> = self
             .connection()
             .get(key)
             .await
             .context(ReadFromRedisSnafu)?;
+        let Some(value) = value else {
+            return Ok(None);
+        };
 
-        Ok(bincode::serde::decode_from_slice(&value, BINCODE_CONFIG)
-            .context(DeserializeFromBinarySnafu)?
-            .0)
+        Ok(Some(
+            bincode::serde::decode_from_slice(&value, BINCODE_CONFIG)
+                .context(DeserializeFromBinarySnafu)?
+                .0,
+        ))
     }
 
     #[instrument(skip(self))]

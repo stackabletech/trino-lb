@@ -1,0 +1,10 @@
+---
+apiVersion: trino.stackable.tech/v1alpha1
+kind: TrinoCatalog
+metadata:
+  name: tpch
+  labels:
+    trino: trino
+spec:
+  connector:
+    tpch: {}

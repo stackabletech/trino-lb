@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fmt::Debug,
     net::{Ipv6Addr, SocketAddr},
     path::PathBuf,
@@ -15,9 +16,13 @@ use axum_server::{Handle, tls_rustls::RustlsConfig};
 use futures::FutureExt;
 use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::time::sleep;
-use tower_http::{compression::CompressionLayer, trace::TraceLayer};
+use tower_http::{
+    compression::CompressionLayer, decompression::RequestDecompressionLayer, trace::TraceLayer,
+};
 use tracing::info;
+use trino_lb_core::config::TrinoClusterConfig;
 use trino_lb_persistence::PersistenceImplementation;
+use url::Url;
 
 use crate::{
     cluster_group_manager::ClusterGroupManager, config::Config, metrics::Metrics, routing,
@@ -29,6 +34,19 @@ mod v1;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
+    #[snafu(display("Failed to extract Trino host from given Trino endpoint {endpoint}"))]
+    ExtractTrinoHostFromEndpoint { endpoint: Url },
+
+    #[snafu(display(
+        "The clusters \"{first_cluster}\" and \"{second_cluster}\" share the same host \"{host}\". \
+        This is bad, because we don't know from which cluster a certain Trino HTTP even was send from"
+    ))]
+    DuplicateTrinoClusterHost {
+        first_cluster: String,
+        second_cluster: String,
+        host: String,
+    },
+
     #[snafu(display(
         "Failed configure HTTP server PEM cert at {cert_pem_file:?} and PEM key at {key_pem_file:?}"
     ))]
@@ -52,6 +70,8 @@ pub struct AppState {
     persistence: Arc<PersistenceImplementation>,
     cluster_group_manager: ClusterGroupManager,
     router: routing::Router,
+    /// Maps from the Cluster host to the name of the cluster
+    cluster_name_for_host: HashMap<String, String>,
     metrics: Arc<Metrics>,
 }
 
@@ -64,11 +84,45 @@ pub async fn start_http_server(
 ) -> Result<(), Error> {
     let tls_config = config.trino_lb.tls.clone();
     let ports_config = config.trino_lb.ports.clone();
+
+    let mut cluster_name_for_host = HashMap::new();
+    let clusters = config
+        .trino_cluster_groups
+        .values()
+        .flat_map(|group_config| &group_config.trino_clusters);
+    for TrinoClusterConfig {
+        name,
+        alternative_hostnames,
+        endpoint,
+        ..
+    } in clusters
+    {
+        let host = endpoint
+            .host_str()
+            .with_context(|| ExtractTrinoHostFromEndpointSnafu {
+                endpoint: endpoint.clone(),
+            })?;
+
+        for name in std::iter::once(name).chain(alternative_hostnames.iter()) {
+            if let Some(first_cluster) =
+                cluster_name_for_host.insert(host.to_owned(), name.to_owned())
+            {
+                DuplicateTrinoClusterHostSnafu {
+                    first_cluster,
+                    second_cluster: name,
+                    host,
+                }
+                .fail()?;
+            }
+        }
+    }
+
     let app_state = Arc::new(AppState {
         config,
         persistence,
         cluster_group_manager,
         router,
+        cluster_name_for_host,
         metrics,
     });
 
@@ -121,9 +175,24 @@ pub async fn start_http_server(
             "/v1/statement/executing/{query_id}/{slug}/{token}",
             delete(v1::statement::delete_trino_executing_statement),
         )
+        .route(
+            "/v1/trino-event-listener",
+            post(v1::trino_event_listener::post_trino_event_listener),
+        )
         .route("/ui/index.html", get(ui::index::get_ui_index))
         .route("/ui/query.html", get(ui::query::get_ui_query))
         .layer(TraceLayer::new_for_http())
+        // Transparently decompress request bodies based on the
+        // Content-Encoding header.
+        //
+        // The Trino HTTP events (received at `/v1/trino-event-listener`) are
+        // compressed by default, so we need to be able to accept compressed
+        // content.
+        .layer(RequestDecompressionLayer::new())
+        // Compress response bodies if the associated request had an
+        // Accept-Encoding header.
+        //
+        // Trino clients can ask for compressed data, so we should support compressing the response
         .layer(CompressionLayer::new())
         .with_state(app_state);
 

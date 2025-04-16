@@ -1,0 +1,34 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-routing
+spec:
+  template:
+    spec:
+      containers:
+        - name: test-routing
+          image: oci.stackable.tech/sdp/trino-cli:{{ test_scenario['values']['trino'] }}-stackable0.0.0-dev
+          command:
+            - /bin/bash
+            - -x
+            - -euo
+            - pipefail
+            - -c
+            - |
+              TRINO_LB_ADDRESS="https://trino-lb:8443"
+              COORDINATOR_NAME_QUERY="select regexp_extract(url_extract_host(http_uri), '[a-z0-9-]+') from "system".runtime.nodes where coordinator = true"
+
+              # admin lands in s
+              echo "$COORDINATOR_NAME_QUERY" | TRINO_PASSWORD=adminadmin java -jar trino-cli-executable.jar --server $TRINO_LB_ADDRESS --insecure --user admin --password | grep -qx '"trino-s-1-coordinator-default-0"' || exit 1
+              # alice lands in s
+              echo "$COORDINATOR_NAME_QUERY" | TRINO_PASSWORD=alicealice java -jar trino-cli-executable.jar --server $TRINO_LB_ADDRESS --insecure --user alice --password | grep -qx '"trino-s-1-coordinator-default-0"' || exit 1
+              # bob lands in m
+              echo "$COORDINATOR_NAME_QUERY" | TRINO_PASSWORD=bobbob java -jar trino-cli-executable.jar --server $TRINO_LB_ADDRESS --insecure --user bob --password | grep -qx '"trino-m-1-coordinator-default-0"' || exit 1
+
+              # We can also set client tags explicitly
+              echo "$COORDINATOR_NAME_QUERY" | TRINO_PASSWORD=adminadmin java -jar trino-cli-executable.jar --server $TRINO_LB_ADDRESS --insecure --user admin --password --client-tags=s | grep -qx '"trino-s-1-coordinator-default-0"' || exit 1
+              echo "$COORDINATOR_NAME_QUERY" | TRINO_PASSWORD=adminadmin java -jar trino-cli-executable.jar --server $TRINO_LB_ADDRESS --insecure --user admin --password --client-tags=m | grep -qx '"trino-m-1-coordinator-default-0"' || exit 1
+
+              echo "All queries completed successfully."
+      restartPolicy: OnFailure

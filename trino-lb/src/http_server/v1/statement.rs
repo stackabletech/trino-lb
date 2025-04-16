@@ -14,13 +14,14 @@ use axum::{
 use futures::TryFutureExt;
 use http::{HeaderMap, StatusCode, Uri};
 use opentelemetry::KeyValue;
-use snafu::{ResultExt, Snafu};
+use snafu::{OptionExt, ResultExt, Snafu};
 use tokio::time::Instant;
 use tracing::{Instrument, debug, info, info_span, instrument, warn};
 use trino_lb_core::{
     TrinoLbQueryId, TrinoQueryId,
+    config::TrinoLbProxyMode,
     sanitization::Sanitize,
-    trino_api::TrinoQueryApiResponse,
+    trino_api::queries::TrinoQueryApiResponse,
     trino_query::{QueuedQuery, TrinoQuery},
 };
 use trino_lb_persistence::Persistence;
@@ -36,12 +37,12 @@ use crate::{
 pub enum Error {
     #[snafu(display("Failed to modify nextUri trino send us to point tu trino-lb"))]
     ModifyNextUri {
-        source: trino_lb_core::trino_api::Error,
+        source: trino_lb_core::trino_api::queries::Error,
     },
 
     #[snafu(display("Failed to convert queued query to trino query"))]
     ConvertQueuedQueryToTrinoQuery {
-        source: trino_lb_core::trino_api::Error,
+        source: trino_lb_core::trino_api::queries::Error,
     },
 
     #[snafu(display("Failed to store queued query in persistence"))]
@@ -59,8 +60,17 @@ pub enum Error {
         query_id: TrinoLbQueryId,
     },
 
+    #[snafu(display("Query with id {query_id:?} not found"))]
+    QueryNotFound { query_id: TrinoQueryId },
+
     #[snafu(display("Failed to store query in persistence"))]
     StoreQueryInPersistence {
+        source: trino_lb_persistence::Error,
+        query_id: TrinoQueryId,
+    },
+
+    #[snafu(display("Failed to delete query from persistence"))]
+    DeleteQueryFromPersistence {
         source: trino_lb_persistence::Error,
         query_id: TrinoQueryId,
     },
@@ -136,11 +146,7 @@ impl IntoResponse for Error {
 }
 
 /// This function gets a new query and decided wether to queue it or to send it to a Trino cluster directly.
-#[instrument(
-    name = "POST /v1/statement",
-    skip(state),
-    fields(headers = ?headers.sanitize()),
-)]
+#[instrument(name = "POST /v1/statement", skip(state, headers, query))]
 pub async fn post_statement(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
@@ -167,7 +173,7 @@ pub async fn post_statement(
 /// It either replies with "please hold the line" or forwards the query to an Trino cluster.
 #[instrument(
     name = "GET /v1/statement/queued_in_trino_lb/{queryId}/{sequenceNumber}",
-    skip(state)
+    skip(state, sequence_number)
 )]
 pub async fn get_trino_lb_statement(
     State(state): State<Arc<AppState>>,
@@ -195,8 +201,7 @@ pub async fn get_trino_lb_statement(
 /// In case the nextUri is null, the query will be stopped and removed from trino-lb.
 #[instrument(
     name = "GET /v1/statement/queued/{queryId}/{slug}/{token}",
-    skip(state),
-    fields(headers = ?headers.sanitize()),
+    skip(state, headers)
 )]
 pub async fn get_trino_queued_statement(
     headers: HeaderMap,
@@ -218,8 +223,7 @@ pub async fn get_trino_queued_statement(
 /// In case the nextUri is null, the query will be stopped and removed from trino-lb.
 #[instrument(
     name = "GET /v1/statement/executing/{queryId}/{slug}/{token}",
-    skip(state),
-    fields(headers = ?headers.sanitize()),
+    skip(state, headers, uri)
 )]
 pub async fn get_trino_executing_statement(
     headers: HeaderMap,
@@ -235,7 +239,7 @@ pub async fn get_trino_executing_statement(
     handle_query_running_on_trino(&state, headers, query_id, uri.path()).await
 }
 
-#[instrument(skip(state, queued_query))]
+#[instrument(skip_all)]
 async fn queue_or_hand_over_query(
     state: &Arc<AppState>,
     queued_query: QueuedQuery,
@@ -250,6 +254,7 @@ async fn queue_or_hand_over_query(
         last_accessed,
         cluster_group,
     } = &queued_query;
+    let proxy_mode = &state.config.trino_lb.proxy_mode;
 
     let start_of_request = Instant::now();
 
@@ -264,6 +269,7 @@ async fn queue_or_hand_over_query(
             cluster = cluster.name,
             "Found cluster that has sufficient space"
         );
+
         let has_increased = state
             .persistence
             .inc_cluster_query_count(&cluster.name.to_string(), cluster.max_running_queries)
@@ -271,6 +277,39 @@ async fn queue_or_hand_over_query(
             .context(DecClusterQueryCounterSnafu {
                 trino_cluster: &cluster.name,
             })?;
+
+        if !has_increased {
+            debug!(
+                cluster = cluster.name,
+                "The cluster had enough space when asked for the best cluster, but inc_cluster_query_count returned None, \
+                    probably because the cluster has reached its maximum query count in the meantime"
+            );
+        }
+
+        // let cont = match proxy_mode {
+        //     // Only continue when the increment was successful
+        //     TrinoLbProxyMode::ProxyAllCalls => {
+        //         let has_increased = state
+        //             .persistence
+        //             .inc_cluster_query_count(&cluster.name.to_string(), cluster.max_running_queries)
+        //             .await
+        //             .context(DecClusterQueryCounterSnafu {
+        //                 trino_cluster: &cluster.name,
+        //             })?;
+
+        //         if !has_increased {
+        //             debug!(
+        //                 cluster = cluster.name,
+        //                 "The cluster had enough space when asked for the best cluster, but inc_cluster_query_count returned None, \
+        //                         probably because the cluster has reached its maximum query count in the meantime"
+        //             );
+        //         }
+
+        //         has_increased
+        //     }
+        //     // Always continue, we don't store any query in the persistence
+        //     TrinoLbProxyMode::ProxyFirstCall => true,
+        // };
 
         if has_increased {
             let mut send_to_trino_response = state
@@ -296,27 +335,43 @@ async fn queue_or_hand_over_query(
                     );
 
                     if trino_query_api_response.next_uri.is_some() {
-                        let query = TrinoQuery::new_from(
-                            cluster.name.clone(),
-                            trino_query_api_response.id.clone(),
-                            cluster.endpoint.clone(),
-                            *creation_time,
-                            SystemTime::now(),
-                        );
-                        let query_id = query.id.clone();
+                        match state.config.trino_lb.proxy_mode {
+                            TrinoLbProxyMode::ProxyAllCalls => {
+                                // Only store the query and change the nextURI to trino-lb in case it should proxy all
+                                // calls
+                                let query = TrinoQuery::new_from(
+                                    cluster.name.clone(),
+                                    trino_query_api_response.id.clone(),
+                                    cluster.endpoint.clone(),
+                                    *creation_time,
+                                    SystemTime::now(),
+                                );
+                                let query_id = query.id.clone();
 
-                        state.persistence.store_query(query).await.context(
-                            StoreQueryInPersistenceSnafu {
-                                query_id: &query_id,
-                            },
-                        )?;
+                                state.persistence.store_query(query).await.context(
+                                    StoreQueryInPersistenceSnafu {
+                                        query_id: &query_id,
+                                    },
+                                )?;
 
-                        trino_query_api_response
-                            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
-                            .context(ModifyNextUriSnafu)?;
+                                trino_query_api_response
+                                    .change_next_uri_to_trino_lb(
+                                        &state.config.trino_lb.external_address,
+                                    )
+                                    .context(ModifyNextUriSnafu)?;
+                            }
+                            TrinoLbProxyMode::ProxyFirstCall => {
+                                // In case http-server.process-forwarded is set to true, Trino might choose the original
+                                // host, which is trino-lb. But maybe also not, not entirely sure. As we *don't* want to
+                                // send future calls to trino-lb, we need to actively change the nextUri to the Trino
+                                // cluster. Better safe than sorry!
+                                trino_query_api_response
+                                    .change_next_uri_to_trino(&cluster.endpoint)
+                                    .context(ModifyNextUriSnafu)?;
+                            }
+                        }
 
                         info!(
-                            query_id,
                             trino_cluster_name = cluster.name,
                             "Successfully handed query over to Trino cluster"
                         );
@@ -327,19 +382,28 @@ async fn queue_or_hand_over_query(
                             "Trino got our query but send no nextUri. Maybe an Syntax error or something similar?"
                         );
 
-                        // The queued query will be removed from the persistence below.
-                        // As the query is probably finished, lets decrement the query counter again.
-                        state
-                            .persistence
-                            .dec_cluster_query_count(&cluster.name)
-                            .await
-                            .context(DecClusterQueryCounterSnafu {
-                                trino_cluster: &cluster.name,
-                            })?;
+                        if proxy_mode == &TrinoLbProxyMode::ProxyAllCalls {
+                            // The queued query will be removed from the persistence below.
+                            // As the query is probably finished, lets decrement the query counter again.
+                            state
+                                .persistence
+                                .dec_cluster_query_count(&cluster.name)
+                                .await
+                                .context(DecClusterQueryCounterSnafu {
+                                    trino_cluster: &cluster.name,
+                                })?;
+                        }
+                        // We don't increment the query counter in ProxyFirstCall mode, as we assume
+                        // we get a query event that the query finished (even if it fails). It might
+                        // be the case that this assumption is wrong, but in this case we are better
+                        // safe than sorry and don't decrement the counter, we'd rather have one
+                        // query to few on the cluster instead of too much. A periodic query counter
+                        // sync is in place anyway.
                     }
                 }
                 SendToTrinoResponse::Unauthorized { .. } => {
-                    // As the query was not actually started decrement the query counter again.
+                    // As the query was not actually started decrement the query counter again
+                    // (in all proxy modes)
                     state
                         .persistence
                         .dec_cluster_query_count(&cluster.name)
@@ -364,12 +428,6 @@ async fn queue_or_hand_over_query(
             }
 
             return Ok(send_to_trino_response);
-        } else {
-            debug!(
-                cluster = cluster.name,
-                "The cluster had enough space when asked for the best cluster, but inc_cluster_query_count returned None, \
-                    probably because the cluster has reached its maximum query count in the meantime"
-            );
         }
     }
 
@@ -418,24 +476,23 @@ async fn queue_or_hand_over_query(
     })
 }
 
-#[instrument(
-    skip(state),
-    fields(headers = ?headers.sanitize()),
-)]
+#[instrument(skip(state, headers))]
 async fn handle_query_running_on_trino(
     state: &Arc<AppState>,
     headers: HeaderMap,
     query_id: TrinoQueryId,
     requested_path: &str,
 ) -> Result<(HeaderMap, Json<TrinoQueryApiResponse>), Error> {
-    let query =
-        state
-            .persistence
-            .load_query(&query_id)
-            .await
-            .context(StoreQueryInPersistenceSnafu {
-                query_id: query_id.clone(),
-            })?;
+    let query = state
+        .persistence
+        .load_query(&query_id)
+        .await
+        .with_context(|_| LoadQueryFromPersistenceSnafu {
+            query_id: query_id.clone(),
+        })?
+        .with_context(|| QueryNotFoundSnafu {
+            query_id: query_id.clone(),
+        })?;
 
     let (mut trino_query_api_response, trino_headers) = state
         .cluster_group_manager
@@ -452,16 +509,18 @@ async fn handle_query_running_on_trino(
         .context(AskTrinoForQueryStateSnafu)?;
 
     if trino_query_api_response.next_uri.is_some() {
-        // Change the nextUri to actually point to trino-lb instead of Trino.
-        trino_query_api_response
-            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
-            .context(ModifyNextUriSnafu)?;
+        // Only change the nextURI to trino-lb in case it should proxy all calls
+        if state.config.trino_lb.proxy_mode == TrinoLbProxyMode::ProxyAllCalls {
+            trino_query_api_response
+                .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
+                .context(ModifyNextUriSnafu)?;
+        }
     } else {
         info!(%query_id, "Query completed (no next_uri send)");
 
         tokio::try_join!(
             state.persistence.remove_query(&query_id).map_err(|err| {
-                Error::DeleteQueuedQueryFromPersistence {
+                Error::DeleteQueryFromPersistence {
                     source: err,
                     query_id: query_id.to_owned(),
                 }
@@ -538,7 +597,7 @@ pub async fn delete_trino_queued_statement(
 /// This function get's asked to cancel a query that is already sent to an Trino cluster and currently running.
 #[instrument(
     name = "DELETE /v1/statement/executing/{queryId}/{slug}/{token}",
-    skip(state),
+    skip(state, uri),
     fields(headers = ?headers.sanitize()),
 )]
 pub async fn delete_trino_executing_statement(
@@ -558,10 +617,7 @@ pub async fn delete_trino_executing_statement(
     cancel_query_on_trino(headers, &state, query_id, uri.path()).await
 }
 
-#[instrument(
-    skip(state),
-    fields(headers = ?headers.sanitize()),
-)]
+#[instrument(skip(state, headers))]
 async fn cancel_query_on_trino(
     headers: HeaderMap,
     state: &Arc<AppState>,
@@ -573,14 +629,14 @@ async fn cancel_query_on_trino(
         .http_counter
         .add(1, &[KeyValue::new("resource", "cancel_query_on_trino")]);
 
-    let query =
-        state
-            .persistence
-            .load_query(&query_id)
-            .await
-            .context(StoreQueryInPersistenceSnafu {
-                query_id: query_id.clone(),
-            })?;
+    let query = state
+        .persistence
+        .load_query(&query_id)
+        .await
+        .with_context(|_| StoreQueryInPersistenceSnafu {
+            query_id: query_id.clone(),
+        })?
+        .context(QueryNotFoundSnafu { query_id })?;
 
     state
         .cluster_group_manager

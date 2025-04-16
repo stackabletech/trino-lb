@@ -82,7 +82,7 @@ sqlx = { version = "0.8.2", features = [
 strum = { version = "0.27", features = ["derive"] }
 tokio = "1.39"
 tower = "0.5"
-tower-http = { version = "0.6", features = ["compression-full", "tracing"] }
+tower-http = { version = "0.6", features = ["compression-full", "decompression-full", "tracing"] }
 tracing = "0.1"
 tracing-opentelemetry = "0.25"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -94,4 +94,4 @@ urlencoding = "2.1"
 indicatif = "0.17"
 
 [patch.crates-io]
-prusto = { git = "https://github.com/sbernauer/prusto.git", branch = "feat/derive-name-attribute" }
+prusto = { git = "https://github.com/sbernauer/prusto.git", branch = "feat/derive-name-attribute-2" }

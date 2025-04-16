@@ -56,6 +56,9 @@ pub struct TrinoLbConfig {
     #[serde(default)]
     pub tls: TrinoLbTlsConfig,
 
+    #[serde(default)]
+    pub proxy_mode: TrinoLbProxyMode,
+
     #[serde(
         default = "default_refresh_query_counter_interval",
         with = "humantime_serde"
@@ -80,6 +83,14 @@ pub struct TrinoLbTlsConfig {
 
     pub cert_pem_file: Option<PathBuf>,
     pub key_pem_file: Option<PathBuf>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "PascalCase")]
+pub enum TrinoLbProxyMode {
+    #[default]
+    ProxyAllCalls,
+    ProxyFirstCall,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -182,7 +193,12 @@ pub struct TrinoClusterGroupConfig {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct TrinoClusterConfig {
     pub name: String,
+
+    #[serde(default)]
+    pub alternative_hostnames: Vec<String>,
+
     pub endpoint: Url,
+
     pub credentials: TrinoClusterCredentialsConfig,
 }
 
