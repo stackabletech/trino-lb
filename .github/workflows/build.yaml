@@ -74,17 +74,6 @@ jobs:
           image-index-manifest-tag: dev
           container-file: docker/Dockerfile
 
-      # - name: Publish Container Image on docker.stackable.tech
-      #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      #   uses: stackabletech/actions/publish-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
-      #   with:
-      #     image-registry-uri: docker.stackable.tech
-      #     image-registry-username: github
-      #     image-registry-password: ${{ secrets.NEXUS_PASSWORD }}
-      #     image-repository: stackable/trino-lb
-      #     image-manifest-tag: ${{ steps.build.outputs.image-manifest-tag }}
-      #     source-image-uri: ${{ steps.build.outputs.image-manifest-uri }}
-
       - name: Publish Container Image on oci.stackable.tech
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: stackabletech/actions/publish-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
@@ -107,15 +96,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-
-      # - name: Publish and Sign Image Index Manifest to docker.stackable.tech
-      #   uses: stackabletech/actions/publish-index-manifest@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
-      #   with:
-      #     image-registry-uri: docker.stackable.tech
-      #     image-registry-username: github
-      #     image-registry-password: ${{ secrets.NEXUS_PASSWORD }}
-      #     image-repository: stackable/trino-lb
-      #     image-index-manifest-tag: dev
 
       - name: Publish and Sign Image Index Manifest to oci.stackable.tech
         uses: stackabletech/actions/publish-index-manifest@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
