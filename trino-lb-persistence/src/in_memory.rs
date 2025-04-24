@@ -29,9 +29,6 @@ pub enum Error {
     #[snafu(display("Queued query with id {queued_query_id:?} not found"))]
     QueuedQueryNotFound { queued_query_id: TrinoLbQueryId },
 
-    #[snafu(display("Query with id {query_id:?} not found"))]
-    QueryNotFound { query_id: TrinoQueryId },
-
     #[snafu(display("Failed to determined elapsed time since last queryCountFetcher update"))]
     DetermineElapsedTimeSinceLastUpdate { source: SystemTimeError },
 
@@ -93,12 +90,12 @@ impl Persistence for InMemoryPersistence {
     }
 
     #[instrument(skip(self))]
-    async fn load_query(&self, query_id: &TrinoQueryId) -> Result<TrinoQuery, super::Error> {
+    async fn load_query(
+        &self,
+        query_id: &TrinoQueryId,
+    ) -> Result<Option<TrinoQuery>, super::Error> {
         let queries = self.queries.read().await;
-        Ok(queries
-            .get(query_id)
-            .context(QueryNotFoundSnafu { query_id })?
-            .clone())
+        Ok(queries.get(query_id).cloned())
     }
 
     #[instrument(skip(self))]

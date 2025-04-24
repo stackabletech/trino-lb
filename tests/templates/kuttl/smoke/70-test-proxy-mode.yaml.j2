@@ -1,0 +1,54 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-proxy-mode
+spec:
+  template:
+    spec:
+      containers:
+        - name: test-proxy-mode
+          image: oci.stackable.tech/sdp/trino-cli:{{ test_scenario['values']['trino'] }}-stackable0.0.0-dev
+          command:
+            - /bin/bash
+            - -x
+            - -euo
+            - pipefail
+            - -c
+            - |
+              # Query Trinos and trino-lb
+              COORDINATORS=(
+                  "https://trino-s-1-coordinator:8443"
+                  "https://trino-m-1-coordinator:8443"
+                  "https://trino-lb:8443"
+              )
+
+              export TRINO_USER="alice"
+              export TRINO_PASSWORD="alicealice"
+              QUERY="select count(*) from tpch.sf5.customer"
+
+              for COORDINATOR in "${COORDINATORS[@]}"; do
+                  echo "$QUERY" | java -jar trino-cli-executable.jar --server $COORDINATOR --insecure --user $TRINO_USER --password
+              done
+
+              # Send multiple queries in parallel to trino-lb
+              NUM_REQUESTS=30
+              TRINO_LB_ADDRESS="https://trino-lb:8443"
+
+              pids=()
+
+              for ((i = 1; i <= NUM_REQUESTS; i++)); do
+                  echo "$QUERY" | java -jar trino-cli-executable.jar --server $TRINO_LB_ADDRESS --insecure --user $TRINO_USER --password &
+                  pids+=("$!")
+              done
+
+              # Wait for all processes to complete and check exit codes
+              for pid in "${pids[@]}"; do
+                  if ! wait "$pid"; then
+                      echo "One of the requests failed with a non-zero exit code."
+                      exit 1
+                  fi
+              done
+
+              echo "All queries completed successfully."
+      restartPolicy: OnFailure

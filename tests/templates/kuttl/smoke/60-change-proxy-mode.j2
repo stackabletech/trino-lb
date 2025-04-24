@@ -1,0 +1,6 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: kubectl -n $NAMESPACE delete secret trino-lb-config || true
+  - script: envsubst '$NAMESPACE' < 60_trino-lb-config.yaml | kubectl apply -n $NAMESPACE -f -

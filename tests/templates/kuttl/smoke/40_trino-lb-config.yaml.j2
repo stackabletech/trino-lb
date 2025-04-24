@@ -1,0 +1,52 @@
+trinoLb:
+  externalAddress: https://trino-lb:8443
+  tls:
+    enabled: true
+    certPemFile: /certificates/tls.crt
+    keyPemFile: /certificates/tls.key
+  persistence:
+    inMemory: {}
+trinoClusterGroups:
+  s:
+    maxRunningQueries: 1
+    trinoClusters:
+      - name: trino-s-1
+        endpoint: https://trino-s-1-coordinator:8443
+        credentials:
+          username: admin
+          password: adminadmin
+  m:
+    maxRunningQueries: 1
+    trinoClusters:
+      - name: trino-m-1
+        endpoint: https://trino-m-1-coordinator:8443
+        credentials:
+          username: admin
+          password: adminadmin
+trinoClusterGroupsIgnoreCert: true
+
+routers:
+  - trinoRoutingGroupHeader:
+      headerName: X-Trino-Routing-Group
+  - clientTags:
+      oneOf: ["s"]
+      trinoClusterGroup: s
+  - clientTags:
+      oneOf: ["m"]
+      trinoClusterGroup: m
+  - pythonScript:
+      script: |
+        from typing import Optional
+
+        def targetClusterGroup(query: str, headers: dict[str, str]) -> Optional[str]:
+            user = get_user(headers)
+            if user == "alice":
+                return "s"
+            elif user == "bob":
+                return "m"
+            else:
+                return None
+
+        def get_user(headers: dict[str, str]) -> Optional[str]:
+            return headers.get("x-trino-user")
+routingFallback: s
