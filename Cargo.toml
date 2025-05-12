@@ -15,7 +15,7 @@ edition = "2024"
 repository = "https://github.com/stackabletech/trino-lb"
 
 [workspace.dependencies]
-askama = "0.12"
+askama = "0.14"
 axum = { version = "0.8", features = ["tracing"] }
 # If we use the feature "tls-rustls" it will pull in the "aws-lc-rs" crate, which as of 2024-08-16 I did not get to build in the "make run-dev" workflow :/
 axum-server = { version = "0.7", features = ["tls-rustls-no-provider"] }
@@ -94,4 +94,4 @@ urlencoding = "2.1"
 indicatif = "0.17"
 
 [patch.crates-io]
-prusto = { git = "https://github.com/sbernauer/prusto.git", branch = "feat/derive-name-attribute" }
+prusto = { git = "https://github.com/sbernauer/prusto.git", branch = "feat/derive-name-attribute-2" }
