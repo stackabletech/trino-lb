@@ -10,7 +10,12 @@ All notable changes to this project will be documented in this file.
   ago before marking it as `ready` ([#68]).
 - Emit less attributes in tracing to make logs easier readable ([#86]).
 
+### Fixed
+
+- Set connection and response timeout for Redis connections ([#85]).
+
 [#68]: https://github.com/stackabletech/trino-lb/pull/68
+[#85]: https://github.com/stackabletech/trino-lb/pull/85
 [#86]: https://github.com/stackabletech/trino-lb/pull/86
 
 ## [0.5.0] - 2025-03-14

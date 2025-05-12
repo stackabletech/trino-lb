@@ -7,8 +7,8 @@ use std::{
 use futures::{TryFutureExt, future::try_join_all};
 use redis::{
     AsyncCommands, Client, RedisError, Script,
-    aio::{ConnectionManager, MultiplexedConnection},
-    cluster::ClusterClientBuilder,
+    aio::{ConnectionManager, ConnectionManagerConfig, MultiplexedConnection},
+    cluster::{ClusterClientBuilder, ClusterConfig},
     cluster_async::ClusterConnection,
 };
 use snafu::{OptionExt, ResultExt, Snafu};
@@ -22,6 +22,9 @@ use trino_lb_core::{
 use url::Url;
 
 use crate::Persistence;
+
+const REDIS_CONNECTION_TIMEOUT: Duration = Duration::from_secs(10);
+const REDIS_RESPONSE_TIMEOUT: Duration = Duration::from_secs(10);
 
 const LAST_QUERY_COUNT_FETCHER_UPDATE_KEY: &str = "lastQueryCountFetcherUpdate";
 
@@ -139,9 +142,13 @@ impl RedisPersistence<ConnectionManager> {
         })?;
         info!(redis_host, "Using redis persistence");
 
+        let redis_config = ConnectionManagerConfig::new()
+            .set_connection_timeout(REDIS_CONNECTION_TIMEOUT)
+            .set_response_timeout(REDIS_RESPONSE_TIMEOUT);
+
         let client = Client::open(config.endpoint.as_str()).context(CreateClientSnafu)?;
         let connection = client
-            .get_connection_manager()
+            .get_connection_manager_with_config(redis_config)
             .await
             .context(CreateClientSnafu)?;
 
@@ -160,11 +167,15 @@ impl RedisPersistence<ClusterConnection<MultiplexedConnection>> {
         })?;
         info!(redis_host, "Using redis cluster persistence");
 
+        let redis_config = ClusterConfig::new()
+            .set_connection_timeout(REDIS_CONNECTION_TIMEOUT)
+            .set_response_timeout(REDIS_RESPONSE_TIMEOUT);
+
         let client = ClusterClientBuilder::new([config.endpoint.as_str()])
             .build()
             .context(CreateClientSnafu)?;
         let connection = client
-            .get_async_connection()
+            .get_async_connection_with_config(redis_config)
             .await
             .context(CreateClientSnafu)?;
 
