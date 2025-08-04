@@ -9,7 +9,7 @@ trinoLb:
       clusterMode: true
       endpoint: redis://:redis@trino-lb-redis-cluster.trino-lb.svc.cluster.local:6379/
     # postgres:
-    #   # helm install postgres bitnami/postgresql --version 13.2.18 --set auth.username=trino-lb,auth.password=trino-lb,auth.database=trino_lb
+    #   # helm install postgres bitnami/postgresql --version 13.2.18 --set auth.username=trino-lb,auth.password=trino-lb,auth.database=trino_lb,image.repository=bitnamilegacy/postgresql,volumePermissions.image.repository=bitnamilegacy/os-shell,metrics.image.repository=bitnamilegacy/postgres-exporter,global.security.allowInsecureImages=true
     #   url: postgres://trino-lb:trino-lb@postgres-postgresql.default.svc.cluster.local/trino_lb
     #   maxConnections: 10
   refreshQueryCounterInterval: 30s # It is low for testing purpose and to get frequent running queries metrics
