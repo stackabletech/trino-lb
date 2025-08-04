@@ -13,10 +13,11 @@ spec:
     catalogLabelSelector:
       matchLabels:
         trino: trino
-    listenerClass: external-stable
     authentication:
       - authenticationClass: trino-users
   coordinators:
+    roleConfig:
+      listenerClass: external-stable
     configOverrides: &configOverrides
       config.properties:
         tracing.enabled: "true"
@@ -45,10 +46,11 @@ spec:
     catalogLabelSelector:
       matchLabels:
         trino: trino
-    listenerClass: external-stable
     authentication:
       - authenticationClass: trino-users
   coordinators:
+    roleConfig:
+      listenerClass: external-stable
     configOverrides: &configOverrides
       config.properties:
         tracing.enabled: "true"
