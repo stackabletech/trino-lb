@@ -1,9 +1,9 @@
 dependencies:
 - name: redis-cluster
   repository: https://charts.bitnami.com/bitnami/
-  version: 10.2.3
+  version: 10.3.0
 - name: kube-prometheus-stack
   repository: https://prometheus-community.github.io/helm-charts
   version: 55.11.0
-digest: sha256:69e1bcfbf4cda25c7d51be3e67533099f8a0922cf5825fd7e256edef444a34cb
-generated: "2025-08-04T10:22:19.130269831+02:00"
+digest: sha256:f4b091ff3a9d9df5e66c988456f25e14d6e13a4803e7c92c550202fb7b71fd4b
+generated: "2025-08-05T12:18:16.873622385Z"
