@@ -47,7 +47,7 @@ impl PythonScriptRouter {
         config: &PythonScriptRouterConfig,
         valid_target_groups: HashSet<String>,
     ) -> Result<Self, Error> {
-        let function = Python::with_gil(|py| {
+        let function = Python::attach(|py| {
             let script =
                 CString::new(config.script.clone()).context(ConvertScriptToCStringSnafu)?;
             let function: Py<PyAny> =
@@ -76,7 +76,7 @@ impl RouterImplementationTrait for PythonScriptRouter {
         fields(headers = ?headers.sanitize()),
     )]
     async fn route(&self, query: &str, headers: &http::HeaderMap) -> Option<String> {
-        let result = Python::with_gil(|py| {
+        let result = Python::attach(|py| {
             let headers_dict = header_map_to_hashmap(headers)
                 .into_py_dict(py)
                 .context(ConvertHeadersToPythonDictSnafu)?;
@@ -92,7 +92,7 @@ impl RouterImplementationTrait for PythonScriptRouter {
             }
         };
 
-        let target_group = match Python::with_gil(|py| result.extract::<Option<String>>(py)) {
+        let target_group = match Python::attach(|py| result.extract::<Option<String>>(py)) {
             Ok(target_group) => target_group,
             Err(error) => {
                 error!(query, ?error, "Failed to execute Python script");

@@ -128,6 +128,7 @@ pub trait RouterImplementationTrait {
     async fn route(&self, query: &str, headers: &http::HeaderMap) -> Option<String>;
 }
 
+#[allow(clippy::large_enum_variant)]
 #[enum_dispatch]
 pub enum RoutingImplementation {
     ExplainCosts(ExplainCostsRouter),

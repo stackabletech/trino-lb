@@ -4,7 +4,7 @@ on:
     tags: ['v[0-9]+.[0-9]+.[0-9]+']
 
 env:
-  RUST_TOOLCHAIN_VERSION: "1.85.0"
+  RUST_TOOLCHAIN_VERSION: "1.87.0"
   RUSTFLAGS: "-D warnings"
   RUSTDOCFLAGS: "-D warnings"
   CARGO_TERM_COLOR: always

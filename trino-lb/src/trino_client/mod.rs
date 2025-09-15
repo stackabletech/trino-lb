@@ -23,14 +23,18 @@ pub enum Error {
     ExtractTrinoPort { url: Url },
 
     #[snafu(display("Failed to create Trino client"))]
-    CreateTrinoClient { source: prusto::error::Error },
+    CreateTrinoClient {
+        #[snafu(source(from(prusto::error::Error, Box::new)))]
+        source: Box<prusto::error::Error>,
+    },
 
     #[snafu(display("Failed to create HTTP client"))]
     CreateHttpClient { source: reqwest::Error },
 
     #[snafu(display("Failed to execute explain query {explain_query:?}"))]
     ExecuteExplainQuery {
-        source: prusto::error::Error,
+        #[snafu(source(from(prusto::error::Error, Box::new)))]
+        source: Box<prusto::error::Error>,
         explain_query: String,
     },
 
