@@ -5,7 +5,15 @@ trinoLb:
     certPemFile: /certificates/cert.pem
     keyPemFile: /certificates/key.pem
   persistence:
+{% if test_scenario['values']['persistence'] == 'inMemory' %}
     inMemory: {}
+{% elif test_scenario['values']['persistence'] == 'redis' %}
+    redis:
+      endpoint: redis://:redis@redis-master:6379
+{% elif test_scenario['values']['persistence'] == 'postgres' %}
+    postgres:
+      url: postgres://trino-lb:trino-lb@postgresql/trino_lb
+{% endif %}
 trinoClusterGroups:
   s:
     maxRunningQueries: 1
