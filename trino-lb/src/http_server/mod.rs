@@ -1,6 +1,6 @@
 use std::{
     fmt::Debug,
-    net::{Ipv6Addr, SocketAddr},
+    net::{Ipv4Addr, SocketAddr},
     path::PathBuf,
     sync::Arc,
     time::Duration,
@@ -77,7 +77,7 @@ pub async fn start_http_server(
         .route("/", get(|| async { Redirect::permanent("/metrics") }))
         .route("/metrics", get(metrics::get))
         .with_state(Arc::clone(&app_state));
-    let listen_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, ports_config.metrics));
+    let listen_addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, ports_config.metrics));
     info!(%listen_addr, "Starting metrics exporter");
 
     let handle = Handle::new();
@@ -129,7 +129,7 @@ pub async fn start_http_server(
 
     if tls_config.enabled {
         // Start https server
-        let listen_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, ports_config.https));
+        let listen_addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, ports_config.https));
         info!(%listen_addr, "Starting server");
 
         let cert_pem_file = tls_config.cert_pem_file.context(CertsMissingSnafu)?;
@@ -148,7 +148,7 @@ pub async fn start_http_server(
             .context(StartHttpServerSnafu)?;
     } else {
         // Start http server
-        let listen_addr = SocketAddr::from((Ipv6Addr::UNSPECIFIED, ports_config.http));
+        let listen_addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, ports_config.http));
         info!(%listen_addr, "Starting server");
 
         axum_server::bind(listen_addr)

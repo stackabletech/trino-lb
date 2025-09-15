@@ -9,6 +9,10 @@ All notable changes to this project will be documented in this file.
 - The Stackable scaler now ensures that a `TrinoCluster` has changed to `ready` more than 5 seconds
   ago before marking it as `ready` ([#68]).
 - Emit less attributes in tracing to make logs easier readable ([#86]).
+- BREAKING: Only bind to IPv4 (`0.0.0.0`) instead of IPv6 (`::`).
+  On most Linux systems, binding to `::` dual-stacks, on Windows this would likely bind to IPv6 only.
+  As a user reported that they run into `Address family not supported by protocol (os error 97)`, we now only bind to IPv4.
+  There was some attempt to make it portable work on IPv4 and IPv6 (optional), but that turned out to be a bigger story for later ([#XX]).
 
 ### Fixed
 
