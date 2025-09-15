@@ -136,11 +136,7 @@ impl IntoResponse for Error {
 }
 
 /// This function gets a new query and decided wether to queue it or to send it to a Trino cluster directly.
-#[instrument(
-    name = "POST /v1/statement",
-    skip(state),
-    fields(headers = ?headers.sanitize()),
-)]
+#[instrument(name = "POST /v1/statement", skip(state, headers))]
 pub async fn post_statement(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
@@ -167,7 +163,7 @@ pub async fn post_statement(
 /// It either replies with "please hold the line" or forwards the query to an Trino cluster.
 #[instrument(
     name = "GET /v1/statement/queued_in_trino_lb/{queryId}/{sequenceNumber}",
-    skip(state)
+    skip(state, sequence_number)
 )]
 pub async fn get_trino_lb_statement(
     State(state): State<Arc<AppState>>,
@@ -195,8 +191,7 @@ pub async fn get_trino_lb_statement(
 /// In case the nextUri is null, the query will be stopped and removed from trino-lb.
 #[instrument(
     name = "GET /v1/statement/queued/{queryId}/{slug}/{token}",
-    skip(state),
-    fields(headers = ?headers.sanitize()),
+    skip(state, headers)
 )]
 pub async fn get_trino_queued_statement(
     headers: HeaderMap,
@@ -218,8 +213,7 @@ pub async fn get_trino_queued_statement(
 /// In case the nextUri is null, the query will be stopped and removed from trino-lb.
 #[instrument(
     name = "GET /v1/statement/executing/{queryId}/{slug}/{token}",
-    skip(state),
-    fields(headers = ?headers.sanitize()),
+    skip(state, headers)
 )]
 pub async fn get_trino_executing_statement(
     headers: HeaderMap,
@@ -235,7 +229,12 @@ pub async fn get_trino_executing_statement(
     handle_query_running_on_trino(&state, headers, query_id, uri.path()).await
 }
 
-#[instrument(skip(state, queued_query))]
+#[instrument(skip(
+    state,
+    queued_query,
+    queued_query_already_stored_in_persistence,
+    current_sequence_number
+))]
 async fn queue_or_hand_over_query(
     state: &Arc<AppState>,
     queued_query: QueuedQuery,
