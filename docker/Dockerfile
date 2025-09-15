@@ -1,4 +1,6 @@
-FROM debian:bookworm AS builder
+# docker build -f docker/Dockerfile . -t oci.stackable.tech/stackable/trino-lb:0.0.0-dev
+
+FROM debian:trixie AS builder
 
 # hadolint ignore=DL3008
 RUN apt-get update && \
@@ -8,7 +10,7 @@ RUN apt-get update && \
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=SC1091
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.85.0 && . "${HOME}/.cargo/env"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.87.0 && . "${HOME}/.cargo/env"
 
 WORKDIR /trino-lb
 COPY Cargo.toml Cargo.toml
@@ -22,7 +24,7 @@ COPY trino-lb-persistence trino-lb-persistence
 RUN . "$HOME/.cargo/env" && cargo build --locked --release --all-features
 
 # Build final image
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 # Install python, needed for PythonScriptRouter
 # hadolint ignore=DL3008
