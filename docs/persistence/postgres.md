@@ -17,4 +17,4 @@ trinoLb:
 
 The above configuration works with a Postgres installed with the following command:
 
-`helm install postgres bitnami/postgresql --version 13.2.18 --set auth.username=trino-lb,auth.password=trino-lb,auth.database=trino_lb`
+`helm install postgres bitnami/postgresql --version 13.2.18 --set auth.username=trino-lb,auth.password=trino-lb,auth.database=trino_lb,image.repository=bitnamilegacy/postgresql,volumePermissions.image.repository=bitnamilegacy/os-shell,metrics.image.repository=bitnamilegacy/postgres-exporter,global.security.allowInsecureImages=true`
