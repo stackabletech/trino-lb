@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trino-lb
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: trino-lb
+subjects:
+  - kind: ServiceAccount
+    name: trino-lb
+roleRef:
+  kind: Role
+  name: trino-lb
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trino-lb
+  labels:
+    app.kubernetes.io/name: trino-lb
+rules:
+  - apiGroups:
+      - trino.stackable.tech
+    resources:
+      - trinoclusters
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+  - apiGroups:
+      - trino.stackable.tech
+    resources:
+      - trinoclusters/status
+    verbs:
+      - get
