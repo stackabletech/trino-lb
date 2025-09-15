@@ -32,7 +32,10 @@ pub mod stackable;
 pub enum Error {
     #[snafu(display("Stackable scaling error"), context(false))]
     #[allow(clippy::enum_variant_names)]
-    StackableError { source: stackable::Error },
+    StackableError {
+        #[snafu(source(from(stackable::Error, Box::new)))]
+        source: Box<stackable::Error>,
+    },
 
     #[snafu(display(
         "Configuration error: A specific Trino cluster can only be part of a single clusterGroup. Please make sure the Trino cluster {cluster_name:?} only is part of a single clusterGroup."
@@ -40,7 +43,10 @@ pub enum Error {
     ConfigErrorTrinoClusterInMultipleClusterGroups { cluster_name: String },
 
     #[snafu(display("Failed to create Stackable autoscaler"))]
-    CreateStackableAutoscaler { source: stackable::Error },
+    CreateStackableAutoscaler {
+        #[snafu(source(from(stackable::Error, Box::new)))]
+        source: Box<stackable::Error>,
+    },
 
     #[snafu(display("Failed to get the counter of running queries on the cluster {cluster:?}"))]
     GetClusterQueryCounter {

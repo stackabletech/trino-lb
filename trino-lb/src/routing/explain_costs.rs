@@ -18,7 +18,10 @@ pub enum Error {
     TargetClusterGroupNotFound { cluster_group: String },
 
     #[snafu(display("Failed to create Trino client"))]
-    ExtractTrinoHost { source: trino_client::Error },
+    ExtractTrinoHost {
+        #[snafu(source(from(trino_client::Error, Box::new)))]
+        source: Box<trino_client::Error>,
+    },
 }
 
 pub struct ExplainCostsRouter {

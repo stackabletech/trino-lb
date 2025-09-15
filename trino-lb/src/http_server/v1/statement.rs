@@ -412,7 +412,7 @@ async fn queue_or_hand_over_query(
     }
 
     Ok(SendToTrinoResponse::HandedOver {
-        trino_query_api_response: trino_lb_query_api_response,
+        trino_query_api_response: Box::new(trino_lb_query_api_response),
         headers: HeaderMap::new(),
     })
 }

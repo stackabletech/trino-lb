@@ -33,7 +33,7 @@ impl IntoResponse for Error {
     fn into_response(self) -> Response {
         warn!(error = ?self, "Error while processing ui query request");
         let status_code = match self {
-            Error::QueryIdMissing { .. } => StatusCode::BAD_REQUEST,
+            Error::QueryIdMissing => StatusCode::BAD_REQUEST,
             Error::QueryIdNotFound { .. } => StatusCode::NOT_FOUND,
         };
         (status_code, format!("{self}")).into_response()

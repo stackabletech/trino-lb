@@ -95,7 +95,7 @@ pub struct ClusterStats {
 
 pub enum SendToTrinoResponse {
     HandedOver {
-        trino_query_api_response: TrinoQueryApiResponse,
+        trino_query_api_response: Box<TrinoQueryApiResponse>,
         headers: http::HeaderMap,
     },
     Unauthorized {

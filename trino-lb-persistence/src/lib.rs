@@ -86,6 +86,7 @@ pub trait Persistence {
     ) -> Result<ClusterState, Error>;
 }
 
+#[allow(clippy::large_enum_variant)]
 #[enum_dispatch]
 pub enum PersistenceImplementation {
     Redis(redis::RedisPersistence<::redis::aio::ConnectionManager>),
