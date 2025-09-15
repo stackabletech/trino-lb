@@ -1,0 +1,14 @@
+{% if test_scenario['values']['persistence'] == 'postgres' %}
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 600
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+status:
+  readyReplicas: 1
+  replicas: 1
+{% endif %}

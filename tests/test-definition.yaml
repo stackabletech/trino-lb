@@ -6,7 +6,7 @@ dimensions:
   - name: trino
     values:
       - "451"
-      - "470"
+      # - "470" # Reduce test count
       - "476"
       # To use a custom image, add a comma and the full name after the product version
       # - 470,oci.stackable.tech/sdp/trino:470-stackable0.0.0-dev
@@ -21,12 +21,17 @@ dimensions:
     values:
       - "true"
       - "false"
+  - name: persistence
+    values:
+      - inMemory
+      - redis
+      - postgres
 tests:
   - name: smoke
     dimensions:
       - trino-lb
       - trino
+      - persistence
 
 # TODOS
-# 1. Test storage backend redis and postgres
-#   a. Also restart trino-lb deployment to make sure persistence is kept
+# 1. Restart trino-lb deployment to make sure persistence is kept
