@@ -15,6 +15,10 @@ spec:
         trino: trino
     authentication:
       - authenticationClass: trino-users
+    authorization:
+      opa:
+        configMapName: opa
+        package: trino
   coordinators:
     roleConfig:
       listenerClass: external-stable
@@ -48,6 +52,10 @@ spec:
         trino: trino
     authentication:
       - authenticationClass: trino-users
+    authorization:
+      opa:
+        configMapName: opa
+        package: trino
   coordinators:
     roleConfig:
       listenerClass: external-stable
@@ -94,3 +102,60 @@ metadata:
 spec:
   connector:
     tpch: {}
+---
+apiVersion: opa.stackable.tech/v1alpha1
+kind: OpaCluster
+metadata:
+  name: opa
+  namespace: default
+spec:
+  image:
+    productVersion: 0.67.1
+  servers:
+    roleGroups:
+      default:
+        replicas: 1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trino-opa-bundle
+  namespace: default
+  labels:
+    opa.stackable.tech/bundle: "trino"
+data:
+  trino.rego: |
+    package trino
+
+    import rego.v1
+
+    default allow = false
+
+    # Allow non-batched access
+    allow if {
+      is_admin
+    }
+    # Allow batched access
+    batch contains i if {
+      some i
+      input.action.filterResources[i]
+      is_admin
+    }
+    # Corner case: filtering columns is done with a single table item, and many columns inside
+    batch contains i if {
+      some i
+      input.action.operation == "FilterColumns"
+      count(input.action.filterResources) == 1
+      input.action.filterResources[0].table.columns[i]
+      is_admin
+    }
+
+    is_admin() if {
+      input.context.identity.user == "admin"
+    }
+
+    # Allow graceful shutdown, see https://docs.stackable.tech/home/stable/trino/usage-guide/operations/graceful-shutdown/#_authorization_requirements
+    allow if {
+      input.action.operation == "WriteSystemInformation"
+      input.context.identity.user == "graceful-shutdown-user"
+    }
