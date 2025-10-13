@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: trino-lb-certificates
-# Copied from example-configs/self-singed-certs
+# Copied from example-configs/self-signed-certs
 stringData:
   cert.pem: |
     -----BEGIN CERTIFICATE-----
