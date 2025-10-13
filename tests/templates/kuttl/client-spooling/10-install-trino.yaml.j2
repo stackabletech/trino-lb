@@ -20,9 +20,9 @@ spec:
       - authenticationClass: trino-users-auth
     clientProtocol:
       spooling:
-        location: s3://trino/trino-spooling/
+        location: s3://trino/spooling/
         filesystem:
-          s3: 
+          s3:
             connection:
               reference: minio
 {% if lookup('env', 'VECTOR_AGGREGATOR') %}
@@ -38,12 +38,6 @@ spec:
           limit: 2Gi
       logging:
         enableVectorAgent: {{ lookup('env', 'VECTOR_AGGREGATOR') | length > 0 }}
-    configOverrides:
-      spooling-manager.properties:
-        # Work around
-        # Query 20251013_172909_00012_vnvph failed: java.io.IOException: Put failed for bucket [trino] key [trino-spooling/01K7GK37QFCZFRCYQ8PPNGF8G2.json+zstd]: software.amazon.awssdk.services.s3.model.InvalidRequestException: The encryption parameters are not applicable to this object. (Service: S3, Status Code: 400, Request ID: 186E1D2548947E69, Extended Request ID: dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8) (SDK Attempt Count: 1)
-        # Strangely the exact setup works in the trino-operator client-spooling kuttl tests...
-        fs.segment.encryption: "false"
     roleGroups:
       default:
         replicas: 1
