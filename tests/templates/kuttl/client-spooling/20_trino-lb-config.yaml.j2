@@ -1,0 +1,22 @@
+trinoLb:
+  externalAddress: https://trino-lb:8443
+  tls:
+    enabled: true
+    certPemFile: /certificates/cert.pem
+    keyPemFile: /certificates/key.pem
+  persistence:
+    inMemory: {}
+trinoClusterGroups:
+  default:
+    maxRunningQueries: 5
+    trinoClusters:
+      - name: trino-client-spooling
+        endpoint: https://trino-client-spooling-coordinator:8443
+        credentials:
+          username: admin
+          password: adminadmin
+trinoClusterGroupsIgnoreCert: true
+
+# Route all queries to the "default" cluster group
+routers: []
+routingFallback: default
