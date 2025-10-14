@@ -18,6 +18,8 @@ dimensions:
   # As not all Trino versions support client spooling, we have an extra dimension
   - name: trino-client-spooling
     values:
+      # According to https://docs.stackable.tech/home/nightly/trino/usage-guide/client-spooling-protocol/
+      # > The client spooling protocol was introduced in Trino 466 but it only works reliably starting with Trino 476.
       - "476"
   - name: trino-lb-https
     values:
@@ -28,6 +30,10 @@ dimensions:
       - inMemory
       - redis
       - postgres
+  - name: client-spooling-retrieval-mode
+    values:
+      - STORAGE # Trino default setting
+      - COORDINATOR_PROXY # In case trino clients don't have access to S3, the coordinator can proxy it.
 tests:
   - name: smoke
     dimensions:
@@ -38,6 +44,7 @@ tests:
     dimensions:
       - trino-lb
       - trino-client-spooling
+      - client-spooling-retrieval-mode
 
 # TODOS
 # 1. Restart trino-lb deployment to make sure persistence is kept

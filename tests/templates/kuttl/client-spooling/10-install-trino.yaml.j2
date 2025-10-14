@@ -38,6 +38,9 @@ spec:
           limit: 2Gi
       logging:
         enableVectorAgent: {{ lookup('env', 'VECTOR_AGGREGATOR') | length > 0 }}
+    configOverrides:
+      config.properties:
+        protocol.spooling.retrieval-mode: {{ test_scenario['values']['client-spooling-retrieval-mode'] }}
     roleGroups:
       default:
         replicas: 1
