@@ -6,6 +6,6 @@ timeout: 600
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: test-routing
+  name: test-queries
 status:
   succeeded: 1
