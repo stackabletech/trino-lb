@@ -16,6 +16,7 @@ trino-lb-core = { path = "../trino-lb-core" }
 trino-lb-persistence = { path = "../trino-lb-persistence" }
 
 askama.workspace = true
+axum-extra.workspace = true
 axum-server.workspace = true
 axum.workspace = true
 chrono.workspace = true

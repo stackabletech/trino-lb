@@ -53,6 +53,8 @@ pub struct TrinoLbConfig {
 
     pub persistence: PersistenceConfig,
 
+    pub admin_authentication: Option<TrinoLbAdminAuthenticationConfig>,
+
     #[serde(default)]
     pub tls: TrinoLbTlsConfig,
 
@@ -168,6 +170,12 @@ pub struct PostgresConfig {
 
 fn default_max_connections() -> u32 {
     10
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub enum TrinoLbAdminAuthenticationConfig {
+    BasicAuth { username: String, password: String },
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -347,5 +355,14 @@ impl Config {
         let deserializer = serde_yaml::Deserializer::from_reader(config_file_content);
         serde_yaml::with::singleton_map_recursive::deserialize(deserializer)
             .context(ParseConfigFileSnafu { config_file })
+    }
+}
+
+impl Config {
+    pub fn cluster_in_config(&self, cluster_name: &TrinoClusterName) -> bool {
+        self.trino_cluster_groups
+            .values()
+            .flat_map(|cluster_group| &cluster_group.trino_clusters)
+            .any(|cluster| &cluster.name == cluster_name)
     }
 }

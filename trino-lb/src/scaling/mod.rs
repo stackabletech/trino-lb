@@ -611,8 +611,18 @@ impl Scaler {
     #[instrument(name = "Scaler::set_all_clusters_to_ready", skip(self))]
     async fn set_all_clusters_to_ready(&self) -> Result<(), Error> {
         for cluster in self.groups.values().flatten() {
+            let current_state = self
+                .persistence
+                .get_cluster_state(&cluster.name)
+                .await
+                .context(ReadCurrentClusterStateFromPersistenceSnafu {
+                    cluster: &cluster.name,
+                })?;
+
+            let new_state = current_state.turn_ready_if_not_deactivated();
+
             self.persistence
-                .set_cluster_state(&cluster.name, ClusterState::Ready)
+                .set_cluster_state(&cluster.name, new_state)
                 .await
                 .context(SetCurrentClusterStateInPersistenceSnafu {
                     cluster: &cluster.name,

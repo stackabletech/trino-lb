@@ -53,6 +53,13 @@ impl ClusterState {
         }
     }
 
+    pub fn turn_ready_if_not_deactivated(&self) -> Self {
+        match self {
+            ClusterState::Deactivated => Self::Deactivated,
+            _ => ClusterState::Ready,
+        }
+    }
+
     pub fn can_be_started(&self) -> bool {
         match self {
             ClusterState::Stopped | ClusterState::Draining { .. } => true,

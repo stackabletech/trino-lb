@@ -4,6 +4,10 @@ trinoLb:
     enabled: true
     certPemFile: /certificates/cert.pem
     keyPemFile: /certificates/key.pem
+  adminAuthentication:
+    basicAuth:
+      username: admin
+      password: admin
   persistence:
     redis:
       clusterMode: true
@@ -35,7 +39,7 @@ trinoClusterGroups:
           min: 0
     trinoClusters:
       - name: trino-s-1
-        endpoint: https://trino-s-1-coordinator-default.default.svc.cluster.local:8443
+        endpoint: https://trino-s-1-coordinator.default.svc.cluster.local:8443
         credentials: &common-credentials
           username: admin
           password: adminadmin
@@ -51,10 +55,10 @@ trinoClusterGroups:
           min: 1
     trinoClusters:
       - name: trino-m-1
-        endpoint: https://trino-m-1-coordinator-default.default.svc.cluster.local:8443
+        endpoint: https://trino-m-1-coordinator.default.svc.cluster.local:8443
         credentials: *common-credentials
       - name: trino-m-2
-        endpoint: https://trino-m-2-coordinator-default.default.svc.cluster.local:8443
+        endpoint: https://trino-m-2-coordinator.default.svc.cluster.local:8443
         credentials: *common-credentials
   # oidc:
   #   maxRunningQueries: 3
