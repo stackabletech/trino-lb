@@ -130,6 +130,7 @@ Also, the cluster `trino-s-1` was started on demand, executed the 60 queries and
 ![Grafana screenshot](./assets/grafana-screenshot.png)
 
 ## Tracing
+
 trino-lb emits [OpenTelemetry Traces](https://opentelemetry.io/docs/concepts/signals/traces/) to [OTLP](https://opentelemetry.io/docs/specs/otel/protocol/) endpoints such as [Jaeger](https://www.jaegertracing.io/).
 When proxy-ing requests to Trino we take care of [OpenTelemetry Propagation](https://opentelemetry.io/docs/instrumentation/js/propagation/), so that the Trino spans will show up within the trino-lb spans.
 This enables nice tracing across trino-lb and trino (as seen in the screenshot below)
