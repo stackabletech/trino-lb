@@ -81,7 +81,30 @@ However, as we can't influence the query ID the query will get running on Trino 
 Queued queries that have not been accessed for longer than 5 minutes are removed from the persistence to avoid cluttering the system with abounded queries.
 Doing so trino-lb behaves the same way Trino does (the relevant setting in Trino is `query.client.timeout`).
 
-## 5. Autoscaling Trino clusters
+## 5. Zero downtime maintenance
+
+You can activate and deactivate Trino clusters in trino-lb.
+A deactivated cluster continues to process running queries, but no new queries will be submitted to it.
+
+To safely update a running Trino cluster you can
+
+1. Deactivate the Trino cluster using `POST /admin/deactivate-cluster/{cluster_name}`
+2. Wait until all running queries have finished. Tip: You can use `GET /admin/cluster-status` to fetch the current query counter or talk to the Trino cluster directly.
+3. Safely do modifications to the Trino cluster without any user impact
+4. Once you are done with your changes re-activate the Trino cluster again using `POST /admin/activate-cluster/{cluster_name}`
+
+Important: To activate/deactivate a Trino cluster you need to authenticate against trino-lb.
+Currently only Basic Auth is supported, you can configure the credentials like this:
+
+```yaml
+trinoLb:
+  adminAuthentication:
+    basicAuth:
+      username: trino-lb-admin
+      password: your-password
+```
+
+## 6. Autoscaling Trino clusters
 
 You can scale the number of Trino clusters within a group based on the queue length and clusters utilization.
 This allows you to significantly save costs by reducing the number of clusters running.
