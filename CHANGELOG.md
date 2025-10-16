@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Support activating and deactivation Trino clusters via API calls to `/admin/activate-cluster/{cluster_name}` and `/admin/deactivate-cluster/{cluster_name}` respectively. For this to work you need to authenticate yourself at trino-lb via basic auth ([#95]).
+- Expose cluster statistics at `/admin/cluster-status` ([#95]).
+
 ### Changed
 
 - The Stackable scaler now ensures that a `TrinoCluster` has changed to `ready` more than 5 seconds
@@ -22,6 +27,7 @@ All notable changes to this project will be documented in this file.
 [#85]: https://github.com/stackabletech/trino-lb/pull/85
 [#86]: https://github.com/stackabletech/trino-lb/pull/86
 [#91]: https://github.com/stackabletech/trino-lb/pull/91
+[#95]: https://github.com/stackabletech/trino-lb/pull/95
 
 ## [0.5.0] - 2025-03-14
 
