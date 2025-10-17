@@ -11,7 +11,7 @@ use axum_extra::{
 };
 use http::StatusCode;
 use opentelemetry::KeyValue;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use snafu::{ResultExt, Snafu, ensure};
 use tracing::{info, instrument, warn};
 use trino_lb_core::{
@@ -119,7 +119,7 @@ pub async fn get_cluster_status(
     ))
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct ClusterActivationResponse {
     state: ClusterState,
 }
