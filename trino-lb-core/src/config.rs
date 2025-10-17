@@ -359,7 +359,7 @@ impl Config {
 }
 
 impl Config {
-    pub fn cluster_in_config(&self, cluster_name: &TrinoClusterName) -> bool {
+    pub fn is_cluster_in_config(&self, cluster_name: &TrinoClusterName) -> bool {
         self.trino_cluster_groups
             .values()
             .flat_map(|cluster_group| &cluster_group.trino_clusters)
