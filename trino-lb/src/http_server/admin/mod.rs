@@ -158,7 +158,7 @@ async fn set_cluster_activation(
 
     state
         .persistence
-        .set_cluster_state(cluster_name, desired_state.clone())
+        .set_cluster_state(cluster_name, desired_state)
         .await
         .context(SetClusterStateInPersistenceSnafu {
             cluster: cluster_name,

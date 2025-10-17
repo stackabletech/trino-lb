@@ -3,7 +3,7 @@ use std::{fmt::Display, time::SystemTime};
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash, Serialize, IntoStaticStr)]
+#[derive(Copy, Clone, Debug, Deserialize, Eq, PartialEq, Hash, Serialize, IntoStaticStr)]
 pub enum ClusterState {
     Unknown,
     /// Not running at all

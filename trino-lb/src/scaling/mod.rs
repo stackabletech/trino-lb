@@ -434,7 +434,7 @@ impl Scaler {
             let me = Arc::clone(&self);
             let target_state = target_states.get(&cluster.name).unwrap();
             join_set.spawn(
-                me.apply_cluster_target_state(cluster, target_state.clone())
+                me.apply_cluster_target_state(cluster, *target_state)
                     .instrument(Span::current()),
             );
         }
