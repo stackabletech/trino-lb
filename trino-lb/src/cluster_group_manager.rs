@@ -8,7 +8,7 @@ use axum::{Json, body::Body, response::IntoResponse};
 use futures::future::try_join_all;
 use http::{HeaderMap, StatusCode};
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use snafu::{OptionExt, ResultExt, Snafu};
 use tracing::{Instrument, debug, info_span, instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
@@ -88,7 +88,7 @@ pub struct TrinoCluster {
     pub endpoint: Url,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct ClusterStats {
     pub state: ClusterState,
     pub query_counter: u64,

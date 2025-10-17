@@ -142,7 +142,7 @@ async fn set_cluster_activation(
     }
 
     ensure!(
-        state.config.cluster_in_config(cluster_name),
+        state.config.is_cluster_in_config(cluster_name),
         UnknownClusterSnafu {
             cluster: cluster_name
         }
