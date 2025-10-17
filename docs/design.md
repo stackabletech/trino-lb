@@ -84,7 +84,7 @@ Doing so trino-lb behaves the same way Trino does (the relevant setting in Trino
 ## 5. Zero downtime maintenance
 
 You can activate and deactivate Trino clusters in trino-lb.
-A deactivated cluster continues to process running queries, but no new queries will be submitted to it.
+A deactivated cluster continues to process already running queries, but no new queries will be submitted to it.
 
 To safely update a running Trino cluster you can
 
