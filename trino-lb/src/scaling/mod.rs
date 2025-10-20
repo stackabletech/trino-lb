@@ -619,7 +619,7 @@ impl Scaler {
                     cluster: &cluster.name,
                 })?;
 
-            let new_state = current_state.turn_ready_if_not_deactivated();
+            let new_state = current_state.mark_ready_if_not_deactivated();
 
             self.persistence
                 .set_cluster_state(&cluster.name, new_state)
