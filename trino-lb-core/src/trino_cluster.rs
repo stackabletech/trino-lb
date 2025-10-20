@@ -53,7 +53,7 @@ impl ClusterState {
         }
     }
 
-    pub fn turn_ready_if_not_deactivated(&self) -> Self {
+    pub fn mark_ready_if_not_deactivated(&self) -> Self {
         match self {
             ClusterState::Deactivated => Self::Deactivated,
             _ => ClusterState::Ready,
