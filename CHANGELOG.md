@@ -6,8 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Support activating and deactivation Trino clusters via API calls to `/admin/activate-cluster/{cluster_name}` and `/admin/deactivate-cluster/{cluster_name}` respectively. For this to work you need to authenticate yourself at trino-lb via basic auth ([#95]).
-- Expose cluster statistics at `/admin/cluster-status` ([#95]).
+- Support activating and deactivation Trino clusters via API calls to `/admin/clusters/{cluster_name}/activate` and `/admin/clusters/{cluster_name}/deactivate` respectively. For this to work you need to authenticate yourself at trino-lb via basic auth ([#95]).
+- Expose cluster statistics at `/admin/clusters/{cluster_name}/status` and `/admin/clusters/status` ([#95]).
 
 ### Changed
 

@@ -123,14 +123,18 @@ pub async fn start_http_server(
             delete(v1::statement::delete_trino_executing_statement),
         )
         .route(
-            "/admin/activate-cluster/{cluster_name}",
+            "/admin/clusters/{cluster_name}/activate",
             post(admin::post_activate_cluster),
         )
         .route(
-            "/admin/deactivate-cluster/{cluster_name}",
+            "/admin/clusters/{cluster_name}/deactivate",
             post(admin::post_deactivate_cluster),
         )
-        .route("/admin/cluster-status", get(admin::get_cluster_status))
+        .route(
+            "/admin/clusters/{cluster_name}/status",
+            get(admin::get_cluster_status),
+        )
+        .route("/admin/clusters/status", get(admin::get_all_cluster_status))
         .route("/ui/index.html", get(ui::index::get_ui_index))
         .route("/ui/query.html", get(ui::query::get_ui_query))
         .layer(TraceLayer::new_for_http())

@@ -88,10 +88,10 @@ A deactivated cluster continues to process already running queries, but no new q
 
 To safely update a running Trino cluster you can
 
-1. Deactivate the Trino cluster using `POST /admin/deactivate-cluster/{cluster_name}`
-2. Wait until all running queries have finished. Tip: You can use `GET /admin/cluster-status` to fetch the current query counter or talk to the Trino cluster directly.
+1. Deactivate the Trino cluster using `POST /admin/clusters/{cluster_name}/deactivate`
+2. Wait until all running queries have finished. Tip: You can use `GET /admin/clusters/{cluster_name}/status` (or `GET /admin/clusters/status`) to fetch the current query counter or talk to the Trino cluster directly.
 3. Safely do modifications to the Trino cluster without any user impact
-4. Once you are done with your changes re-activate the Trino cluster again using `POST /admin/activate-cluster/{cluster_name}`
+4. Once you are done with your changes re-activate the Trino cluster again using `POST /admin/clusters/{cluster_name}/activate`
 
 Important: To activate/deactivate a Trino cluster you need to authenticate against trino-lb.
 Currently only Basic Auth is supported, you can configure the credentials like this:

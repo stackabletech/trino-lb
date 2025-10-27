@@ -35,8 +35,20 @@ pub enum Error {
     #[snafu(display("Unknown Trino cluster {cluster:?}"))]
     UnknownCluster { cluster: TrinoClusterName },
 
+    #[snafu(display("Failed to get cluster state for cluster {cluster:?} from persistence"))]
+    GetClusterStateFromPersistence {
+        source: trino_lb_persistence::Error,
+        cluster: TrinoClusterName,
+    },
+
     #[snafu(display("Failed to set cluster state for cluster {cluster:?} in persistence"))]
     SetClusterStateInPersistence {
+        source: trino_lb_persistence::Error,
+        cluster: TrinoClusterName,
+    },
+
+    #[snafu(display("Failed to get the query counter for cluster {cluster:?} from persistence"))]
+    GetQueryCounterForGroup {
         source: trino_lb_persistence::Error,
         cluster: TrinoClusterName,
     },
@@ -54,7 +66,9 @@ impl IntoResponse for Error {
             Error::NoAdminAuthenticationMethodDefined => StatusCode::UNAUTHORIZED,
             Error::InvalidAdminCredentials => StatusCode::UNAUTHORIZED,
             Error::UnknownCluster { .. } => StatusCode::NOT_FOUND,
+            Error::GetClusterStateFromPersistence { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SetClusterStateInPersistence { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::GetQueryCounterForGroup { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::GetAllClusterStates { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (status_code, format!("{self}")).into_response()
@@ -64,7 +78,7 @@ impl IntoResponse for Error {
 /// (Re)-Activates a Trino Cluster, so that it receives new queries.
 ///
 /// This is useful for maintenance actions (in combination with deactivation).
-#[instrument(name = "POST /admin/activate-cluster/{cluster_name}", skip(state))]
+#[instrument(name = "POST /admin/clusters/{cluster_name}/activate", skip(state))]
 pub async fn post_activate_cluster(
     TypedHeader(Authorization(basic_auth)): TypedHeader<Authorization<Basic>>,
     State(state): State<Arc<AppState>>,
@@ -81,7 +95,7 @@ pub async fn post_activate_cluster(
 /// Deactivate a Trino Cluster, so that it doesn't receive any new queries.
 ///
 /// This is useful for maintenance actions (in combination with activation).
-#[instrument(name = "POST /admin/deactivate-cluster/{cluster_name}", skip(state))]
+#[instrument(name = "POST /admin/clusters/{cluster_name}/deactivate", skip(state))]
 pub async fn post_deactivate_cluster(
     TypedHeader(Authorization(basic_auth)): TypedHeader<Authorization<Basic>>,
     State(state): State<Arc<AppState>>,
@@ -95,15 +109,54 @@ pub async fn post_deactivate_cluster(
     set_cluster_activation(state, basic_auth, &cluster_name, false).await
 }
 
-/// Get the status of the Trino clusters
-#[instrument(name = "GET /admin/cluster-status", skip(state))]
+/// Get the status of a single Trino clusters
+#[instrument(name = "/admin/clusters/{cluster_name}/status", skip(state))]
 pub async fn get_cluster_status(
+    State(state): State<Arc<AppState>>,
+    Path(cluster_name): Path<TrinoClusterName>,
+) -> Result<Json<ClusterStats>, Error> {
+    state
+        .metrics
+        .http_counter
+        .add(1, &[KeyValue::new("resource", "get_cluster_status")]);
+
+    ensure!(
+        state.config.is_cluster_in_config(&cluster_name),
+        UnknownClusterSnafu {
+            cluster: cluster_name
+        }
+    );
+
+    let cluster_state = state
+        .persistence
+        .get_cluster_state(&cluster_name)
+        .await
+        .context(GetClusterStateFromPersistenceSnafu {
+            cluster: &cluster_name,
+        })?;
+    let cluster_query_counter = state
+        .persistence
+        .get_cluster_query_count(&cluster_name)
+        .await
+        .context(GetQueryCounterForGroupSnafu {
+            cluster: &cluster_name,
+        })?;
+
+    Ok(Json(ClusterStats {
+        state: cluster_state,
+        query_counter: cluster_query_counter,
+    }))
+}
+
+/// Get the status of all Trino clusters
+#[instrument(name = "/admin/clusters/status", skip(state))]
+pub async fn get_all_cluster_status(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<BTreeMap<TrinoClusterName, ClusterStats>>, Error> {
     state
         .metrics
         .http_counter
-        .add(1, &[KeyValue::new("resource", "get_cluster_status")]);
+        .add(1, &[KeyValue::new("resource", "get_all_cluster_status")]);
 
     let cluster_stats = state
         .cluster_group_manager
