@@ -9,7 +9,7 @@ use prometheus::{Encoder, TextEncoder};
 use snafu::{ResultExt, Snafu};
 use tracing::{instrument, warn};
 
-use crate::http_server::AppState;
+use crate::{error_formatting::snafu_error_to_string, http_server::AppState};
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -23,7 +23,11 @@ pub enum Error {
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         warn!(error = ?self, "Error while processing metrics request");
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("{self:?}")).into_response()
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            snafu_error_to_string(&self),
+        )
+            .into_response()
     }
 }
 
