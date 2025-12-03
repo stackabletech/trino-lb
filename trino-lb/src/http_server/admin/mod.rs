@@ -149,7 +149,7 @@ pub async fn get_cluster_status(
     }))
 }
 
-/// Get the status of all Trino clusters
+/// Get the status of all Trino clusters.
 #[instrument(name = "/admin/clusters/status", skip(state))]
 pub async fn get_all_cluster_status(
     State(state): State<Arc<AppState>>,
