@@ -76,7 +76,7 @@ impl IntoResponse for Error {
     }
 }
 
-/// (Re)-Activates a Trino Cluster, so that it receives new queries.
+/// (Re)-Activates a Trino Cluster, so that it may receive new incoming queries.
 ///
 /// This is useful for maintenance actions (in combination with deactivation).
 #[instrument(name = "POST /admin/clusters/{cluster_name}/activate", skip(state))]
