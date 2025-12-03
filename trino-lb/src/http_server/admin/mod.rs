@@ -93,7 +93,10 @@ pub async fn post_activate_cluster(
     set_cluster_activation(state, basic_auth, &cluster_name, true).await
 }
 
-/// Deactivate a Trino Cluster, so that it doesn't receive any new queries.
+/// Deactivates a Trino Cluster, so that no new incoming queries are handed over to this cluster.
+///
+/// This will not abort any already running queries. Use `GET /admin/cluster-status` to retrieve the
+/// number of active queries before doing any maintenance work on this cluster.
 ///
 /// This is useful for maintenance actions (in combination with activation).
 #[instrument(name = "POST /admin/clusters/{cluster_name}/deactivate", skip(state))]
