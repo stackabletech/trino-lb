@@ -110,7 +110,7 @@ pub async fn post_deactivate_cluster(
     set_cluster_activation(state, basic_auth, &cluster_name, false).await
 }
 
-/// Get the status of a single Trino clusters
+/// Get the status of a single Trino cluster.
 #[instrument(name = "/admin/clusters/{cluster_name}/status", skip(state))]
 pub async fn get_cluster_status(
     State(state): State<Arc<AppState>>,
