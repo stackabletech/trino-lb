@@ -32,17 +32,17 @@ impl RouterImplementationTrait for TrinoRoutingGroupHeaderRouter {
     )]
     async fn route(&self, query: &str, headers: &http::HeaderMap) -> Option<String> {
         let target_group = headers.get(&self.config.header_name);
-        if let Some(target_group) = target_group {
-            if let Ok(target_group) = target_group.to_str() {
-                if self.valid_target_groups.contains(target_group) {
-                    return Some(target_group.to_string());
-                } else {
-                    // TODO: Maybe let the routers return client errors to the clients in case of user errors.
-                    warn!(
-                        target_group,
-                        "The client requested a target group that does not exist, skipped routing"
-                    );
-                }
+        if let Some(target_group) = target_group
+            && let Ok(target_group) = target_group.to_str()
+        {
+            if self.valid_target_groups.contains(target_group) {
+                return Some(target_group.to_string());
+            } else {
+                // TODO: Maybe let the routers return client errors to the clients in case of user errors.
+                warn!(
+                    target_group,
+                    "The client requested a target group that does not exist, skipped routing"
+                );
             }
         }
 
