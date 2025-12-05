@@ -1,12 +1,12 @@
 # Contributor guide
 
-### Build docker image
+## Build docker image
 
 ```bash
 docker build . -f docker/Dockerfile -t foo:bar
 ```
 
-### Test docker image
+## Test docker image
 
 Update `tests/test-definition.yaml` by setting the `trino-lb` dimension to `foo:bar`.
 
