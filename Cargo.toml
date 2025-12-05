@@ -17,7 +17,7 @@ repository = "https://github.com/stackabletech/trino-lb"
 [workspace.dependencies]
 askama = "0.14"
 axum = { version = "0.8", features = ["tracing"] }
-axum-extra = { version = "0.10", features = ["typed-header"] }
+axum-extra = { version = "0.12", features = ["typed-header"] }
 # If we use the feature "tls-rustls" it will pull in the "aws-lc-rs" crate, which as of 2024-08-16 I did not get to build in the "make run-dev" workflow :/
 axum-server = { version = "0.7", features = ["tls-rustls-no-provider"] }
 bincode = { version = "2.0", features = ["serde"] }
@@ -48,7 +48,7 @@ opentelemetry-otlp = { version = "0.17", features = ["serialize", "gzip-tonic"] 
 opentelemetry-prometheus = "0.17"
 prometheus = "0.13"
 prusto = "0.5"
-pyo3 = { version = "0.26", features = ["auto-initialize"] }
+pyo3 = { version = "0.27", features = ["auto-initialize"] }
 rand = "0.9"
 redis = { version = "0.32", default-features = false, features = [
   "acl",

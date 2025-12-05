@@ -10,7 +10,7 @@ RUN apt-get update && \
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # hadolint ignore=SC1091
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.87.0 && . "${HOME}/.cargo/env"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.91.1 && . "${HOME}/.cargo/env"
 
 WORKDIR /trino-lb
 COPY Cargo.toml Cargo.toml
@@ -32,7 +32,7 @@ RUN apt-get update && \
     apt-get install --no-install-recommends -y python3 python3-pip libpython3-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# There are propably some users that want to use this libs in their PythonScriptRouter to e.g. make external HTTP calls
+# There are probably some users that want to use this libs in their PythonScriptRouter to e.g. make external HTTP calls
 # hadolint ignore=DL3013
 RUN python3 -m pip install --no-cache-dir --break-system-packages requests
 
