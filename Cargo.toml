@@ -17,6 +17,7 @@ repository = "https://github.com/stackabletech/trino-lb"
 [workspace.dependencies]
 askama = "0.14"
 axum = { version = "0.8", features = ["tracing"] }
+axum-extra = { version = "0.10", features = ["typed-header"] }
 # If we use the feature "tls-rustls" it will pull in the "aws-lc-rs" crate, which as of 2024-08-16 I did not get to build in the "make run-dev" workflow :/
 axum-server = { version = "0.7", features = ["tls-rustls-no-provider"] }
 bincode = { version = "2.0", features = ["serde"] }

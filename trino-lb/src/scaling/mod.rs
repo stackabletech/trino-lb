@@ -434,7 +434,7 @@ impl Scaler {
             let me = Arc::clone(&self);
             let target_state = target_states.get(&cluster.name).unwrap();
             join_set.spawn(
-                me.apply_cluster_target_state(cluster, target_state.clone())
+                me.apply_cluster_target_state(cluster, *target_state)
                     .instrument(Span::current()),
             );
         }
@@ -611,8 +611,18 @@ impl Scaler {
     #[instrument(name = "Scaler::set_all_clusters_to_ready", skip(self))]
     async fn set_all_clusters_to_ready(&self) -> Result<(), Error> {
         for cluster in self.groups.values().flatten() {
+            let current_state = self
+                .persistence
+                .get_cluster_state(&cluster.name)
+                .await
+                .context(ReadCurrentClusterStateFromPersistenceSnafu {
+                    cluster: &cluster.name,
+                })?;
+
+            let new_state = current_state.mark_ready_if_not_deactivated();
+
             self.persistence
-                .set_cluster_state(&cluster.name, ClusterState::Ready)
+                .set_cluster_state(&cluster.name, new_state)
                 .await
                 .context(SetCurrentClusterStateInPersistenceSnafu {
                     cluster: &cluster.name,

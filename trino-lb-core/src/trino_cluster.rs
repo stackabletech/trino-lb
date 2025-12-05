@@ -3,7 +3,7 @@ use std::{fmt::Display, time::SystemTime};
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash, Serialize, IntoStaticStr)]
+#[derive(Copy, Clone, Debug, Deserialize, Eq, PartialEq, Hash, Serialize, IntoStaticStr)]
 pub enum ClusterState {
     Unknown,
     /// Not running at all
@@ -50,6 +50,13 @@ impl ClusterState {
             ClusterState::Ready | ClusterState::Draining { .. } => ClusterState::Ready,
             ClusterState::Unhealthy => ClusterState::Unhealthy,
             ClusterState::Deactivated => ClusterState::Deactivated,
+        }
+    }
+
+    pub fn mark_ready_if_not_deactivated(&self) -> Self {
+        match self {
+            ClusterState::Deactivated => Self::Deactivated,
+            _ => ClusterState::Ready,
         }
     }
 

@@ -28,6 +28,7 @@ use url::Url;
 
 use crate::{
     cluster_group_manager::{self, SendToTrinoResponse},
+    error_formatting::snafu_error_to_string,
     http_server::AppState,
     maintenance::leftover_queries::UPDATE_QUEUED_QUERY_LAST_ACCESSED_INTERVAL,
 };
@@ -131,7 +132,11 @@ pub enum Error {
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         warn!(error = ?self, "Error while processing request");
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("{self:?}")).into_response()
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            snafu_error_to_string(&self),
+        )
+            .into_response()
     }
 }
 

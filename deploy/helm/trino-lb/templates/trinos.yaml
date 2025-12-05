@@ -8,7 +8,7 @@ metadata:
   namespace: default
 spec:
   image:
-    productVersion: "455"
+    productVersion: "476"
   clusterConfig:
     catalogLabelSelector:
       matchLabels:
@@ -18,6 +18,10 @@ spec:
   coordinators:
     roleConfig:
       listenerClass: external-stable
+    config:
+      resources:
+        cpu:
+          min: 50m
     configOverrides: &configOverrides
       config.properties:
         tracing.enabled: "true"
@@ -27,6 +31,10 @@ spec:
         replicas: 1
   workers:
     configOverrides: *configOverrides
+    config:
+      resources:
+        cpu:
+          min: 50m
     roleGroups:
       default:
         replicas: 1
@@ -41,7 +49,7 @@ metadata:
   namespace: default
 spec:
   image:
-    productVersion: "455"
+    productVersion: "476"
   clusterConfig:
     catalogLabelSelector:
       matchLabels:
@@ -51,6 +59,10 @@ spec:
   coordinators:
     roleConfig:
       listenerClass: external-stable
+    config:
+      resources:
+        cpu:
+          min: 50m
     configOverrides: &configOverrides
       config.properties:
         tracing.enabled: "true"
@@ -60,6 +72,10 @@ spec:
         replicas: 1
   workers:
     configOverrides: *configOverrides
+    config:
+      resources:
+        cpu:
+          min: 50m
     roleGroups:
       default:
         replicas: 1

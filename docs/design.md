@@ -81,7 +81,30 @@ However, as we can't influence the query ID the query will get running on Trino 
 Queued queries that have not been accessed for longer than 5 minutes are removed from the persistence to avoid cluttering the system with abounded queries.
 Doing so trino-lb behaves the same way Trino does (the relevant setting in Trino is `query.client.timeout`).
 
-## 5. Autoscaling Trino clusters
+## 5. Zero downtime maintenance
+
+You can activate and deactivate Trino clusters in trino-lb.
+A deactivated cluster continues to process already running queries, but no new queries will be submitted to it.
+
+To safely update a running Trino cluster you can
+
+1. Deactivate the Trino cluster using `POST /admin/clusters/{cluster_name}/deactivate`
+2. Wait until all running queries have finished. Tip: You can use `GET /admin/clusters/{cluster_name}/status` (or `GET /admin/clusters/status`) to fetch the current query counter or talk to the Trino cluster directly.
+3. Safely do modifications to the Trino cluster without any user impact
+4. Once you are done with your changes re-activate the Trino cluster again using `POST /admin/clusters/{cluster_name}/activate`
+
+Important: To activate/deactivate a Trino cluster you need to authenticate against trino-lb.
+Currently only Basic Auth is supported, you can configure the credentials like this:
+
+```yaml
+trinoLb:
+  adminAuthentication:
+    basicAuth:
+      username: trino-lb-admin
+      password: your-password
+```
+
+## 6. Autoscaling Trino clusters
 
 You can scale the number of Trino clusters within a group based on the queue length and clusters utilization.
 This allows you to significantly save costs by reducing the number of clusters running.
@@ -107,6 +130,7 @@ Also, the cluster `trino-s-1` was started on demand, executed the 60 queries and
 ![Grafana screenshot](./assets/grafana-screenshot.png)
 
 ## Tracing
+
 trino-lb emits [OpenTelemetry Traces](https://opentelemetry.io/docs/concepts/signals/traces/) to [OTLP](https://opentelemetry.io/docs/specs/otel/protocol/) endpoints such as [Jaeger](https://www.jaegertracing.io/).
 When proxy-ing requests to Trino we take care of [OpenTelemetry Propagation](https://opentelemetry.io/docs/instrumentation/js/propagation/), so that the Trino spans will show up within the trino-lb spans.
 This enables nice tracing across trino-lb and trino (as seen in the screenshot below)

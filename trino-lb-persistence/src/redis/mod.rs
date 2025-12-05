@@ -483,8 +483,8 @@ where
         state: ClusterState,
     ) -> Result<(), super::Error> {
         let key = cluster_state_key(cluster_name);
-        let value = bincode::serde::encode_to_vec(&state, BINCODE_CONFIG)
-            .context(SerializeToBinarySnafu)?;
+        let value =
+            bincode::serde::encode_to_vec(state, BINCODE_CONFIG).context(SerializeToBinarySnafu)?;
 
         let _: () = self
             .connection()

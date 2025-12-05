@@ -11,7 +11,7 @@ use tracing::{instrument, warn};
 use trino_lb_core::TrinoLbQueryId;
 use trino_lb_persistence::Persistence;
 
-use crate::http_server::AppState;
+use crate::{error_formatting::snafu_error_to_string, http_server::AppState};
 
 #[derive(Snafu, Debug)]
 pub enum Error {
@@ -36,7 +36,7 @@ impl IntoResponse for Error {
             Error::QueryIdMissing => StatusCode::BAD_REQUEST,
             Error::QueryIdNotFound { .. } => StatusCode::NOT_FOUND,
         };
-        (status_code, format!("{self}")).into_response()
+        (status_code, snafu_error_to_string(&self)).into_response()
     }
 }
 

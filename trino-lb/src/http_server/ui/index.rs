@@ -12,6 +12,7 @@ use tracing::{instrument, warn};
 
 use crate::{
     cluster_group_manager::{self, ClusterStats},
+    error_formatting::snafu_error_to_string,
     http_server::AppState,
 };
 
@@ -33,7 +34,7 @@ impl IntoResponse for Error {
             Error::GetAllClusterStates { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             Error::RenderTemplate { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
-        (status_code, format!("{self}")).into_response()
+        (status_code, snafu_error_to_string(&self)).into_response()
     }
 }
 

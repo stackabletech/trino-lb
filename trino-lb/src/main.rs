@@ -23,6 +23,7 @@ use crate::{args::Args, http_server::start_http_server};
 
 mod args;
 mod cluster_group_manager;
+mod error_formatting;
 mod http_server;
 mod maintenance;
 mod metrics;
