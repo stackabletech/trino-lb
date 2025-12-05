@@ -402,15 +402,15 @@ impl Scaler {
                     // We don't want to shut down the last remaining cluster obviously
                     // The only exception is the case no queries were running at all, in that case we shut down
                     // the unneeded cluster.
-                    if shut_down_candidates.len() > 1 || current_running_queries == 0 {
-                        if let Some((_, to_shut_down)) = shut_down_candidates.first() {
-                            target_states.insert(
-                                to_shut_down.name.to_owned(),
-                                ClusterState::Draining {
-                                    last_time_seen_with_queries: SystemTime::now(),
-                                },
-                            );
-                        }
+                    if (shut_down_candidates.len() > 1 || current_running_queries == 0)
+                        && let Some((_, to_shut_down)) = shut_down_candidates.first()
+                    {
+                        target_states.insert(
+                            to_shut_down.name.to_owned(),
+                            ClusterState::Draining {
+                                last_time_seen_with_queries: SystemTime::now(),
+                            },
+                        );
                     }
                 }
             }

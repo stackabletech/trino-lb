@@ -53,19 +53,19 @@ pub fn init(
     let console_output_layer = tracing_subscriber::fmt::layer().with_filter(env_filter_layer);
     let mut layers = vec![console_output_layer.boxed()];
 
-    if let Some(tracing_config) = tracing_config {
-        if tracing_config.enabled {
-            let env_filter_layer = EnvFilter::builder()
-                .with_default_directive(LevelFilter::DEBUG.into())
-                .from_env_lossy();
-            layers.push(
-                tracing_opentelemetry::layer()
-                    .with_error_records_to_exceptions(true)
-                    .with_tracer(otel_tracer(tracing_config)?)
-                    .with_filter(env_filter_layer)
-                    .boxed(),
-            );
-        }
+    if let Some(tracing_config) = tracing_config
+        && tracing_config.enabled
+    {
+        let env_filter_layer = EnvFilter::builder()
+            .with_default_directive(LevelFilter::DEBUG.into())
+            .from_env_lossy();
+        layers.push(
+            tracing_opentelemetry::layer()
+                .with_error_records_to_exceptions(true)
+                .with_tracer(otel_tracer(tracing_config)?)
+                .with_filter(env_filter_layer)
+                .boxed(),
+        );
     }
 
     let registry = prometheus::Registry::new();
