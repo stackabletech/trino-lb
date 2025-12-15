@@ -458,8 +458,7 @@ async fn handle_query_running_on_trino(
     // Just to be safe the query needs to be completed and not contain any nextUri for the client
     // to call to, before being considered done. We don't expect any future calls to done queries,
     // so we can (hopefully) safely remove them from the persistence.
-    if trino_query_api_response.is_query_finished() && !trino_query_api_response.next_uri.is_some()
-    {
+    if trino_query_api_response.is_query_finished() && trino_query_api_response.next_uri.is_none() {
         info!(%query_id, "Query completed, removing it from the persistence");
 
         tokio::try_join!(
