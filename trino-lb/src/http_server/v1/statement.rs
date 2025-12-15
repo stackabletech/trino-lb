@@ -437,7 +437,7 @@ async fn handle_query_running_on_trino(
             .persistence
             .load_query(&query_id)
             .await
-            .context(StoreQueryInPersistenceSnafu {
+            .context(LoadQueryFromPersistenceSnafu {
                 query_id: query_id.clone(),
             })?;
 
@@ -455,13 +455,12 @@ async fn handle_query_running_on_trino(
         .await
         .context(AskTrinoForQueryStateSnafu)?;
 
-    if trino_query_api_response.next_uri.is_some() {
-        // Change the nextUri to actually point to trino-lb instead of Trino.
-        trino_query_api_response
-            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
-            .context(ModifyNextUriSnafu)?;
-    } else {
-        info!(%query_id, "Query completed (no next_uri send)");
+    // Just to be safe the query needs to be completed and not contain any nextUri for the client
+    // to call to, before being considered done. We don't expect any future calls to done queries,
+    // so we can (hopefully) safely remove them from the persistence.
+    if trino_query_api_response.is_query_finished() && !trino_query_api_response.next_uri.is_some()
+    {
+        info!(%query_id, "Query completed, removing it from the persistence");
 
         tokio::try_join!(
             state.persistence.remove_query(&query_id).map_err(|err| {
@@ -480,6 +479,11 @@ async fn handle_query_running_on_trino(
                     }
                 }),
         )?;
+    } else {
+        // Change the nextUri to actually point to trino-lb instead of Trino.
+        trino_query_api_response
+            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
+            .context(ModifyNextUriSnafu)?;
     }
 
     Ok((trino_headers, Json(trino_query_api_response)))
@@ -582,7 +586,7 @@ async fn cancel_query_on_trino(
             .persistence
             .load_query(&query_id)
             .await
-            .context(StoreQueryInPersistenceSnafu {
+            .context(LoadQueryFromPersistenceSnafu {
                 query_id: query_id.clone(),
             })?;
 

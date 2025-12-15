@@ -73,8 +73,6 @@ spec:
                   else
                       echo "✅ Assertion passed on $COORDINATOR: $ROW_COUNT rows"
                   fi
-
-                  echo "$BIG_RESULT_QUERY" | java -jar trino-cli-executable.jar --server $COORDINATOR --insecure --user $TRINO_USER --password > /dev/null
               done
 
               echo "All queries completed successfully."
