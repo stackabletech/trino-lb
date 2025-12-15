@@ -1,11 +1,13 @@
 trinoLb:
-  externalAddress: https://trino-lb:8443
+  externalAddress: https://127.0.0.1:8443
   tls:
     enabled: true
     certPemFile: /certificates/cert.pem
     keyPemFile: /certificates/key.pem
   persistence:
     inMemory: {}
+  tracing:
+    enabled: true
 trinoClusterGroups:
   default:
     maxRunningQueries: 5

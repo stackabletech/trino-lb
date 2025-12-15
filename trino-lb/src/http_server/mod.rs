@@ -122,6 +122,7 @@ pub async fn start_http_server(
             "/v1/statement/executing/{query_id}/{slug}/{token}",
             delete(v1::statement::delete_trino_executing_statement),
         )
+        .route("/proxy", get(v1::proxy::get))
         .route(
             "/admin/clusters/{cluster_name}/activate",
             post(admin::post_activate_cluster),

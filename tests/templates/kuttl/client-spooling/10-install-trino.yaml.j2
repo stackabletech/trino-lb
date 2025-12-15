@@ -51,7 +51,7 @@ spec:
           min: 250m
           max: "1"
         memory:
-          limit: 3Gi
+          limit: 5Gi
       gracefulShutdownTimeout: 2m # Let the test run faster
       logging:
         enableVectorAgent: {{ lookup('env', 'VECTOR_AGGREGATOR') | length > 0 }}

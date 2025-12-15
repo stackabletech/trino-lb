@@ -35,8 +35,8 @@ use crate::{
 
 #[derive(Snafu, Debug)]
 pub enum Error {
-    #[snafu(display("Failed to modify nextUri trino send us to point tu trino-lb"))]
-    ModifyNextUri {
+    #[snafu(display("Failed to update Trino references to point to trino-lb"))]
+    UpdateTrinoReferencesToTrinoLb {
         source: trino_lb_core::trino_api::Error,
     },
 
@@ -316,8 +316,10 @@ async fn queue_or_hand_over_query(
                         )?;
 
                         trino_query_api_response
-                            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
-                            .context(ModifyNextUriSnafu)?;
+                            .update_trino_references_to_trino_lb(
+                                &state.config.trino_lb.external_address,
+                            )
+                            .context(UpdateTrinoReferencesToTrinoLbSnafu)?;
 
                         info!(
                             query_id,
@@ -458,9 +460,11 @@ async fn handle_query_running_on_trino(
     if trino_query_api_response.next_uri.is_some() {
         // Change the nextUri to actually point to trino-lb instead of Trino.
         trino_query_api_response
-            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
-            .context(ModifyNextUriSnafu)?;
+            .update_trino_references_to_trino_lb(&state.config.trino_lb.external_address)
+            .context(UpdateTrinoReferencesToTrinoLbSnafu)?;
     } else {
+        // todo!("We should determine if a query is finished differently");
+
         info!(%query_id, "Query completed (no next_uri send)");
 
         tokio::try_join!(

@@ -20,6 +20,8 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: trino-lb
+      annotations:
+        sidecar.opentelemetry.io/inject: observability/otel-collector-grpc
     spec:
       containers:
         - name: trino-lb

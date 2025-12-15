@@ -1,0 +1,168 @@
+{
+    "id": "20251212_121620_00015_em2hb",
+    "nextUri": "https://127.0.0.1:8443/v1/statement/executing/20251212_121620_00015_em2hb/yb4c376fd455fd93ccd42c8784a5560c3291196f6/5",
+    "infoUri": "https://trino-client-spooling-coordinator:8443/ui/query.html?20251212_121620_00015_em2hb",
+    "partialCancelUri": "https://trino-client-spooling-coordinator:8443/v1/statement/executing/partialCancel/20251212_121620_00015_em2hb/0/yb4c376fd455fd93ccd42c8784a5560c3291196f6/5",
+    "columns": [
+        {
+            "name": "custkey",
+            "type": "bigint",
+            "typeSignature": {
+                "rawType": "bigint",
+                "arguments": []
+            }
+        },
+        {
+            "name": "name",
+            "type": "varchar(25)",
+            "typeSignature": {
+                "rawType": "varchar",
+                "arguments": [
+                    {
+                        "kind": "LONG",
+                        "value": 25
+                    }
+                ]
+            }
+        },
+        {
+            "name": "address",
+            "type": "varchar(40)",
+            "typeSignature": {
+                "rawType": "varchar",
+                "arguments": [
+                    {
+                        "kind": "LONG",
+                        "value": 40
+                    }
+                ]
+            }
+        },
+        {
+            "name": "nationkey",
+            "type": "bigint",
+            "typeSignature": {
+                "rawType": "bigint",
+                "arguments": []
+            }
+        },
+        {
+            "name": "phone",
+            "type": "varchar(15)",
+            "typeSignature": {
+                "rawType": "varchar",
+                "arguments": [
+                    {
+                        "kind": "LONG",
+                        "value": 15
+                    }
+                ]
+            }
+        },
+        {
+            "name": "acctbal",
+            "type": "double",
+            "typeSignature": {
+                "rawType": "double",
+                "arguments": []
+            }
+        },
+        {
+            "name": "mktsegment",
+            "type": "varchar(10)",
+            "typeSignature": {
+                "rawType": "varchar",
+                "arguments": [
+                    {
+                        "kind": "LONG",
+                        "value": 10
+                    }
+                ]
+            }
+        },
+        {
+            "name": "comment",
+            "type": "varchar(117)",
+            "typeSignature": {
+                "rawType": "varchar",
+                "arguments": [
+                    {
+                        "kind": "LONG",
+                        "value": 117
+                    }
+                ]
+            }
+        }
+    ],
+    "data": {
+        "encoding": "json+zstd",
+        "segments": [
+            {
+                "type": "spooled",
+                "uri": "https://minio:9000/trino/spooling/01KCAH1KEE432S8VXFDJTZYTTT.json%2Bzstd?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20251212T121622Z&X-Amz-SignedHeaders=host%3Bx-amz-server-side-encryption-customer-algorithm%3Bx-amz-server-side-encryption-customer-key%3Bx-amz-server-side-encryption-customer-key-md5&X-Amz-Credential=minioAccessKey%2F20251212%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=3600&X-Amz-Signature=331b80bdae6c92352d12985ae8863dddbc72c755d49466c1aeeb732cd08b7d8d",
+                "ackUri": "https://trino-client-spooling-coordinator:8443/v1/spooled/ack/LYp8Bg6PDoTuUO86fmNMQNhtC0xryOhvWpL2LXhwLI4=",
+                "metadata": {
+                    "segmentSize": 2716023,
+                    "uncompressedSize": 7706400,
+                    "rowsCount": 43761,
+                    "expiresAt": "2025-12-13T01:16:21.454",
+                    "rowOffset": 10952
+                },
+                "headers": {
+                    "x-amz-server-side-encryption-customer-algorithm": [
+                        "AES256"
+                    ],
+                    "x-amz-server-side-encryption-customer-key": [
+                        "iemW0eosEhVVn+QR3q/OApysz8ieRCzAHngdoJFlbHY="
+                    ],
+                    "x-amz-server-side-encryption-customer-key-MD5": [
+                        "D1VfXAwD/ffApNMNf3gBig=="
+                    ]
+                }
+            }
+        ]
+    },
+    "error": null,
+    "warnings": [],
+    "stats": {
+        "completedSplits": 0,
+        "cpuTimeMillis": 0,
+        "elapsedTimeMillis": 2616,
+        "nodes": 1,
+        "peakMemoryBytes": 177518310,
+        "physicalInputBytes": 0,
+        "processedBytes": 0,
+        "processedRows": 142356,
+        "progressPercentage": 0.0,
+        "queuedSplits": 0,
+        "queuedTimeMillis": 0,
+        "queued": false,
+        "rootStage": {
+            "completedSplits": 0,
+            "coordinatorOnly": false,
+            "cpuTimeMillis": 0,
+            "done": false,
+            "failedTasks": 0,
+            "nodes": 1,
+            "physicalInputBytes": 0,
+            "processedBytes": 0,
+            "processedRows": 142356,
+            "queuedSplits": 0,
+            "runningSplits": 24,
+            "stageId": "0",
+            "state": "RUNNING",
+            "subStages": [],
+            "totalSplits": 24,
+            "wallTimeMillis": 0
+        },
+        "runningPercentage": 100.0,
+        "runningSplits": 24,
+        "scheduled": true,
+        "spilledBytes": 0,
+        "state": "RUNNING",
+        "totalSplits": 24,
+        "wallTimeMillis": 0
+    },
+    "updateType": null,
+    "updateCount": null
+}
