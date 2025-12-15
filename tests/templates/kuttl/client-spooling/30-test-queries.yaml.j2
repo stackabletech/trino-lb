@@ -53,8 +53,27 @@ spec:
               echo "Submitting queries with big result set to trigger client spooling"
               # Test big query result, so client spooling is used
               BIG_RESULT_QUERY="SELECT * FROM tpch.sf100.customer"
+              EXPECTED_ROWS=15000000
+
               for COORDINATOR in "${COORDINATORS[@]}"; do
                   echo "Running query with big result set against $COORDINATOR"
+                  ROW_COUNT=$(
+                      echo "$BIG_RESULT_QUERY" | \
+                      java -jar trino-cli-executable.jar \
+                          --server "$COORDINATOR" \
+                          --insecure \
+                          --user "$TRINO_USER" \
+                          --password \
+                      | wc -l
+                  )
+
+                  if [ "$ROW_COUNT" -ne "$EXPECTED_ROWS" ]; then
+                      echo "❌ Assertion failed on $COORDINATOR: expected $EXPECTED_ROWS rows, got $ROW_COUNT"
+                      exit 1
+                  else
+                      echo "✅ Assertion passed on $COORDINATOR: $ROW_COUNT rows"
+                  fi
+
                   echo "$BIG_RESULT_QUERY" | java -jar trino-cli-executable.jar --server $COORDINATOR --insecure --user $TRINO_USER --password > /dev/null
               done
 
