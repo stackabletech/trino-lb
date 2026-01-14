@@ -5,7 +5,7 @@ use std::{
 
 use prusto::{QueryError, Warning};
 use serde::{Deserialize, Serialize};
-use serde_json::value::RawValue;
+use serde_json::{Value, value::RawValue};
 use snafu::{ResultExt, Snafu};
 use tracing::instrument;
 use url::Url;
@@ -22,6 +22,12 @@ pub enum Error {
 
     #[snafu(display("Failed to parse nextUri Trino send us"))]
     ParseNextUriFromTrino { source: url::ParseError },
+
+    #[snafu(display("Failed to parse segment ackUri Trino send us"))]
+    ParseSegmentAckUriFromTrino { source: url::ParseError },
+
+    #[snafu(display("Failed to change segment ackUri to point to external Trino address"))]
+    ChangeSegmentAckUriToTrino { source: url::ParseError },
 
     #[snafu(display(
         "Failed to determine the elapsed time of a queued query. Are all system clocks of trino-lb instances in sync?"
@@ -48,7 +54,7 @@ pub struct TrinoQueryApiResponse {
     pub partial_cancel_uri: Option<String>,
 
     pub columns: Option<Box<RawValue>>,
-    pub data: Option<Box<RawValue>>,
+    pub data: Option<Box<Value>>,
 
     pub error: Option<QueryError>,
     pub warnings: Vec<Warning>,
@@ -156,29 +162,81 @@ impl TrinoQueryApiResponse {
         })
     }
 
+    /// Changes the following references in the query (if they exist)
+    ///
+    /// 1. nextUri to point to trino-lb
+    /// 2. In case the `external_trino_addr` is set, segments ackUri to point to the external
+    /// address of Trino. Trino sometimes get's confused (likely by some HTTP) headers and put's the
+    /// trino-lb address into the ackUri (but the requests should go to Trino directly).
     #[instrument(
         skip(self),
         fields(trino_lb_addr = %trino_lb_addr),
     )]
-    pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: &Url) -> Result<(), Error> {
+    pub fn update_trino_references(
+        &mut self,
+        trino_lb_addr: &Url,
+        external_trino_addr: Option<&Url>,
+    ) -> Result<(), Error> {
+        // Point nextUri to trino-lb
         if let Some(next_uri) = &self.next_uri {
             let next_uri = Url::parse(next_uri).context(ParseNextUriFromTrinoSnafu)?;
             self.next_uri = Some(change_next_uri_to_trino_lb(&next_uri, trino_lb_addr).to_string());
+        }
+
+        // Point segment ackUris to Trino
+        if let Some(external_trino_addr) = external_trino_addr
+            && let Some(data) = self.data.as_deref_mut()
+        {
+            change_segment_ack_uris_to_trino(data, external_trino_addr)?;
         }
 
         Ok(())
     }
 }
 
+#[instrument(
+    fields(next_uri = %next_uri, trino_lb_addr = %trino_lb_addr),
+)]
 fn change_next_uri_to_trino_lb(next_uri: &Url, trino_lb_addr: &Url) -> Url {
     let mut result = trino_lb_addr.clone();
     result.set_path(next_uri.path());
     result
 }
 
+#[instrument(
+    skip(data),
+    fields(external_trino_addr = %external_trino_addr),
+)]
+fn change_segment_ack_uris_to_trino(
+    data: &mut Value,
+    external_trino_addr: &Url,
+) -> Result<(), Error> {
+    let Some(segments) = data.get_mut("segments").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+
+    for segment in segments {
+        if let Some("spooled") = segment.get("type").and_then(Value::as_str)
+            && let Some(ack_uri) = segment.get_mut("ackUri")
+            && let Some(ack_uri_str) = ack_uri.as_str()
+        {
+            let parsed_ack_uri = ack_uri_str
+                .parse::<Url>()
+                .context(ParseSegmentAckUriFromTrinoSnafu)?;
+            let mut result = external_trino_addr.clone();
+            result.set_path(parsed_ack_uri.path());
+
+            *ack_uri = Value::String(result.to_string());
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
+    use serde_json::json;
 
     use super::*;
 
@@ -209,5 +267,58 @@ mod tests {
         let trino_lb_addr = Url::parse(&trino_lb_addr).unwrap();
         let result = change_next_uri_to_trino_lb(&next_uri, &trino_lb_addr);
         assert_eq!(result.to_string(), expected);
+    }
+
+    #[test]
+    fn test_change_segment_ack_uris_to_trino() {
+        let mut data = json!({
+            "encoding": "json+zstd",
+            "segments": [
+                {
+                    "type": "spooled",
+                    "uri": "https://minio:9000/trino/spooling/01KCAH1KEE432S8VXFDJTZYTTT.json%2Bzstd?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20251212T121622Z&X-Amz-SignedHeaders=host%3Bx-amz-server-side-encryption-customer-algorithm%3Bx-amz-server-side-encryption-customer-key%3Bx-amz-server-side-encryption-customer-key-md5&X-Amz-Credential=minioAccessKey%2F20251212%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=3600&X-Amz-Signature=331b80bdae6c92352d12985ae8863dddbc72c755d49466c1aeeb732cd08b7d8d",
+                    "ackUri": "https://trino-client-spooling-coordinator:8443/v1/spooled/ack/LYp8Bg6PDoTuUO86fmNMQNhtC0xryOhvWpL2LXhwLI4=",
+                    "metadata": {
+                        "segmentSize": 2716023,
+                        "uncompressedSize": 7706400,
+                        "rowsCount": 43761,
+                        "expiresAt": "2025-12-13T01:16:21.454",
+                        "rowOffset": 10952
+                    },
+                    "headers": {
+                        "x-amz-server-side-encryption-customer-algorithm": [
+                            "AES256"
+                        ],
+                        "x-amz-server-side-encryption-customer-key": [
+                            "iemW0eosEhVVn+QR3q/OApysz8ieRCzAHngdoJFlbHY="
+                        ],
+                        "x-amz-server-side-encryption-customer-key-MD5": [
+                            "D1VfXAwD/ffApNMNf3gBig=="
+                        ]
+                    }
+                }
+            ]
+        });
+        let external_trino_addr = "https://trino-external:1234"
+            .parse()
+            .expect("static URL is always valid");
+
+        change_segment_ack_uris_to_trino(&mut data, &external_trino_addr).unwrap();
+
+        let segment = data
+            .get("segments")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .first()
+            .unwrap();
+        assert_eq!(
+            segment.get("uri").unwrap(),
+            "https://minio:9000/trino/spooling/01KCAH1KEE432S8VXFDJTZYTTT.json%2Bzstd?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20251212T121622Z&X-Amz-SignedHeaders=host%3Bx-amz-server-side-encryption-customer-algorithm%3Bx-amz-server-side-encryption-customer-key%3Bx-amz-server-side-encryption-customer-key-md5&X-Amz-Credential=minioAccessKey%2F20251212%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Expires=3600&X-Amz-Signature=331b80bdae6c92352d12985ae8863dddbc72c755d49466c1aeeb732cd08b7d8d"
+        );
+        assert_eq!(
+            segment.get("ackUri").unwrap(),
+            "https://trino-external:1234/v1/spooled/ack/LYp8Bg6PDoTuUO86fmNMQNhtC0xryOhvWpL2LXhwLI4="
+        );
     }
 }

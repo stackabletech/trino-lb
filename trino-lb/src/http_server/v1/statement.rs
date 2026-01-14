@@ -304,6 +304,7 @@ async fn queue_or_hand_over_query(
                             cluster.name.clone(),
                             trino_query_api_response.id.clone(),
                             cluster.endpoint.clone(),
+                            cluster.external_endpoint.clone(),
                             *creation_time,
                             SystemTime::now(),
                         );
@@ -316,7 +317,10 @@ async fn queue_or_hand_over_query(
                         )?;
 
                         trino_query_api_response
-                            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
+                            .update_trino_references(
+                                &state.config.trino_lb.external_address,
+                                cluster.external_endpoint.as_ref(),
+                            )
                             .context(ModifyNextUriSnafu)?;
 
                         info!(
@@ -458,7 +462,10 @@ async fn handle_query_running_on_trino(
     if trino_query_api_response.next_uri.is_some() {
         // Change the nextUri to actually point to trino-lb instead of Trino.
         trino_query_api_response
-            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
+            .update_trino_references(
+                &state.config.trino_lb.external_address,
+                query.trino_external_endpoint.as_ref(),
+            )
             .context(ModifyNextUriSnafu)?;
     } else {
         info!(%query_id, "Query completed (no next_uri send)");

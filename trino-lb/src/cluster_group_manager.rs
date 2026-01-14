@@ -86,6 +86,7 @@ pub struct TrinoCluster {
     pub name: String,
     pub max_running_queries: u64,
     pub endpoint: Url,
+    pub external_endpoint: Option<Url>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -145,6 +146,7 @@ impl ClusterGroupManager {
                     name: cluster_name,
                     max_running_queries: group_config.max_running_queries,
                     endpoint: cluster_config.endpoint.clone(),
+                    external_endpoint: cluster_config.external_endpoint.clone(),
                 })
             }
             groups.insert(group_name.clone(), group);

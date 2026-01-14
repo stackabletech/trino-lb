@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 
 - Support activating and deactivation Trino clusters via API calls to `/admin/clusters/{cluster_name}/activate` and `/admin/clusters/{cluster_name}/deactivate` respectively. For this to work you need to authenticate yourself at trino-lb via basic auth ([#95]).
 - Expose cluster statistics at `/admin/clusters/{cluster_name}/status` and `/admin/clusters/status` ([#95]).
+- Support configuring an external endpoint of Trino clusters.
+  This is used to update the segments ackUris to, as sometimes Trino get's confused and put's the wrong endpoint (namely the one of trino-lb) in there.
+  Please note that this runs a database migration on Postgres ([#XX]).
 
 ### Changed
 
@@ -28,6 +31,7 @@ All notable changes to this project will be documented in this file.
 [#86]: https://github.com/stackabletech/trino-lb/pull/86
 [#91]: https://github.com/stackabletech/trino-lb/pull/91
 [#95]: https://github.com/stackabletech/trino-lb/pull/95
+[#XX]: https://github.com/stackabletech/trino-lb/pull/XX
 
 ## [0.5.0] - 2025-03-14
 

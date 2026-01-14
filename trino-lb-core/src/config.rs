@@ -191,6 +191,10 @@ pub struct TrinoClusterGroupConfig {
 pub struct TrinoClusterConfig {
     pub name: String,
     pub endpoint: Url,
+
+    /// Public endpoint of the Trino cluster.
+    /// This can e.g. be used to change segment ackUris to.
+    pub external_endpoint: Option<Url>,
     pub credentials: TrinoClusterCredentialsConfig,
 }
 
