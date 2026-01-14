@@ -22,12 +22,14 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Set connection and response timeout for Redis connections ([#85]).
+- Only remove queries from the persistence in case they don't send a `nextUri` and are in state `FINISHED` ([#98]).
 
 [#68]: https://github.com/stackabletech/trino-lb/pull/68
 [#85]: https://github.com/stackabletech/trino-lb/pull/85
 [#86]: https://github.com/stackabletech/trino-lb/pull/86
 [#91]: https://github.com/stackabletech/trino-lb/pull/91
 [#95]: https://github.com/stackabletech/trino-lb/pull/95
+[#98]: https://github.com/stackabletech/trino-lb/pull/98
 
 ## [0.5.0] - 2025-03-14
 
