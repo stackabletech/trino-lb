@@ -32,7 +32,7 @@ kubectl -n <namespace> port-forward svc/trino-lb 8443:8443
 
 Please make sure that `trinoLb.externalAddress` in your trino-lb config points to `https://127.0.0.1:8443`, so that it populates the nextUri correctly.
 
-Than start `mitmproxy`:
+Then start `mitmproxy`:
 
 ```bash
 # nix-shell -p mitmproxy
