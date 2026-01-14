@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 - Expose cluster statistics at `/admin/clusters/{cluster_name}/status` and `/admin/clusters/status` ([#95]).
 - Support configuring an external endpoint of Trino clusters.
   This is used to update the segments ackUris to, as sometimes Trino get's confused and put's the wrong endpoint (namely the one of trino-lb) in there.
-  Please note that this runs a database migration on Postgres ([#XX]).
+  Please note that this runs a database migration on Postgres ([#100]).
 
 ### Changed
 
@@ -33,7 +33,7 @@ All notable changes to this project will be documented in this file.
 [#91]: https://github.com/stackabletech/trino-lb/pull/91
 [#95]: https://github.com/stackabletech/trino-lb/pull/95
 [#98]: https://github.com/stackabletech/trino-lb/pull/98
-[#XX]: https://github.com/stackabletech/trino-lb/pull/XX
+[#100]: https://github.com/stackabletech/trino-lb/pull/100
 
 ## [0.5.0] - 2025-03-14
 
