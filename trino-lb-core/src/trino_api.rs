@@ -92,6 +92,23 @@ pub struct Stat {
 }
 
 impl TrinoQueryApiResponse {
+    pub fn is_query_finished(&self) -> bool {
+        self.stats.state == "FINISHED"
+    }
+
+    #[instrument(
+        skip(self),
+        fields(trino_lb_addr = %trino_lb_addr),
+    )]
+    pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: &Url) -> Result<(), Error> {
+        if let Some(next_uri) = &self.next_uri {
+            let next_uri = Url::parse(next_uri).context(ParseNextUriFromTrinoSnafu)?;
+            self.next_uri = Some(change_next_uri_to_trino_lb(&next_uri, trino_lb_addr).to_string());
+        }
+
+        Ok(())
+    }
+
     #[instrument(
         skip(query),
         fields(trino_lb_addr = %trino_lb_addr),
