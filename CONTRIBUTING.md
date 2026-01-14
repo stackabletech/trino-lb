@@ -27,7 +27,7 @@ Last but not least run
 First, port-forward trino-lb to localhost:
 
 ```bash
-kubectl -n kuttl-test-more-titmouse port-forward svc/trino-lb 8443:8443
+kubectl -n <namespace> port-forward svc/trino-lb 8443:8443
 ```
 
 Please make sure that `trinoLb.externalAddress` in your trino-lb config points to `https://127.0.0.1:8443`, so that it populates the nextUri correctly.
