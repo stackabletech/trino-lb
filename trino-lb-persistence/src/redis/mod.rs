@@ -115,6 +115,12 @@ pub enum Error {
 
     #[snafu(display("Invalid response from compare and set lua script. Expected either 0 or 1"))]
     InvalidCASScriptResponse { response: u64 },
+
+    #[snafu(display("Failed to list queued queries for cluster group {cluster_group:?}"))]
+    ListQueuedQueries {
+        source: RedisError,
+        cluster_group: String,
+    },
 }
 
 /// This Redis implementation works against Redis clusters. It uses a single connection that is shared between all
@@ -143,8 +149,8 @@ impl RedisPersistence<ConnectionManager> {
         info!(redis_host, "Using redis persistence");
 
         let redis_config = ConnectionManagerConfig::new()
-            .set_connection_timeout(REDIS_CONNECTION_TIMEOUT)
-            .set_response_timeout(REDIS_RESPONSE_TIMEOUT);
+            .set_connection_timeout(Some(REDIS_CONNECTION_TIMEOUT))
+            .set_response_timeout(Some(REDIS_RESPONSE_TIMEOUT));
 
         let client = Client::open(config.endpoint.as_str()).context(CreateClientSnafu)?;
         let connection = client
@@ -539,6 +545,7 @@ where
         if let Ok(mut queued) = connection.sscan(queued_query_set_name(cluster_group)).await {
             // TODO: Await `load_queued_query` in parallel (if possible) or add them to a Vec to bulk-delete afterwards
             while let Some(key) = queued.next_item().await {
+                let key = key.with_context(|_| ListQueuedQueriesSnafu { cluster_group })?;
                 let queued_query = self.load_queued_query(&key).await?;
                 if &queued_query.last_accessed < not_accessed_after {
                     self.remove_queued_query(&queued_query).await?;

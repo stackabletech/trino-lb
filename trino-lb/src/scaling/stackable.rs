@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Utc};
-use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
+use k8s_openapi::{apimachinery::pkg::apis::meta::v1::Time, jiff::Timestamp};
 use kube::{
     Api, Client, Discovery,
     api::{Patch, PatchParams},
@@ -415,7 +414,7 @@ impl ScalerTrait for StackableScaler {
     }
 }
 
-fn elapsed_seconds_since(datetime: DateTime<Utc>) -> i64 {
-    let now = Utc::now();
-    (now - datetime).num_seconds()
+fn elapsed_seconds_since(datetime: Timestamp) -> i64 {
+    let now = Timestamp::now();
+    (now - datetime).get_seconds()
 }

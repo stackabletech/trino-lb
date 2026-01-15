@@ -177,7 +177,7 @@ pub async fn start_http_server(
     Ok(())
 }
 
-async fn graceful_shutdown(handle: Handle) {
+async fn graceful_shutdown(handle: Handle<SocketAddr>) {
     wait_for_shutdown_signal().await;
 
     info!("Shutting down gracefully");
