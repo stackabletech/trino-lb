@@ -73,6 +73,12 @@ pub enum Error {
 /// We can not use the `#[tokio::main]` macro, as we need at least 3 worker threads because of some magic happening
 /// in metric collection that are related to <https://github.com/open-telemetry/opentelemetry-rust/issues/1376#issuecomment-1816813128>
 fn main() -> Result<(), MainError> {
+    // To prevent `no process-level CryptoProvider available -- call CryptoProvider::install_default() before this point`,
+    // see https://github.com/rustls/rustls/issues/1938 for details
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .map_err(|_| Error::InstallRustlsCryptoProvider)?;
+
     const ENV_WORKER_THREADS: &str = "TOKIO_WORKER_THREADS";
 
     let worker_threads = match std::env::var(ENV_WORKER_THREADS) {
