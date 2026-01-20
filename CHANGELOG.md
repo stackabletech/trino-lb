@@ -26,6 +26,8 @@ All notable changes to this project will be documented in this file.
 
 - Set connection and response timeout for Redis connections ([#85]).
 - Only remove queries from the persistence in case they don't send a `nextUri` and are in state `FINISHED` ([#98]).
+- Correctly proxy HEAD requests to `/v1/statement/executing/{queryId}/{slug}/{token}`.
+  Previously, we would GET (instead of HEAD) the URL at the Trino cluster, which resulted in trino-lb dropping the HTTP body, causing problems ([#100]).
 
 [#68]: https://github.com/stackabletech/trino-lb/pull/68
 [#85]: https://github.com/stackabletech/trino-lb/pull/85

@@ -8,6 +8,7 @@ use std::{
 
 use axum::{
     Json,
+    body::Body,
     extract::{Path, State},
     response::{IntoResponse, Response},
 };
@@ -90,6 +91,11 @@ pub enum Error {
 
     #[snafu(display("Failed to ask trino for query state"))]
     AskTrinoForQueryState {
+        source: cluster_group_manager::Error,
+    },
+
+    #[snafu(display("Failed to send HEAD request to trino"))]
+    SendHeadToTrino {
         source: cluster_group_manager::Error,
     },
 
@@ -216,22 +222,45 @@ pub async fn get_trino_queued_statement(
 /// Trino cluster and currently running.
 ///
 /// In case the nextUri is null, the query will be stopped and removed from trino-lb.
+///
+/// Please note that sometimes the Trino clients also HEAD this endpoint, in which case we need some
+/// special handling.
 #[instrument(
-    name = "GET /v1/statement/executing/{queryId}/{slug}/{token}",
+    name = "GET (or HEAD) /v1/statement/executing/{queryId}/{slug}/{token}",
     skip(state, headers)
 )]
 pub async fn get_trino_executing_statement(
+    method: http::Method,
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
     Path((query_id, _, _)): Path<(TrinoQueryId, String, u64)>,
     uri: Uri,
-) -> Result<(HeaderMap, Json<TrinoQueryApiResponse>), Error> {
+) -> Result<Response, Error> {
+    if method == http::Method::HEAD {
+        state.metrics.http_counter.add(
+            1,
+            &[KeyValue::new("resource", "head_trino_executing_statement")],
+        );
+
+        let headers = handle_head_request_to_trino(&state, headers, query_id, uri.path()).await?;
+
+        // For a HEAD request we don't need (nor can) return a body.
+        let mut response = Response::new(Body::empty());
+        *response.status_mut() = StatusCode::OK;
+        *response.headers_mut() = headers;
+        return Ok(response);
+    }
     state.metrics.http_counter.add(
         1,
         &[KeyValue::new("resource", "get_trino_executing_statement")],
     );
 
-    handle_query_running_on_trino(&state, headers, query_id, uri.path()).await
+    let (headers, body) =
+        handle_query_running_on_trino(&state, headers, query_id, uri.path()).await?;
+
+    let mut response = body.into_response();
+    *response.headers_mut() = headers;
+    Ok(response)
 }
 
 #[instrument(skip(
@@ -493,6 +522,38 @@ async fn handle_query_running_on_trino(
     }
 
     Ok((trino_headers, Json(trino_query_api_response)))
+}
+
+async fn handle_head_request_to_trino(
+    state: &Arc<AppState>,
+    headers: HeaderMap,
+    query_id: TrinoQueryId,
+    requested_path: &str,
+) -> Result<HeaderMap, Error> {
+    let query =
+        state
+            .persistence
+            .load_query(&query_id)
+            .await
+            .context(LoadQueryFromPersistenceSnafu {
+                query_id: query_id.clone(),
+            })?;
+
+    let headers = state
+        .cluster_group_manager
+        .send_head_to_trino(
+            query.trino_endpoint.join(requested_path).context(
+                JoinRequestPathToTrinoEndpointSnafu {
+                    requested_path,
+                    trino_endpoint: query.trino_endpoint.clone(),
+                },
+            )?,
+            headers,
+        )
+        .await
+        .context(SendHeadToTrinoSnafu)?;
+
+    Ok(headers)
 }
 
 /// This function get's asked to delete the queued query.

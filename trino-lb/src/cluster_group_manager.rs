@@ -35,6 +35,9 @@ pub enum Error {
     #[snafu(display("Failed to contact Trino API to post query"))]
     ContactTrinoPostQuery { source: reqwest::Error },
 
+    #[snafu(display("Failed to call Trino HEAD URL {url:?}"))]
+    CallTrinoHeadUrl { source: reqwest::Error, url: Url },
+
     #[snafu(display("Failed to decode Trino API response"))]
     DecodeTrinoResponse { source: reqwest::Error },
 
@@ -232,7 +235,7 @@ impl ClusterGroupManager {
             .get(next_uri)
             .headers(headers)
             .send()
-            .instrument(info_span!("Send HTTP get to Trino"))
+            .instrument(info_span!("Send HTTP GET to Trino"))
             .await
             .context(ContactTrinoPostQuerySnafu)?;
         let headers = response.headers();
@@ -247,6 +250,33 @@ impl ClusterGroupManager {
             .in_scope(|| serde_json::from_slice(&bytes).context(ParseTrinoResponseSnafu))?;
 
         Ok((trino_query_api_response, headers))
+    }
+
+    /// Sometimes the trino-client HEADs a /executing/xxx endpoint instead of GETing it.
+    /// We need to proxy this as a HEAD request as well.
+    #[instrument(
+        skip(self),
+        fields(head_uri = %head_uri, headers = ?headers.sanitize())
+    )]
+    pub async fn send_head_to_trino(
+        &self,
+        head_uri: Url,
+        mut headers: HeaderMap,
+    ) -> Result<HeaderMap, Error> {
+        add_current_context_to_client_request(tracing::Span::current().context(), &mut headers);
+
+        let response = self
+            .http_client
+            .head(head_uri.clone())
+            .headers(headers)
+            .send()
+            .instrument(info_span!("Send HTTP HEAD to Trino"))
+            .await
+            .with_context(|_| CallTrinoHeadUrlSnafu { url: head_uri })?;
+        let headers = response.headers();
+        let headers = filter_to_trino_headers(headers);
+
+        Ok(headers)
     }
 
     #[instrument(
