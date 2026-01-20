@@ -259,7 +259,9 @@ pub async fn get_trino_executing_statement(
         handle_query_running_on_trino(&state, headers, query_id, uri.path()).await?;
 
     let mut response = body.into_response();
-    *response.headers_mut() = headers;
+    // We can not simply replace the headers, as otherwise e.g. "Content-Type: application/json"
+    // would be missing
+    response.headers_mut().extend(headers);
     Ok(response)
 }
 
