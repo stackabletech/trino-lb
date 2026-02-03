@@ -182,9 +182,9 @@ impl TrinoQueryApiResponse {
     /// Changes the following references in the query (if they exist)
     ///
     /// 1. nextUri to point to trino-lb
-    /// 2. In case the `external_trino_addr` is set, segments ackUri to point to the external
-    /// address of Trino. Trino sometimes get's confused (likely by some HTTP) headers and put's the
-    /// trino-lb address into the ackUri (but the requests should go to Trino directly).
+    /// 2. In case the `external_trino_addr` is set, update the segments ackUri to point to the
+    /// external address of Trino. Trino sometimes gets confused (likely by some HTTP headers) and
+    /// puts the trino-lb address into the ackUri (but the requests should go to Trino directly).
     #[instrument(
         skip(self),
         fields(trino_lb_addr = %trino_lb_addr),
