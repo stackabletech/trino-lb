@@ -20,9 +20,6 @@ pub enum Error {
         trino_lb_addr: Url,
     },
 
-    #[snafu(display("Failed to parse nextUri Trino send us"))]
-    ParseNextUriFromTrino { source: url::ParseError },
-
     #[snafu(display("Failed to parse segment ackUri Trino send us"))]
     ParseSegmentAckUriFromTrino { source: url::ParseError },
 
