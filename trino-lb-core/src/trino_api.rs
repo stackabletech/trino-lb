@@ -49,9 +49,9 @@ pub struct TrinoQueryApiResponse {
     pub id: TrinoQueryId,
 
     /// Normally this will always be set, only the last call will not return a `next_uri`.
-    pub next_uri: Option<String>,
-    pub info_uri: String,
-    pub partial_cancel_uri: Option<String>,
+    pub next_uri: Option<Url>,
+    pub info_uri: Url,
+    pub partial_cancel_uri: Option<Url>,
 
     pub columns: Option<Box<RawValue>>,
     pub data: Option<Box<Value>>,
@@ -102,8 +102,7 @@ impl TrinoQueryApiResponse {
     )]
     pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: &Url) -> Result<(), Error> {
         if let Some(next_uri) = &self.next_uri {
-            let next_uri = Url::parse(next_uri).context(ParseNextUriFromTrinoSnafu)?;
-            self.next_uri = Some(change_next_uri_to_trino_lb(&next_uri, trino_lb_addr).to_string());
+            self.next_uri = Some(change_next_uri_to_trino_lb(next_uri, trino_lb_addr));
         }
 
         Ok(())
@@ -138,15 +137,13 @@ impl TrinoQueryApiResponse {
                     ))
                     .context(JoinApiPathToTrinoLbUrlSnafu {
                         trino_lb_addr: trino_lb_addr.clone(),
-                    })?
-                    .to_string(),
+                    })?,
             ),
             info_uri: trino_lb_addr
                 .join(&format!("ui/query.html?{query_id}"))
                 .context(JoinApiPathToTrinoLbUrlSnafu {
                     trino_lb_addr: trino_lb_addr.clone(),
-                })?
-                .to_string(),
+                })?,
             partial_cancel_uri: None,
             columns: None,
             data: None,
@@ -196,8 +193,7 @@ impl TrinoQueryApiResponse {
     ) -> Result<(), Error> {
         // Point nextUri to trino-lb
         if let Some(next_uri) = &self.next_uri {
-            let next_uri = Url::parse(next_uri).context(ParseNextUriFromTrinoSnafu)?;
-            self.next_uri = Some(change_next_uri_to_trino_lb(&next_uri, trino_lb_addr).to_string());
+            self.next_uri = Some(change_next_uri_to_trino_lb(next_uri, trino_lb_addr));
         }
 
         // Point segment ackUris to Trino
