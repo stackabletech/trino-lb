@@ -97,7 +97,7 @@ impl TrinoQueryApiResponse {
         skip(self),
         fields(trino_lb_addr = %trino_lb_addr),
     )]
-    pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: &Url) -> Result<(), Error> {
+    pub fn change_next_uri_to_trino_lb(&mut self, trino_lb_addr: Url) -> Result<(), Error> {
         if let Some(next_uri) = &self.next_uri {
             self.next_uri = Some(change_next_uri_to_trino_lb(next_uri, trino_lb_addr));
         }
@@ -185,7 +185,7 @@ impl TrinoQueryApiResponse {
     )]
     pub fn update_trino_references(
         &mut self,
-        trino_lb_addr: &Url,
+        trino_lb_addr: Url,
         external_trino_addr: Option<&Url>,
     ) -> Result<(), Error> {
         // Point nextUri to trino-lb
@@ -207,8 +207,8 @@ impl TrinoQueryApiResponse {
 #[instrument(
     fields(next_uri = %next_uri, trino_lb_addr = %trino_lb_addr),
 )]
-fn change_next_uri_to_trino_lb(next_uri: &Url, trino_lb_addr: &Url) -> Url {
-    let mut result = trino_lb_addr.clone();
+fn change_next_uri_to_trino_lb(next_uri: &Url, trino_lb_addr: Url) -> Url {
+    let mut result = trino_lb_addr;
     result.set_path(next_uri.path());
     result
 }
@@ -275,7 +275,7 @@ mod tests {
     ) {
         let next_uri = Url::parse(&next_uri).unwrap();
         let trino_lb_addr = Url::parse(&trino_lb_addr).unwrap();
-        let result = change_next_uri_to_trino_lb(&next_uri, &trino_lb_addr);
+        let result = change_next_uri_to_trino_lb(&next_uri, trino_lb_addr);
         assert_eq!(result.to_string(), expected);
     }
 

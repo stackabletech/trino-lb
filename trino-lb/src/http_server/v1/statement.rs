@@ -349,7 +349,7 @@ async fn queue_or_hand_over_query(
 
                         trino_query_api_response
                             .update_trino_references(
-                                &state.config.trino_lb.external_address,
+                                state.config.trino_lb.external_address.clone(),
                                 cluster.external_endpoint.as_ref(),
                             )
                             .context(ModifyNextUriSnafu)?;
@@ -517,7 +517,7 @@ async fn handle_query_running_on_trino(
         // Change the nextUri to actually point to trino-lb instead of Trino.
         trino_query_api_response
             .update_trino_references(
-                &state.config.trino_lb.external_address,
+                state.config.trino_lb.external_address.clone(),
                 query.trino_external_endpoint.as_ref(),
             )
             .context(ModifyNextUriSnafu)?;
