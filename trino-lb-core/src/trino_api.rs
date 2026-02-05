@@ -176,7 +176,7 @@ impl TrinoQueryApiResponse {
     /// Changes the following references in the query (if they exist)
     ///
     /// 1. nextUri to point to trino-lb
-    /// 2. In case the `external_trino_addr` is set, update the segments ackUri to point to the
+    /// 2. In case the `external_trino_endpoint` is set, update the segments ackUri to point to the
     /// external address of Trino. Trino sometimes gets confused (likely by some HTTP headers) and
     /// puts the trino-lb address into the ackUri (but the requests should go to Trino directly).
     #[instrument(
@@ -186,7 +186,7 @@ impl TrinoQueryApiResponse {
     pub fn update_trino_references(
         &mut self,
         trino_lb_addr: Url,
-        external_trino_addr: Option<&Url>,
+        external_trino_endpoint: Option<&Url>,
     ) -> Result<(), Error> {
         // Point nextUri to trino-lb
         if let Some(next_uri) = &self.next_uri {
@@ -194,10 +194,10 @@ impl TrinoQueryApiResponse {
         }
 
         // Point segment ackUris to Trino
-        if let Some(external_trino_addr) = external_trino_addr
+        if let Some(external_trino_endpoint) = external_trino_endpoint
             && let Some(data) = self.data.as_deref_mut()
         {
-            change_segment_ack_uris_to_trino(data, external_trino_addr)?;
+            change_segment_ack_uris_to_trino(data, external_trino_endpoint)?;
         }
 
         Ok(())
@@ -215,11 +215,11 @@ fn change_next_uri_to_trino_lb(next_uri: &Url, trino_lb_addr: Url) -> Url {
 
 #[instrument(
     skip(data),
-    fields(external_trino_addr = %external_trino_addr),
+    fields(external_trino_endpoint = %external_trino_endpoint),
 )]
 fn change_segment_ack_uris_to_trino(
     data: &mut Value,
-    external_trino_addr: &Url,
+    external_trino_endpoint: &Url,
 ) -> Result<(), Error> {
     let Some(segments) = data.get_mut("segments").and_then(Value::as_array_mut) else {
         return Ok(());
@@ -233,7 +233,7 @@ fn change_segment_ack_uris_to_trino(
             let parsed_ack_uri = ack_uri_str
                 .parse::<Url>()
                 .context(ParseSegmentAckUriFromTrinoSnafu)?;
-            let mut result = external_trino_addr.clone();
+            let mut result = external_trino_endpoint.clone();
             result.set_path(parsed_ack_uri.path());
 
             *ack_uri = Value::String(result.to_string());
@@ -309,11 +309,11 @@ mod tests {
                 }
             ]
         });
-        let external_trino_addr = "https://trino-external:1234"
+        let external_trino_endpoint = "https://trino-external:1234"
             .parse()
             .expect("static URL is always valid");
 
-        change_segment_ack_uris_to_trino(&mut data, &external_trino_addr).unwrap();
+        change_segment_ack_uris_to_trino(&mut data, &external_trino_endpoint).unwrap();
 
         let segment = data
             .get("segments")
