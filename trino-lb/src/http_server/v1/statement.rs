@@ -133,6 +133,12 @@ pub enum Error {
         requested_path: String,
         trino_endpoint: Url,
     },
+
+    #[snafu(display("Unexpected HTTP method {actual}, expected on of {expected:?}"))]
+    UnexpectedHttpMethod {
+        actual: http::Method,
+        expected: Vec<http::Method>,
+    },
 }
 
 impl IntoResponse for Error {
@@ -236,33 +242,43 @@ pub async fn get_trino_executing_statement(
     Path((query_id, _, _)): Path<(TrinoQueryId, String, u64)>,
     uri: Uri,
 ) -> Result<Response, Error> {
-    if method == http::Method::HEAD {
-        state.metrics.http_counter.add(
-            1,
-            &[KeyValue::new("resource", "head_trino_executing_statement")],
-        );
+    match method {
+        http::Method::GET => {
+            state.metrics.http_counter.add(
+                1,
+                &[KeyValue::new("resource", "get_trino_executing_statement")],
+            );
 
-        let headers = handle_head_request_to_trino(&state, headers, query_id, uri.path()).await?;
+            let (headers, body) =
+                handle_query_running_on_trino(&state, headers, query_id, uri.path()).await?;
 
-        // For a HEAD request we don't need (nor can) return a body.
-        let mut response = Response::new(Body::empty());
-        *response.status_mut() = StatusCode::OK;
-        *response.headers_mut() = headers;
-        return Ok(response);
+            let mut response = body.into_response();
+            // We can not simply replace the headers, as otherwise e.g. "Content-Type: application/json"
+            // would be missing
+            response.headers_mut().extend(headers);
+            Ok(response)
+        }
+        http::Method::HEAD => {
+            state.metrics.http_counter.add(
+                1,
+                &[KeyValue::new("resource", "head_trino_executing_statement")],
+            );
+
+            let headers =
+                handle_head_request_to_trino(&state, headers, query_id, uri.path()).await?;
+
+            // For a HEAD request we don't need (nor can) return a body.
+            let mut response = Response::new(Body::empty());
+            *response.status_mut() = StatusCode::OK;
+            *response.headers_mut() = headers;
+            Ok(response)
+        }
+        _ => UnexpectedHttpMethodSnafu {
+            actual: method,
+            expected: vec![http::Method::GET, http::Method::HEAD],
+        }
+        .fail(),
     }
-    state.metrics.http_counter.add(
-        1,
-        &[KeyValue::new("resource", "get_trino_executing_statement")],
-    );
-
-    let (headers, body) =
-        handle_query_running_on_trino(&state, headers, query_id, uri.path()).await?;
-
-    let mut response = body.into_response();
-    // We can not simply replace the headers, as otherwise e.g. "Content-Type: application/json"
-    // would be missing
-    response.headers_mut().extend(headers);
-    Ok(response)
 }
 
 #[instrument(skip(
