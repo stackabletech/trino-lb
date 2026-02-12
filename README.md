@@ -1,6 +1,7 @@
 # trino-lb
 
 A highly available load balancer with support for queueing, routing and auto-scaling of multiple [Trino](https://trino.io) clusters.
+It proxies calls to the underlying Trino clusters by mimicking the Trino protocol, so you can point any arbitrary Trino client at trino-lb.
 
 * [Design](./docs/design.md)
 * [Example setups](./docs/example-setups.md)
