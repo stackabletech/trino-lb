@@ -53,7 +53,7 @@ pub struct TrinoQuery {
     pub trino_endpoint: Url,
 
     /// Public endpoint of the Trino cluster, if it's configured in the trino-lb config.
-    /// This can e.g. be used to change segment ackUris to.
+    /// This can e.g. be used to change segment ackUris to point to the Trino public endpoint.
     pub trino_external_endpoint: Option<Url>,
 
     /// The time the query was submitted to trino-lb.
