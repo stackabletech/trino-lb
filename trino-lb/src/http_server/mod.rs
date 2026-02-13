@@ -108,7 +108,7 @@ pub async fn start_http_server(
         )
         .route(
             "/v1/statement/executing/{query_id}/{slug}/{token}",
-            get(v1::statement::get_trino_executing_statement),
+            get(v1::statement::get_or_head_trino_executing_statement),
         )
         .route(
             "/v1/statement/queued_in_trino_lb/{query_id}/{sequence_number}",

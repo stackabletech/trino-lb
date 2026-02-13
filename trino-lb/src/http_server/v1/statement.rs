@@ -235,7 +235,7 @@ pub async fn get_trino_queued_statement(
     name = "GET (or HEAD) /v1/statement/executing/{queryId}/{slug}/{token}",
     skip(state, headers)
 )]
-pub async fn get_trino_executing_statement(
+pub async fn get_or_head_trino_executing_statement(
     method: http::Method,
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
