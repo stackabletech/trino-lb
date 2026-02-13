@@ -52,7 +52,7 @@ pub struct TrinoQuery {
     /// Endpoint of the Trino cluster the query is running on.
     pub trino_endpoint: Url,
 
-    /// (Optionally, if configured) public endpoint of the Trino cluster.
+    /// Public endpoint of the Trino cluster, if it's configured in the trino-lb config.
     /// This can e.g. be used to change segment ackUris to.
     pub trino_external_endpoint: Option<Url>,
 
