@@ -92,6 +92,9 @@ pub enum Error {
     #[snafu(display("Failed to parse endpoint url of cluster from stored query"))]
     ParseClusterEndpointFromStoredQuery { source: url::ParseError },
 
+    #[snafu(display("Failed to parse external endpoint url of cluster from stored query"))]
+    ParseClusterExternalEndpointFromStoredQuery { source: url::ParseError },
+
     #[snafu(display("Failed to convert max query counter to u64, as it is too high"))]
     ConvertMaxAllowedQueryCounterToU64 { source: TryFromIntError },
 
@@ -204,11 +207,12 @@ impl Persistence for PostgresPersistence {
     #[instrument(skip(self, query))]
     async fn store_query(&self, query: TrinoQuery) -> Result<(), super::Error> {
         query!(
-            r#"INSERT INTO queries (id, trino_cluster, trino_endpoint, creation_time, delivered_time)
-            VALUES ($1, $2, $3, $4, $5)"#,
+            r#"INSERT INTO queries (id, trino_cluster, trino_endpoint, trino_external_endpoint, creation_time, delivered_time)
+            VALUES ($1, $2, $3, $4, $5, $6)"#,
             query.id,
             query.trino_cluster,
             query.trino_endpoint.as_str(),
+            query.trino_external_endpoint.as_ref().map(Url::as_str),
             Into::<DateTime<Utc>>::into(query.creation_time),
             Into::<DateTime<Utc>>::into(query.delivered_time),
         )
@@ -222,7 +226,7 @@ impl Persistence for PostgresPersistence {
     #[instrument(skip(self))]
     async fn load_query(&self, query_id: &TrinoQueryId) -> Result<TrinoQuery, super::Error> {
         let result = query!(
-            r#"SELECT id, trino_cluster, trino_endpoint, creation_time, delivered_time
+            r#"SELECT id, trino_cluster, trino_endpoint, trino_external_endpoint, creation_time, delivered_time
             FROM queries
             WHERE id = $1"#,
             query_id,
@@ -231,11 +235,19 @@ impl Persistence for PostgresPersistence {
         .await
         .context(LoadQuerySnafu)?;
 
+        let trino_external_endpoint = match result.trino_external_endpoint {
+            Some(trino_external_endpoint) => Some(
+                Url::parse(&trino_external_endpoint)
+                    .context(ParseClusterExternalEndpointFromStoredQuerySnafu)?,
+            ),
+            None => None,
+        };
         let query = TrinoQuery {
             id: result.id,
             trino_cluster: result.trino_cluster,
             trino_endpoint: Url::parse(&result.trino_endpoint)
                 .context(ParseClusterEndpointFromStoredQuerySnafu)?,
+            trino_external_endpoint,
             creation_time: result.creation_time.into(),
             delivered_time: result.delivered_time.into(),
         };

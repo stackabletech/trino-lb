@@ -8,6 +8,7 @@ use std::{
 
 use axum::{
     Json,
+    body::Body,
     extract::{Path, State},
     response::{IntoResponse, Response},
 };
@@ -93,6 +94,11 @@ pub enum Error {
         source: cluster_group_manager::Error,
     },
 
+    #[snafu(display("Failed to send HEAD request to trino"))]
+    SendHeadToTrino {
+        source: cluster_group_manager::Error,
+    },
+
     #[snafu(display(
         "Failed to decrement the query counter query trino cluster {trino_cluster:?}"
     ))]
@@ -126,6 +132,12 @@ pub enum Error {
         source: url::ParseError,
         requested_path: String,
         trino_endpoint: Url,
+    },
+
+    #[snafu(display("Unexpected HTTP method {actual}, expected on of {expected:?}"))]
+    UnexpectedHttpMethod {
+        actual: http::Method,
+        expected: Vec<http::Method>,
     },
 }
 
@@ -216,22 +228,57 @@ pub async fn get_trino_queued_statement(
 /// Trino cluster and currently running.
 ///
 /// In case the nextUri is null, the query will be stopped and removed from trino-lb.
+///
+/// Please note that sometimes the Trino clients also HEAD this endpoint, in which case we need some
+/// special handling.
 #[instrument(
-    name = "GET /v1/statement/executing/{queryId}/{slug}/{token}",
+    name = "GET (or HEAD) /v1/statement/executing/{queryId}/{slug}/{token}",
     skip(state, headers)
 )]
-pub async fn get_trino_executing_statement(
+pub async fn get_or_head_trino_executing_statement(
+    method: http::Method,
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
     Path((query_id, _, _)): Path<(TrinoQueryId, String, u64)>,
     uri: Uri,
-) -> Result<(HeaderMap, Json<TrinoQueryApiResponse>), Error> {
-    state.metrics.http_counter.add(
-        1,
-        &[KeyValue::new("resource", "get_trino_executing_statement")],
-    );
+) -> Result<Response, Error> {
+    match method {
+        http::Method::GET => {
+            state.metrics.http_counter.add(
+                1,
+                &[KeyValue::new("resource", "get_trino_executing_statement")],
+            );
 
-    handle_query_running_on_trino(&state, headers, query_id, uri.path()).await
+            let (headers, body) =
+                handle_query_running_on_trino(&state, headers, query_id, uri.path()).await?;
+
+            let mut response = body.into_response();
+            // We can not simply replace the headers, as otherwise e.g. "Content-Type: application/json"
+            // would be missing
+            response.headers_mut().extend(headers);
+            Ok(response)
+        }
+        http::Method::HEAD => {
+            state.metrics.http_counter.add(
+                1,
+                &[KeyValue::new("resource", "head_trino_executing_statement")],
+            );
+
+            let headers =
+                handle_head_request_to_trino(&state, headers, query_id, uri.path()).await?;
+
+            // For a HEAD request we don't need (nor can) return a body.
+            let mut response = Response::new(Body::empty());
+            *response.status_mut() = StatusCode::OK;
+            *response.headers_mut() = headers;
+            Ok(response)
+        }
+        _ => UnexpectedHttpMethodSnafu {
+            actual: method,
+            expected: vec![http::Method::GET, http::Method::HEAD],
+        }
+        .fail(),
+    }
 }
 
 #[instrument(skip(
@@ -304,6 +351,7 @@ async fn queue_or_hand_over_query(
                             cluster.name.clone(),
                             trino_query_api_response.id.clone(),
                             cluster.endpoint.clone(),
+                            cluster.external_endpoint.clone(),
                             *creation_time,
                             SystemTime::now(),
                         );
@@ -316,7 +364,10 @@ async fn queue_or_hand_over_query(
                         )?;
 
                         trino_query_api_response
-                            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
+                            .update_trino_references(
+                                state.config.trino_lb.external_address.clone(),
+                                cluster.external_endpoint.as_ref(),
+                            )
                             .context(ModifyNextUriSnafu)?;
 
                         info!(
@@ -481,11 +532,46 @@ async fn handle_query_running_on_trino(
     } else {
         // Change the nextUri to actually point to trino-lb instead of Trino.
         trino_query_api_response
-            .change_next_uri_to_trino_lb(&state.config.trino_lb.external_address)
+            .update_trino_references(
+                state.config.trino_lb.external_address.clone(),
+                query.trino_external_endpoint.as_ref(),
+            )
             .context(ModifyNextUriSnafu)?;
     }
 
     Ok((trino_headers, Json(trino_query_api_response)))
+}
+
+async fn handle_head_request_to_trino(
+    state: &Arc<AppState>,
+    headers: HeaderMap,
+    query_id: TrinoQueryId,
+    requested_path: &str,
+) -> Result<HeaderMap, Error> {
+    let query =
+        state
+            .persistence
+            .load_query(&query_id)
+            .await
+            .context(LoadQueryFromPersistenceSnafu {
+                query_id: query_id.clone(),
+            })?;
+
+    let headers = state
+        .cluster_group_manager
+        .send_head_to_trino(
+            query.trino_endpoint.join(requested_path).context(
+                JoinRequestPathToTrinoEndpointSnafu {
+                    requested_path,
+                    trino_endpoint: query.trino_endpoint.clone(),
+                },
+            )?,
+            headers,
+        )
+        .await
+        .context(SendHeadToTrinoSnafu)?;
+
+    Ok(headers)
 }
 
 /// This function get's asked to delete the queued query.

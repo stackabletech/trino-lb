@@ -52,6 +52,10 @@ pub struct TrinoQuery {
     /// Endpoint of the Trino cluster the query is running on.
     pub trino_endpoint: Url,
 
+    /// Public endpoint of the Trino cluster, if it's configured in the trino-lb config.
+    /// This can e.g. be used to change segment ackUris to point to the Trino public endpoint.
+    pub trino_external_endpoint: Option<Url>,
+
     /// The time the query was submitted to trino-lb.
     pub creation_time: SystemTime,
 
@@ -80,6 +84,7 @@ impl TrinoQuery {
         trino_cluster: TrinoClusterName,
         trino_query_id: TrinoQueryId,
         trino_endpoint: Url,
+        trino_external_endpoint: Option<Url>,
         creation_time: SystemTime,
         delivered_time: SystemTime,
     ) -> Self {
@@ -87,6 +92,7 @@ impl TrinoQuery {
             id: trino_query_id,
             trino_cluster,
             trino_endpoint,
+            trino_external_endpoint,
             creation_time,
             delivered_time,
         }
