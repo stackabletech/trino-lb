@@ -5,11 +5,11 @@ metadata:
   name: trino-client-spooling
 spec:
   image:
-{% if test_scenario['values']['trino-client-spooling'].find(",") > 0 %}
-    custom: "{{ test_scenario['values']['trino-client-spooling'].split(',')[1] }}"
-    productVersion: "{{ test_scenario['values']['trino-client-spooling'].split(',')[0] }}"
+{% if test_scenario['values']['trino'].find(",") > 0 %}
+    custom: "{{ test_scenario['values']['trino'].split(',')[1] }}"
+    productVersion: "{{ test_scenario['values']['trino'].split(',')[0] }}"
 {% else %}
-    productVersion: "{{ test_scenario['values']['trino-client-spooling'] }}"
+    productVersion: "{{ test_scenario['values']['trino'] }}"
 {% endif %}
     pullPolicy: IfNotPresent
   clusterConfig:
