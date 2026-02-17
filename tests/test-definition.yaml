@@ -3,6 +3,7 @@ dimensions:
   - name: trino-lb
     values:
       - oci.stackable.tech/stackable/trino-lb:dev
+      # - oci.stackable.tech/stackable/trino-lb:0.6.0
       # - foo:bar
   - name: trino
     values:
