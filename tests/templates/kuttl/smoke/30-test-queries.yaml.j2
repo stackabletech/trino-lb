@@ -28,7 +28,7 @@ spec:
               QUERY="select count(*) from tpch.sf1.customer"
 
               for COORDINATOR in "${COORDINATORS[@]}"; do
-                  echo "$QUERY" | java -jar trino-cli-executable.jar --server $COORDINATOR --insecure --user $TRINO_USER --password
+                  echo "$QUERY" | /stackable/trino-cli/trino-cli --server $COORDINATOR --insecure --user $TRINO_USER --password
               done
 
               # Send multiple queries in parallel to trino-lb
@@ -38,7 +38,7 @@ spec:
               pids=()
 
               for ((i = 1; i <= NUM_REQUESTS; i++)); do
-                  echo "$QUERY" | java -jar trino-cli-executable.jar --server $TRINO_LB_ADDRESS --insecure --user $TRINO_USER --password &
+                  echo "$QUERY" | /stackable/trino-cli/trino-cli --server $TRINO_LB_ADDRESS --insecure --user $TRINO_USER --password &
                   pids+=("$!")
               done
 
