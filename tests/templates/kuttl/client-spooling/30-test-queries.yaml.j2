@@ -9,7 +9,7 @@ spec:
       containers:
         - name: test-queries
           # image: oci.stackable.tech/sdp/trino-cli:476-stackable0.0.0-dev
-          image: oci.stackable.tech/sdp/trino-cli:{{ test_scenario['values']['trino-client-spooling'] }}-stackable0.0.0-dev
+          image: oci.stackable.tech/sdp/trino-cli:{{ test_scenario['values']['trino'] }}-stackable0.0.0-dev
           command:
             - /bin/bash
             - -x

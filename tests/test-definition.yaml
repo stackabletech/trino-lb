@@ -3,24 +3,17 @@ dimensions:
   - name: trino-lb
     values:
       - oci.stackable.tech/stackable/trino-lb:dev
-      # - oci.stackable.tech/stackable/trino-lb:0.5.0
+      # - foo:bar
   - name: trino
     values:
-      - "451"
-      # - "470" # Reduce test count
-      - "476"
+      - "477"
+      - "479"
       # To use a custom image, add a comma and the full name after the product version
       # - 470,oci.stackable.tech/sdp/trino:470-stackable0.0.0-dev
       # However, watch out, you need to tweak the trino-cli image
   - name: trino-latest
     values:
-      - "470"
-  # As not all Trino versions support client spooling, we have an extra dimension
-  - name: trino-client-spooling
-    values:
-      # According to https://docs.stackable.tech/home/nightly/trino/usage-guide/client-spooling-protocol/
-      # > The client spooling protocol was introduced in Trino 466 but it only works reliably starting with Trino 476.
-      - "476"
+      - "479"
   - name: trino-lb-https
     values:
       - "true"
@@ -43,7 +36,7 @@ tests:
   - name: client-spooling
     dimensions:
       - trino-lb
-      - trino-client-spooling
+      - trino
       - client-spooling-retrieval-mode
 
 # TODOS
