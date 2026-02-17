@@ -95,6 +95,9 @@ pub async fn start_http_server(
             .await
     });
 
+    // Note that get routes will also be called for HEAD requests but will have the response body
+    // removed. Make sure to add explicit HEAD routes afterwards.
+    // See https://docs.rs/axum/latest/axum/routing/method_routing/fn.get.html
     let app = Router::new()
         .route("/", get(|| async { Redirect::permanent("/ui/index.html") }))
         .route("/v1/statement", post(v1::statement::post_statement))
@@ -108,7 +111,7 @@ pub async fn start_http_server(
         )
         .route(
             "/v1/statement/executing/{query_id}/{slug}/{token}",
-            get(v1::statement::get_trino_executing_statement),
+            get(v1::statement::get_or_head_trino_executing_statement),
         )
         .route(
             "/v1/statement/queued_in_trino_lb/{query_id}/{sequence_number}",

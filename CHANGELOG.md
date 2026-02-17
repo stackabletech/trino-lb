@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 
 - Support activating and deactivation Trino clusters via API calls to `/admin/clusters/{cluster_name}/activate` and `/admin/clusters/{cluster_name}/deactivate` respectively. For this to work you need to authenticate yourself at trino-lb via basic auth ([#95]).
 - Expose cluster statistics at `/admin/clusters/{cluster_name}/status` and `/admin/clusters/status` ([#95]).
+- Support configuring an external endpoint of Trino clusters.
+  This is used to update the segments ackUris to, as sometimes Trino get's confused and put's the wrong endpoint (namely the one of trino-lb) in there.
+  Please note that this runs a database migration on Postgres ([#100]).
 
 ### Changed
 
@@ -23,6 +26,8 @@ All notable changes to this project will be documented in this file.
 
 - Set connection and response timeout for Redis connections ([#85]).
 - Only remove queries from the persistence in case they don't send a `nextUri` and are in state `FINISHED` ([#98]).
+- Correctly proxy HEAD requests to `/v1/statement/executing/{queryId}/{slug}/{token}`.
+  Previously, we would GET (instead of HEAD) the URL at the Trino cluster, which resulted in trino-lb dropping the HTTP body, causing problems ([#100]).
 
 [#68]: https://github.com/stackabletech/trino-lb/pull/68
 [#85]: https://github.com/stackabletech/trino-lb/pull/85
@@ -30,6 +35,7 @@ All notable changes to this project will be documented in this file.
 [#91]: https://github.com/stackabletech/trino-lb/pull/91
 [#95]: https://github.com/stackabletech/trino-lb/pull/95
 [#98]: https://github.com/stackabletech/trino-lb/pull/98
+[#100]: https://github.com/stackabletech/trino-lb/pull/100
 
 ## [0.5.0] - 2025-03-14
 

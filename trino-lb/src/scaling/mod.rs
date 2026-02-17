@@ -200,6 +200,7 @@ impl Scaler {
                     name: cluster_name,
                     max_running_queries: group_config.max_running_queries,
                     endpoint: cluster_config.endpoint.clone(),
+                    external_endpoint: cluster_config.external_endpoint.clone(),
                 })
             }
             groups.insert(group_name.clone(), group);
