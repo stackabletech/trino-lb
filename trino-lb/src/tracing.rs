@@ -1,20 +1,14 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
-use opentelemetry::{
-    Context, KeyValue, global,
-    metrics::MetricsError,
-    trace::{TraceError, TracerProvider},
-};
+use opentelemetry::trace::TracerProvider;
+use opentelemetry::{Context, global};
 use opentelemetry_http::HeaderInjector;
-use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+use opentelemetry_otlp::{SpanExporter, WithExportConfig, WithTonicConfig};
 use opentelemetry_sdk::{
     Resource,
-    metrics::{
-        Aggregation, Instrument, SdkMeterProvider, Stream,
-        reader::{DefaultAggregationSelector, DefaultTemporalitySelector},
-    },
+    metrics::SdkMeterProvider,
     propagation::TraceContextPropagator,
-    trace::{self, RandomIdGenerator, Sampler},
+    trace::{RandomIdGenerator, Sampler, SdkTracerProvider, Tracer},
 };
 use snafu::{ResultExt, Snafu};
 use tracing::{level_filters::LevelFilter, subscriber::SetGlobalDefaultError};
@@ -22,47 +16,48 @@ use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt};
 use trino_lb_core::config::{Config, TrinoLbTracingConfig};
 use trino_lb_persistence::PersistenceImplementation;
 
-use crate::metrics::{self, Metrics};
+use crate::metrics::Metrics;
 
 #[derive(Snafu, Debug)]
 pub enum Error {
-    #[snafu(display("Failed to install tokio batch runtime"))]
-    InstallTokioBatchRuntime { source: TraceError },
-
-    #[snafu(display("Failed to create metrics pipeline"))]
-    CreateMetricsPipeline { source: MetricsError },
+    #[snafu(display("Failed to build OTLP span exporter"))]
+    BuildSpanExporter {
+        source: opentelemetry_otlp::ExporterBuildError,
+    },
 
     #[snafu(display("Failed to create OpenTelemetry Prometheus exporter"))]
-    CreateOpenTelemetryPrometheusExporter { source: MetricsError },
+    CreateOpenTelemetryPrometheusExporter {
+        source: opentelemetry_sdk::error::OTelSdkError,
+    },
 
     #[snafu(display("Failed to set global tracing subscriber"))]
     SetGlobalTracingSubscriber { source: SetGlobalDefaultError },
-
-    #[snafu(display("Failed to set up metrics"))]
-    SetUpMetrics { source: metrics::Error },
 }
 
 pub fn init(
     tracing_config: Option<&TrinoLbTracingConfig>,
     persistence: Arc<PersistenceImplementation>,
     config: &Config,
-) -> Result<Metrics, Error> {
+) -> Result<(Metrics, Option<SdkTracerProvider>), Error> {
     let env_filter_layer = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
         .from_env_lossy();
     let console_output_layer = tracing_subscriber::fmt::layer().with_filter(env_filter_layer);
     let mut layers = vec![console_output_layer.boxed()];
 
+    let mut tracer_provider = None;
     if let Some(tracing_config) = tracing_config
         && tracing_config.enabled
     {
         let env_filter_layer = EnvFilter::builder()
             .with_default_directive(LevelFilter::DEBUG.into())
             .from_env_lossy();
+        let (tracer, provider) = otel_tracer(tracing_config)?;
+        tracer_provider = Some(provider);
         layers.push(
             tracing_opentelemetry::layer()
                 .with_error_records_to_exceptions(true)
-                .with_tracer(otel_tracer(tracing_config)?)
+                .with_tracer(tracer)
                 .with_filter(env_filter_layer)
                 .boxed(),
         );
@@ -74,10 +69,7 @@ pub fn init(
         .build()
         .context(CreateOpenTelemetryPrometheusExporterSnafu)?;
 
-    let meter_provider = SdkMeterProvider::builder()
-        .with_view(setup_custom_metrics)
-        .with_reader(exporter)
-        .build();
+    let meter_provider = SdkMeterProvider::builder().with_reader(exporter).build();
 
     tracing::subscriber::set_global_default(tracing_subscriber::registry().with(layers))
         .context(SetGlobalTracingSubscriberSnafu)?;
@@ -85,87 +77,45 @@ pub fn init(
     opentelemetry::global::set_meter_provider(meter_provider);
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
 
-    let metrics = Metrics::new(registry, persistence, config).context(SetUpMetricsSnafu)?;
+    let metrics = Metrics::new(registry, persistence, config);
 
-    Ok(metrics)
+    Ok((metrics, tracer_provider))
 }
 
-fn otel_tracer(tracing_config: &TrinoLbTracingConfig) -> Result<trace::Tracer, Error> {
-    let provider = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(exporter(tracing_config))
-        .with_trace_config(
-            trace::Config::default()
-                .with_sampler(Sampler::AlwaysOn)
-                .with_id_generator(RandomIdGenerator::default())
-                .with_max_attributes_per_span(16)
-                .with_max_events_per_span(16)
-                .with_resource(Resource::new(vec![KeyValue::new(
-                    "service.name",
-                    "trino-lb",
-                )])),
-        )
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
-        .context(InstallTokioBatchRuntimeSnafu)?;
+fn otel_tracer(
+    tracing_config: &TrinoLbTracingConfig,
+) -> Result<(Tracer, SdkTracerProvider), Error> {
+    let exporter = build_span_exporter(tracing_config)?;
+
+    let provider = SdkTracerProvider::builder()
+        .with_sampler(Sampler::AlwaysOn)
+        .with_id_generator(RandomIdGenerator::default())
+        .with_max_attributes_per_span(16)
+        .with_max_events_per_span(16)
+        .with_resource(Resource::builder().with_service_name("trino-lb").build())
+        .with_batch_exporter(exporter)
+        .build();
 
     global::set_tracer_provider(provider.clone());
-    Ok(provider.tracer("trino-lb"))
+    let tracer = provider.tracer("trino-lb");
+    Ok((tracer, provider))
 }
 
-fn _otel_meter(tracing_config: &TrinoLbTracingConfig) -> Result<SdkMeterProvider, Error> {
-    opentelemetry_otlp::new_pipeline()
-        .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(exporter(tracing_config))
-        .with_resource(Resource::new(vec![KeyValue::new(
-            "service.name",
-            "trino-lb",
-        )]))
-        .with_period(Duration::from_secs(3))
-        .with_timeout(Duration::from_secs(10))
-        .with_aggregation_selector(DefaultAggregationSelector::new())
-        .with_temporality_selector(DefaultTemporalitySelector::new())
-        .build()
-        .context(CreateMetricsPipelineSnafu)
-}
-
-fn exporter(tracing_config: &TrinoLbTracingConfig) -> TonicExporterBuilder {
-    let mut exporter = opentelemetry_otlp::new_exporter().tonic();
+fn build_span_exporter(tracing_config: &TrinoLbTracingConfig) -> Result<SpanExporter, Error> {
+    let mut builder = SpanExporter::builder().with_tonic();
     if let Some(endpoint) = &tracing_config.otlp_endpoint {
-        exporter = exporter.with_endpoint(endpoint.as_str());
+        builder = builder.with_endpoint(endpoint.as_str());
     }
     if let Some(protocol) = tracing_config.otlp_protocol {
-        exporter = exporter.with_protocol(protocol);
+        builder = builder.with_protocol(protocol);
     }
     if let Some(compression) = tracing_config.otlp_compression {
-        exporter = exporter.with_compression(compression);
+        builder = builder.with_compression(compression);
     }
 
     // In case endpoint and protocol are not set here, they will still be read from the env vars
     // OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_EXPORTER_OTLP_PROTOCOL
-
-    exporter
-}
-
-fn setup_custom_metrics(i: &Instrument) -> Option<Stream> {
-    if i.name == "query_queued_duration" {
-        Some(
-            Stream::new()
-                .name(i.name.clone())
-                .description(i.description.clone())
-                .unit(i.unit.clone())
-                .aggregation(Aggregation::ExplicitBucketHistogram {
-                    // Copied and adopted from https://github.com/open-telemetry/opentelemetry-rust/blob/7d0b80ea852eb3218504b722476484063802a9a4/opentelemetry-sdk/src/metrics/reader.rs#L151-L154
-                    boundaries: vec![
-                        0.0, 5.0, 10.0, 25.0, 50.0, 75.0, 100.0, 250.0, 500.0, 750.0, 1000.0,
-                        2500.0, 5000.0, 7500.0, 10000.0, 25000.0, 50000.0, 75000.0, 100000.0,
-                        250000.0, 500000.0, 750000.0, 1000000.0, 2500000.0,
-                    ],
-                    record_min_max: true,
-                }),
-        )
-    } else {
-        None
-    }
+    builder.build().context(BuildSpanExporterSnafu)
 }
 
 pub fn add_current_context_to_client_request(

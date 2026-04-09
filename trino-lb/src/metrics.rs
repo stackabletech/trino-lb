@@ -5,12 +5,9 @@ use std::{
 };
 
 use futures::future::try_join_all;
-use opentelemetry::{
-    KeyValue,
-    metrics::{Counter, Histogram, MetricsError},
-};
+use opentelemetry::KeyValue;
+use opentelemetry::metrics::{Counter, Histogram};
 use prometheus::Registry;
-use snafu::{ResultExt, Snafu};
 use tokio::{
     runtime::Builder,
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -24,12 +21,6 @@ use trino_lb_core::{
 use trino_lb_persistence::{Persistence, PersistenceImplementation};
 
 use crate::trino_client::ClusterInfo;
-
-#[derive(Snafu, Debug)]
-pub enum Error {
-    #[snafu(display("Failed to register metrics callback"))]
-    RegisterMetricsCallback { source: MetricsError },
-}
 
 pub struct Metrics {
     pub registry: Registry,
@@ -46,79 +37,64 @@ impl Metrics {
         registry: Registry,
         persistence: Arc<PersistenceImplementation>,
         config: &Config,
-    ) -> Result<Self, Error> {
+    ) -> Self {
         let meter = opentelemetry::global::meter("trino-lb");
 
         let http_counter = meter
             .u64_counter("http_requests_total")
             .with_unit("requests")
             .with_description("Total number of HTTP requests made.")
-            .init();
+            .build();
 
         let queued_time = meter
             .u64_histogram("query_queued_duration")
             .with_unit("ms")
             .with_description("The time queries where queued in trino-lb")
-            .init();
+            // Copied and adopted from https://github.com/open-telemetry/opentelemetry-rust/blob/7d0b80ea852eb3218504b722476484063802a9a4/opentelemetry-sdk/src/metrics/reader.rs#L151-L154
+            .with_boundaries(vec![
+                0.0, 5.0, 10.0, 25.0, 50.0, 75.0, 100.0, 250.0, 500.0, 750.0, 1000.0, 2500.0,
+                5000.0, 7500.0, 10000.0, 25000.0, 50000.0, 75000.0, 100000.0, 250000.0, 500000.0,
+                750000.0, 1000000.0, 2500000.0,
+            ])
+            .build();
 
         let cluster_infos = Arc::new(RwLock::new(HashMap::<TrinoClusterName, ClusterInfo>::new()));
 
-        let cluster_counts_per_state_metric = meter
-            .u64_observable_gauge("cluster_counts_per_state")
-            .with_unit("clusters")
-            .with_description("The number of active or inactive clusters for each cluster group")
-            .init();
-
-        let cluster_queries_metric = meter
+        let cluster_infos_for_callback = Arc::clone(&cluster_infos);
+        meter
             .u64_observable_gauge("cluster_queries")
             .with_unit("queries")
             .with_description(
                 "The number of running, queued or blocked queries on a specific Trino cluster",
             )
-            .init();
-
-        let queued_queries_metric = meter
-            .u64_observable_gauge("queued_queries")
-            .with_unit("queries")
-            .with_description("The number of queries queued across all trino-lb instances")
-            .init();
-
-        let cluster_infos_for_callback = Arc::clone(&cluster_infos);
-        meter
-            .register_callback(&[cluster_queries_metric.as_any()], move |observer| {
+            .with_callback(move |observer| {
                 if let Ok(cluster_query_counters) = cluster_infos_for_callback.read() {
                     for (cluster, counter) in cluster_query_counters.deref() {
-                        observer.observe_u64(
-                            &cluster_queries_metric,
+                        observer.observe(
                             counter.running_queries,
-                            [
+                            &[
                                 KeyValue::new("cluster", cluster.to_string()),
                                 KeyValue::new("state", "running"),
-                            ]
-                            .as_ref(),
+                            ],
                         );
-                        observer.observe_u64(
-                            &cluster_queries_metric,
+                        observer.observe(
                             counter.queued_queries,
-                            [
+                            &[
                                 KeyValue::new("cluster", cluster.to_string()),
                                 KeyValue::new("state", "queued"),
-                            ]
-                            .as_ref(),
+                            ],
                         );
-                        observer.observe_u64(
-                            &cluster_queries_metric,
+                        observer.observe(
                             counter.blocked_queries,
-                            [
+                            &[
                                 KeyValue::new("cluster", cluster.to_string()),
                                 KeyValue::new("state", "blocked"),
-                            ]
-                            .as_ref(),
+                            ],
                         );
                     }
                 }
             })
-            .context(RegisterMetricsCallbackSnafu)?;
+            .build();
 
         // All of this mess can be removed once https://github.com/open-telemetry/opentelemetry-rust/issues/1376 is supported.
         let (ping_sender, ping_receiver) = tokio::sync::mpsc::unbounded_channel::<()>();
@@ -141,7 +117,10 @@ impl Metrics {
         });
 
         meter
-            .register_callback(&[queued_queries_metric.as_any()], move |observer| {
+            .u64_observable_gauge("queued_queries")
+            .with_unit("queries")
+            .with_description("The number of queries queued across all trino-lb instances")
+            .with_callback(move |observer| {
                 ping_sender.send(()).unwrap();
                 let queued_queries = std::thread::scope(|s| {
                     s.spawn(|| metrics_receiver.write().unwrap().blocking_recv().unwrap())
@@ -150,14 +129,10 @@ impl Metrics {
                 });
 
                 for (cluster_group, queued) in queued_queries {
-                    observer.observe_u64(
-                        &queued_queries_metric,
-                        queued,
-                        [KeyValue::new("cluster-group", cluster_group)].as_ref(),
-                    );
+                    observer.observe(queued, &[KeyValue::new("cluster-group", cluster_group)]);
                 }
             })
-            .context(RegisterMetricsCallbackSnafu)?;
+            .build();
 
         // All of this mess can be removed once https://github.com/open-telemetry/opentelemetry-rust/issues/1376 is supported.
         let (ping_sender, ping_receiver) = tokio::sync::mpsc::unbounded_channel::<()>();
@@ -180,39 +155,37 @@ impl Metrics {
         });
 
         meter
-            .register_callback(
-                &[cluster_counts_per_state_metric.as_any()],
-                move |observer| {
-                    ping_sender.send(()).unwrap();
-                    let cluster_counts = std::thread::scope(|s| {
-                        s.spawn(|| metrics_receiver.write().unwrap().blocking_recv().unwrap())
-                            .join()
-                            .unwrap()
-                    });
+            .u64_observable_gauge("cluster_counts_per_state")
+            .with_unit("clusters")
+            .with_description("The number of active or inactive clusters for each cluster group")
+            .with_callback(move |observer| {
+                ping_sender.send(()).unwrap();
+                let cluster_counts = std::thread::scope(|s| {
+                    s.spawn(|| metrics_receiver.write().unwrap().blocking_recv().unwrap())
+                        .join()
+                        .unwrap()
+                });
 
-                    for (cluster_group, counts) in cluster_counts {
-                        for (state, count) in counts {
-                            observer.observe_u64(
-                                &cluster_counts_per_state_metric,
-                                count,
-                                [
-                                    KeyValue::new("cluster-group", cluster_group.clone()),
-                                    KeyValue::new::<_, &str>("state", state.into()),
-                                ]
-                                .as_ref(),
-                            );
-                        }
+                for (cluster_group, counts) in cluster_counts {
+                    for (state, count) in counts {
+                        observer.observe(
+                            count,
+                            &[
+                                KeyValue::new("cluster-group", cluster_group.clone()),
+                                KeyValue::new::<_, &str>("state", state.into()),
+                            ],
+                        );
                     }
-                },
-            )
-            .context(RegisterMetricsCallbackSnafu)?;
+                }
+            })
+            .build();
 
-        Ok(Self {
+        Self {
             registry,
             http_counter,
             queued_time,
             cluster_infos,
-        })
+        }
     }
 }
 

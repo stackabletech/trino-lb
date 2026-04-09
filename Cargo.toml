@@ -40,12 +40,12 @@ kube = { version = "3.0", default-features = false, features = [
 main_error = "0.1"
 num_cpus = "1.16"
 number_prefix = "0.4"
-opentelemetry = "0.24"
-opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
-opentelemetry-http = "0.13"
-opentelemetry-otlp = { version = "0.17", features = ["serialize", "gzip-tonic"] }
-opentelemetry-prometheus = "0.17"
-prometheus = "0.13"
+opentelemetry = "0.31"
+opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"] }
+opentelemetry-http = "0.31"
+opentelemetry-otlp = { version = "0.31", features = ["serialize", "grpc-tonic", "gzip-tonic"] }
+opentelemetry-prometheus = "0.31"
+prometheus = "0.14"
 prusto = "0.5"
 pyo3 = { version = "0.28", features = ["auto-initialize"] }
 rand = "0.10"
@@ -84,7 +84,7 @@ tokio = "1.39"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["compression-full", "tracing"] }
 tracing = "0.1"
-tracing-opentelemetry = "0.25"
+tracing-opentelemetry = "0.32"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 trait-variant = "0.1"
 url = { version = "2.5", features = ["serde"] }

@@ -7,7 +7,6 @@ use maintenance::{
     leftover_queries::LeftoverQueryDetector, query_count_fetcher,
     query_count_fetcher::QueryCountFetcher,
 };
-use opentelemetry::global::shutdown_tracer_provider;
 use routing::Router;
 use scaling::Scaler;
 use snafu::{ResultExt, Snafu};
@@ -146,14 +145,13 @@ async fn start() -> Result<(), MainError> {
             }
         });
 
-    let metrics = Arc::new(
-        tracing::init(
-            config.trino_lb.tracing.as_ref(),
-            Arc::clone(&persistence),
-            &config,
-        )
-        .context(SetUpTracingSnafu)?,
-    );
+    let (metrics, tracer_provider) = tracing::init(
+        config.trino_lb.tracing.as_ref(),
+        Arc::clone(&persistence),
+        &config,
+    )
+    .context(SetUpTracingSnafu)?;
+    let metrics = Arc::new(metrics);
 
     let cluster_group_manager = ClusterGroupManager::new(
         Arc::clone(&persistence),
@@ -191,7 +189,9 @@ async fn start() -> Result<(), MainError> {
     .await
     .context(StartHttpServerSnafu)?;
 
-    shutdown_tracer_provider();
+    if let Some(provider) = tracer_provider {
+        let _ = provider.shutdown();
+    }
 
     Ok(())
 }
