@@ -142,16 +142,16 @@ impl Metrics {
 
         meter
             .register_callback(&[queued_queries_metric.as_any()], move |observer| {
-                if let Err(e) = ping_sender.send(()) {
-                    error!(?e, "Failed to send ping for queued_queries metric");
+                if let Err(err) = ping_sender.send(()) {
+                    error!(error = ?err, "Failed to send ping for queued_queries metric");
                     return;
                 }
                 let queued_queries = std::thread::scope(|s| {
                     s.spawn(|| {
                         let mut receiver = match metrics_receiver.write() {
                             Ok(r) => r,
-                            Err(e) => {
-                                error!(%e, "Failed to acquire write lock for queued_queries metric");
+                            Err(err) => {
+                                error!(error = %err, "Failed to acquire write lock for queued_queries metric");
                                 return None;
                             }
                         };
@@ -164,8 +164,8 @@ impl Metrics {
                         }
                     })
                     .join()
-                    .unwrap_or_else(|e| {
-                        error!(?e, "queued_queries metrics thread panicked");
+                    .unwrap_or_else(|err| {
+                        error!(error = ?err, "queued_queries metrics thread panicked");
                         None
                     })
                 });
@@ -206,16 +206,16 @@ impl Metrics {
             .register_callback(
                 &[cluster_counts_per_state_metric.as_any()],
                 move |observer| {
-                    if let Err(e) = ping_sender.send(()) {
-                        error!(?e, "Failed to send ping for cluster_counts_per_state metric");
+                    if let Err(err) = ping_sender.send(()) {
+                        error!(error = ?err, "Failed to send ping for cluster_counts_per_state metric");
                         return;
                     }
                     let cluster_counts = std::thread::scope(|s| {
                         s.spawn(|| {
                             let mut receiver = match metrics_receiver.write() {
                                 Ok(r) => r,
-                                Err(e) => {
-                                    error!(%e, "Failed to acquire write lock for cluster_counts_per_state metric");
+                                Err(err) => {
+                                    error!(error = %err, "Failed to acquire write lock for cluster_counts_per_state metric");
                                     return None;
                                 }
                             };
@@ -228,8 +228,8 @@ impl Metrics {
                             }
                         })
                         .join()
-                        .unwrap_or_else(|e| {
-                            error!(?e, "cluster_counts_per_state metrics thread panicked");
+                        .unwrap_or_else(|err| {
+                            error!(error = ?err, "cluster_counts_per_state metrics thread panicked");
                             None
                         })
                     });
