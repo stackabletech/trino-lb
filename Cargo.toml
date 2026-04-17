@@ -47,9 +47,9 @@ opentelemetry-otlp = { version = "0.17", features = ["serialize", "gzip-tonic"] 
 opentelemetry-prometheus = "0.17"
 prometheus = "0.13"
 prusto = "0.5"
-pyo3 = { version = "0.27", features = ["auto-initialize"] }
-rand = "0.9"
-redis = { version = "1.0", default-features = false, features = [
+pyo3 = { version = "0.28", features = ["auto-initialize"] }
+rand = "0.10"
+redis = { version = "1.2", default-features = false, features = [
   "acl",
   "tokio-rustls-comp",
   "cluster",
@@ -69,7 +69,7 @@ rstest = "0.26"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 serde_yaml = "0.9"
-snafu = "0.8"
+snafu = "0.9"
 # 0.7.4 is the first release that includes https://github.com/launchbadge/sqlx/pull/2927
 sqlx = { version = "0.8.2", features = [
   "runtime-tokio",
@@ -79,7 +79,7 @@ sqlx = { version = "0.8.2", features = [
   "chrono",
   "postgres",
 ] }
-strum = { version = "0.27", features = ["derive"] }
+strum = { version = "0.28", features = ["derive"] }
 tokio = "1.39"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["compression-full", "tracing"] }
