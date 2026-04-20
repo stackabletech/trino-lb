@@ -142,19 +142,42 @@ impl Metrics {
 
         meter
             .register_callback(&[queued_queries_metric.as_any()], move |observer| {
-                ping_sender.send(()).unwrap();
+                if let Err(err) = ping_sender.send(()) {
+                    error!(error = ?err, "Failed to send ping for queued_queries metric");
+                    return;
+                }
                 let queued_queries = std::thread::scope(|s| {
-                    s.spawn(|| metrics_receiver.write().unwrap().blocking_recv().unwrap())
-                        .join()
-                        .unwrap()
+                    s.spawn(|| {
+                        let mut receiver = match metrics_receiver.write() {
+                            Ok(r) => r,
+                            Err(err) => {
+                                error!(error = %err, "Failed to acquire write lock for queued_queries metric");
+                                return None;
+                            }
+                        };
+                        match receiver.blocking_recv() {
+                            Some(v) => Some(v),
+                            None => {
+                                error!("queued_queries metrics channel closed");
+                                None
+                            }
+                        }
+                    })
+                    .join()
+                    .unwrap_or_else(|err| {
+                        error!(error = ?err, "queued_queries metrics thread panicked");
+                        None
+                    })
                 });
 
-                for (cluster_group, queued) in queued_queries {
-                    observer.observe_u64(
-                        &queued_queries_metric,
-                        queued,
-                        [KeyValue::new("cluster-group", cluster_group)].as_ref(),
-                    );
+                if let Some(queued_queries) = queued_queries {
+                    for (cluster_group, queued) in queued_queries {
+                        observer.observe_u64(
+                            &queued_queries_metric,
+                            queued,
+                            [KeyValue::new("cluster-group", cluster_group)].as_ref(),
+                        );
+                    }
                 }
             })
             .context(RegisterMetricsCallbackSnafu)?;
@@ -183,24 +206,47 @@ impl Metrics {
             .register_callback(
                 &[cluster_counts_per_state_metric.as_any()],
                 move |observer| {
-                    ping_sender.send(()).unwrap();
+                    if let Err(err) = ping_sender.send(()) {
+                        error!(error = ?err, "Failed to send ping for cluster_counts_per_state metric");
+                        return;
+                    }
                     let cluster_counts = std::thread::scope(|s| {
-                        s.spawn(|| metrics_receiver.write().unwrap().blocking_recv().unwrap())
-                            .join()
-                            .unwrap()
+                        s.spawn(|| {
+                            let mut receiver = match metrics_receiver.write() {
+                                Ok(r) => r,
+                                Err(err) => {
+                                    error!(error = %err, "Failed to acquire write lock for cluster_counts_per_state metric");
+                                    return None;
+                                }
+                            };
+                            match receiver.blocking_recv() {
+                                Some(v) => Some(v),
+                                None => {
+                                    error!("cluster_counts_per_state metrics channel closed");
+                                    None
+                                }
+                            }
+                        })
+                        .join()
+                        .unwrap_or_else(|err| {
+                            error!(error = ?err, "cluster_counts_per_state metrics thread panicked");
+                            None
+                        })
                     });
 
-                    for (cluster_group, counts) in cluster_counts {
-                        for (state, count) in counts {
-                            observer.observe_u64(
-                                &cluster_counts_per_state_metric,
-                                count,
-                                [
-                                    KeyValue::new("cluster-group", cluster_group.clone()),
-                                    KeyValue::new::<_, &str>("state", state.into()),
-                                ]
-                                .as_ref(),
-                            );
+                    if let Some(cluster_counts) = cluster_counts {
+                        for (cluster_group, counts) in cluster_counts {
+                            for (state, count) in counts {
+                                observer.observe_u64(
+                                    &cluster_counts_per_state_metric,
+                                    count,
+                                    [
+                                        KeyValue::new("cluster-group", cluster_group.clone()),
+                                        KeyValue::new::<_, &str>("state", state.into()),
+                                    ]
+                                    .as_ref(),
+                                );
+                            }
                         }
                     }
                 },

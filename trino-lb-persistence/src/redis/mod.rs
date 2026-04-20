@@ -116,6 +116,12 @@ pub enum Error {
     #[snafu(display("Invalid response from compare and set lua script. Expected either 0 or 1"))]
     InvalidCASScriptResponse { response: u64 },
 
+    #[snafu(display("Failed to get queued query count for cluster group {cluster_group:?}"))]
+    GetQueuedQueryCount {
+        source: RedisError,
+        cluster_group: String,
+    },
+
     #[snafu(display("Failed to list queued queries for cluster group {cluster_group:?}"))]
     ListQueuedQueries {
         source: RedisError,
@@ -428,7 +434,7 @@ where
             .connection()
             .scard::<_, Option<u64>>(queued_query_set_name(cluster_group))
             .await
-            .unwrap()
+            .context(GetQueuedQueryCountSnafu { cluster_group })?
             // The set might not be there yet, as no queries have been queued for this cluster group so far.
             .unwrap_or_default())
     }

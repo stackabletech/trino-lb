@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Handle Redis connection errors (e.g. broken pipe during master failover) gracefully instead of panicking.
+  Previously, `get_queued_query_count` would `.unwrap()` on the Redis result, causing a panic that poisoned
+  the metrics `RwLock`, cascading into further panics and leaving pods unresponsive ([#111]).
+
+[#111]: https://github.com/stackabletech/trino-lb/pull/111
+
 ## [0.6.0] - 2026-02-17
 
 ### Added
