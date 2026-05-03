@@ -10,7 +10,7 @@ maintainers:
     url: https://www.stackable.tech
 dependencies:
   - name: redis-cluster
-    version: 10.2.3
+    version: 10.3.0
     repository: https://charts.bitnami.com/bitnami/
   - name: kube-prometheus-stack
     version: 55.11.0
