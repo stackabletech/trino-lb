@@ -1,12 +1,14 @@
 use std::{
     fmt::Debug,
-    future::Future,
     num::TryFromIntError,
     sync::{Arc, PoisonError, RwLock},
     time::{Duration, SystemTime, SystemTimeError, UNIX_EPOCH},
 };
 
-use futures::future::{BoxFuture, try_join_all};
+use futures::{
+    TryFutureExt,
+    future::{BoxFuture, try_join_all},
+};
 use redis::{
     AsyncCommands, Client, IntoConnectionInfo, RedisError, Script,
     aio::{ConnectionManager, ConnectionManagerConfig, MultiplexedConnection},
@@ -43,6 +45,13 @@ const REDIS_TCP_KEEPALIVE_TIME: Duration = Duration::from_secs(5);
 const REDIS_TCP_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(2);
 const REDIS_TCP_KEEPALIVE_RETRIES: u32 = 3;
 const REDIS_TCP_USER_TIMEOUT: Duration = Duration::from_secs(12);
+
+/// How often the background health check pings Redis to detect a black-holed connection (see the
+/// note on [`REDIS_TCP_KEEPALIVE_TIME`]) and rebuild it via [`Reconnectable`]. Such a connection
+/// only ever produces response *timeouts*, which the redis crate does not treat as a reason to
+/// reconnect, so without this proactive check it would stay wedged until the liveness probe
+/// restarts the pod (see issue #109).
+const REDIS_HEALTH_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 
 /// TCP settings applied to every Redis connection (and every reconnect), see the constants above.
 fn tcp_settings() -> TcpSettings {
@@ -168,8 +177,8 @@ type ConnectionFactory<T> =
 /// The redis crate's [`ConnectionManager`] only reconnects on dropped-connection errors, not on
 /// timeouts, so a black-holed connection (e.g. after a Redis node drain, see issue #109 and the
 /// note on [`REDIS_TCP_KEEPALIVE_TIME`]) would otherwise time out forever. This wrapper lets us
-/// rebuild the underlying connection ourselves; the policy for *when* to rebuild lives in
-/// [`RedisPersistence::run`].
+/// rebuild the underlying connection ourselves; the background health check in
+/// [`RedisPersistence::spawn_health_check`] decides *when* to rebuild.
 struct Reconnectable<T> {
     current: RwLock<Arc<T>>,
     factory: ConnectionFactory<T>,
@@ -196,10 +205,10 @@ where
 
     /// Rebuilds the connection, replacing the one currently in use.
     ///
-    /// `used` is the connection the failing command ran on. This is a no-op if another rebuild is
+    /// `used` is the connection that was found to be bad. This is a no-op if another rebuild is
     /// already in progress, or if the connection has already been replaced since `used` was
-    /// obtained (i.e. another task already noticed the failure and rebuilt it). This keeps a burst
-    /// of failing commands from rebuilding the connection over and over.
+    /// obtained (i.e. another rebuild already happened). This keeps overlapping failure reports
+    /// from rebuilding the connection over and over.
     async fn reconnect(&self, used: &Arc<T>) {
         let Ok(_guard) = self.reconnecting.try_lock() else {
             // Another task is already rebuilding the connection.
@@ -219,7 +228,7 @@ where
             Err(error) => {
                 warn!(
                     ?error,
-                    "Failed to rebuild the Redis connection, will retry on the next failing command"
+                    "Failed to rebuild the Redis connection, will retry on the next health check"
                 );
             }
         }
@@ -237,7 +246,7 @@ pub struct RedisPersistence<R>
 where
     R: AsyncCommands + Clone,
 {
-    connection: Reconnectable<R>,
+    connection: Arc<Reconnectable<R>>,
     compare_and_set_script: Script,
 
     /// Sometimes we need to do stuff for all cluster groups, so we need to store them to iterate over them
@@ -270,19 +279,17 @@ impl RedisPersistence<ConnectionManager> {
             Arc::new(move || {
                 let client = client.clone();
                 let redis_config = redis_config.clone();
-                Box::pin(async move {
-                    client.get_connection_manager_with_config(redis_config).await
-                })
+                Box::pin(async move { client.get_connection_manager_with_config(redis_config).await })
             })
         };
 
         let connection = factory().await.context(CreateClientSnafu)?;
 
-        Ok(Self {
-            connection: Reconnectable::new(connection, factory),
-            compare_and_set_script: compare_and_set_script(),
+        Ok(Self::new_with_connection(
+            connection,
+            factory,
             cluster_groups,
-        })
+        ))
     }
 }
 
@@ -313,11 +320,11 @@ impl RedisPersistence<ClusterConnection<MultiplexedConnection>> {
 
         let connection = factory().await.context(CreateClientSnafu)?;
 
-        Ok(Self {
-            connection: Reconnectable::new(connection, factory),
-            compare_and_set_script: compare_and_set_script(),
+        Ok(Self::new_with_connection(
+            connection,
+            factory,
             cluster_groups,
-        })
+        ))
     }
 }
 
@@ -328,23 +335,22 @@ where
     #[instrument(skip(self, queued_query))]
     async fn store_queued_query(&self, queued_query: QueuedQuery) -> Result<(), super::Error> {
         let key = queued_query_key(&queued_query.id);
-        let set_name = queued_query_set_name(&queued_query.cluster_group);
 
         let value = bincode::serde::encode_to_vec(&queued_query, BINCODE_CONFIG)
             .context(SerializeToBinarySnafu)?;
 
+        let mut connection_1 = self.connection();
+        let mut connection_2 = self.connection();
+
         // We can't use a pipe here, as we otherwise get "Received crossed slots in pipeline - CrossSlot"
-        self.run(|connection| async move {
-            let mut connection_1 = connection.clone();
-            let mut connection_2 = connection;
-            tokio::try_join!(
-                connection_1.set::<_, _, ()>(key, value),
-                connection_2.sadd::<_, _, ()>(&set_name, key),
-            )?;
-            Ok(())
-        })
-        .await
-        .context(WriteToRedisSnafu)?;
+        tokio::try_join!(
+            connection_1
+                .set::<_, _, ()>(key, value)
+                .map_err(|err| Error::WriteToRedis { source: err }),
+            connection_2
+                .sadd::<_, _, ()>(queued_query_set_name(&queued_query.cluster_group), key)
+                .map_err(|err| Error::WriteToRedis { source: err }),
+        )?;
 
         Ok(())
     }
@@ -356,7 +362,8 @@ where
     ) -> Result<QueuedQuery, super::Error> {
         let key = queued_query_key(queued_query_id);
         let value: Vec<u8> = self
-            .run(|mut connection| async move { connection.get(key).await })
+            .connection()
+            .get(key)
             .await
             .context(ReadFromRedisSnafu)?;
 
@@ -368,16 +375,14 @@ where
     #[instrument(skip(self, queued_query))]
     async fn remove_queued_query(&self, queued_query: &QueuedQuery) -> Result<(), super::Error> {
         let key = queued_query_key(&queued_query.id);
-        let set_name = queued_query_set_name(&queued_query.cluster_group);
+        let mut connection = self.connection();
 
         // We can't use a pipe here, as we otherwise get "Received crossed slots in pipeline - CrossSlot"
-        self.run(|mut connection| async move {
-            let _: () = connection.srem(&set_name, key).await?;
-            let _: () = connection.del(key).await?;
-            Ok(())
-        })
-        .await
-        .context(WriteToRedisSnafu)?;
+        let _: () = connection
+            .srem(queued_query_set_name(&queued_query.cluster_group), key)
+            .await
+            .context(WriteToRedisSnafu)?;
+        let _: () = connection.del(key).await.context(WriteToRedisSnafu)?;
 
         Ok(())
     }
@@ -388,12 +393,11 @@ where
         let value = bincode::serde::encode_to_vec(&query, BINCODE_CONFIG)
             .context(SerializeToBinarySnafu)?;
 
-        self.run(|mut connection| async move {
-            let _: () = connection.set(key, value).await?;
-            Ok(())
-        })
-        .await
-        .context(WriteToRedisSnafu)?;
+        let _: () = self
+            .connection()
+            .set(key, value)
+            .await
+            .context(WriteToRedisSnafu)?;
 
         Ok(())
     }
@@ -402,7 +406,8 @@ where
     async fn load_query(&self, query_id: &TrinoQueryId) -> Result<TrinoQuery, super::Error> {
         let key = query_key(query_id);
         let value: Vec<u8> = self
-            .run(|mut connection| async move { connection.get(key).await })
+            .connection()
+            .get(key)
             .await
             .context(ReadFromRedisSnafu)?;
 
@@ -414,12 +419,11 @@ where
     #[instrument(skip(self))]
     async fn remove_query(&self, query_id: &TrinoQueryId) -> Result<(), super::Error> {
         let key = query_key(query_id);
-        self.run(|mut connection| async move {
-            let _: () = connection.del(key).await?;
-            Ok(())
-        })
-        .await
-        .context(DeleteFromRedisSnafu)?;
+        let _: () = self
+            .connection()
+            .del(key)
+            .await
+            .context(DeleteFromRedisSnafu)?;
 
         Ok(())
     }
@@ -431,18 +435,12 @@ where
         max_allowed_count: u64,
     ) -> Result<bool, super::Error> {
         let key = cluster_query_counter_key(cluster_name);
+        let mut connection = self.connection();
 
         loop {
-            let current = self
-                .run(|mut connection| {
-                    let key = &key;
-                    async move {
-                        connection
-                            .get::<_, Option<u64>>(key)
-                            .instrument(debug_span!("get current value"))
-                            .await
-                    }
-                })
+            let current = connection
+                .get::<_, Option<u64>>(&key)
+                .instrument(debug_span!("get current value"))
                 .await
                 .context(ReadFromRedisSnafu)?
                 .unwrap_or_default();
@@ -458,20 +456,13 @@ where
                 return Ok(false);
             }
 
-            let script = self.compare_and_set_script.clone();
             let response: u8 = self
-                .run(|mut connection| {
-                    let key = &key;
-                    async move {
-                        script
-                            .key(key)
-                            .arg(current)
-                            .arg(current + 1)
-                            .invoke_async(&mut connection)
-                            .instrument(debug_span!("invoking compare-and-set lua script"))
-                            .await
-                    }
-                })
+                .compare_and_set_script
+                .key(&key)
+                .arg(current)
+                .arg(current + 1)
+                .invoke_async(&mut connection)
+                .instrument(debug_span!("invoking compare-and-set lua script"))
                 .await
                 .context(ExecuteCASScriptSnafu)?;
 
@@ -497,18 +488,12 @@ where
         cluster_name: &TrinoClusterName,
     ) -> Result<(), super::Error> {
         let key = cluster_query_counter_key(cluster_name);
+        let mut connection = self.connection();
 
         loop {
-            let current = self
-                .run(|mut connection| {
-                    let key = &key;
-                    async move {
-                        connection
-                            .get::<_, Option<u64>>(key)
-                            .instrument(debug_span!("get current value"))
-                            .await
-                    }
-                })
+            let current = connection
+                .get::<_, Option<u64>>(&key)
+                .instrument(debug_span!("get current value"))
                 .await
                 .context(ReadFromRedisSnafu)?
                 .unwrap_or_default();
@@ -518,20 +503,13 @@ where
                 return Ok(());
             }
 
-            let script = self.compare_and_set_script.clone();
             let response: u8 = self
-                .run(|mut connection| {
-                    let key = &key;
-                    async move {
-                        script
-                            .key(key)
-                            .arg(current)
-                            .arg(current - 1)
-                            .invoke_async(&mut connection)
-                            .instrument(debug_span!("invoking compare-and-set lua script"))
-                            .await
-                    }
-                })
+                .compare_and_set_script
+                .key(&key)
+                .arg(current)
+                .arg(current - 1)
+                .invoke_async(&mut connection)
+                .instrument(debug_span!("invoking compare-and-set lua script"))
                 .await
                 .context(ExecuteCASScriptSnafu)?;
 
@@ -555,12 +533,11 @@ where
     ) -> Result<(), super::Error> {
         let key = cluster_query_counter_key(cluster_name);
 
-        self.run(|mut connection| async move {
-            let _: () = connection.set(&key, count).await?;
-            Ok(())
-        })
-        .await
-        .context(SetClusterQueryCountSnafu { cluster_name })?;
+        let _: () = self
+            .connection()
+            .set(key, count)
+            .await
+            .context(SetClusterQueryCountSnafu { cluster_name })?;
 
         Ok(())
     }
@@ -572,7 +549,8 @@ where
     ) -> Result<u64, super::Error> {
         let key = cluster_query_counter_key(cluster_name);
         Ok(self
-            .run(|mut connection| async move { connection.get::<_, Option<u64>>(&key).await })
+            .connection()
+            .get::<_, Option<u64>>(key)
             .await
             .context(ReadClusterQueryCountSnafu { cluster_name })?
             // There can be the case this function is called before `inc_cluster_queries`, so the number of queries is 0 in this case.
@@ -581,9 +559,9 @@ where
 
     #[instrument(skip(self))]
     async fn get_queued_query_count(&self, cluster_group: &str) -> Result<u64, super::Error> {
-        let set_name = queued_query_set_name(cluster_group);
         Ok(self
-            .run(|mut connection| async move { connection.scard::<_, Option<u64>>(&set_name).await })
+            .connection()
+            .scard::<_, Option<u64>>(queued_query_set_name(cluster_group))
             .await
             .context(GetQueuedQueryCountSnafu { cluster_group })?
             // The set might not be there yet, as no queries have been queued for this cluster group so far.
@@ -606,11 +584,8 @@ where
     #[instrument(skip(self))]
     async fn get_last_query_count_fetcher_update(&self) -> Result<SystemTime, super::Error> {
         let ms = self
-            .run(|mut connection| async move {
-                connection
-                    .get::<_, Option<u64>>(LAST_QUERY_COUNT_FETCHER_UPDATE_KEY)
-                    .await
-            })
+            .connection()
+            .get::<_, Option<u64>>(LAST_QUERY_COUNT_FETCHER_UPDATE_KEY)
             .await
             .context(GetLastQueryCountFetcherUpdateSnafu)?
             // There can be the case this function is called before `set_last_query_count_fetcher_update`, so we can
@@ -633,12 +608,11 @@ where
             .try_into()
             .context(ConvertElapsedTimeSinceLastUpdateToMillisSnafu)?;
 
-        self.run(|mut connection| async move {
-            let _: () = connection.set(LAST_QUERY_COUNT_FETCHER_UPDATE_KEY, ms).await?;
-            Ok(())
-        })
-        .await
-        .context(SetLastQueryCountFetcherUpdateSnafu)?;
+        let _: () = self
+            .connection()
+            .set(LAST_QUERY_COUNT_FETCHER_UPDATE_KEY, ms)
+            .await
+            .context(SetLastQueryCountFetcherUpdateSnafu)?;
 
         Ok(())
     }
@@ -653,12 +627,11 @@ where
         let value =
             bincode::serde::encode_to_vec(state, BINCODE_CONFIG).context(SerializeToBinarySnafu)?;
 
-        self.run(|mut connection| async move {
-            let _: () = connection.set(&key, value).await?;
-            Ok(())
-        })
-        .await
-        .context(SetClusterStateSnafu)?;
+        let _: () = self
+            .connection()
+            .set(key, value)
+            .await
+            .context(SetClusterStateSnafu)?;
 
         Ok(())
     }
@@ -671,7 +644,8 @@ where
         let key = cluster_state_key(cluster_name);
 
         let cluster_state: Option<Vec<u8>> = self
-            .run(|mut connection| async move { connection.get(&key).await })
+            .connection()
+            .get(key)
             .await
             .context(GetClusterStateSnafu)?;
 
@@ -690,27 +664,53 @@ impl<R> RedisPersistence<R>
 where
     R: AsyncCommands + Clone + Send + Sync + 'static,
 {
-    /// Runs a single Redis operation on the current connection, rebuilding the connection if the
-    /// operation times out.
+    /// Wraps the initial connection in a [`Reconnectable`] and starts the background health check
+    /// that rebuilds it when it goes bad.
+    fn new_with_connection(
+        connection: R,
+        factory: ConnectionFactory<R>,
+        cluster_groups: Vec<String>,
+    ) -> Self {
+        let connection = Arc::new(Reconnectable::new(connection, factory));
+        Self::spawn_health_check(Arc::clone(&connection));
+
+        Self {
+            connection,
+            compare_and_set_script: compare_and_set_script(),
+            cluster_groups,
+        }
+    }
+
+    fn connection(&self) -> R {
+        (*self.connection.current()).clone()
+    }
+
+    /// Spawns a background task that periodically pings Redis and rebuilds the connection if the
+    /// ping fails.
     ///
     /// The redis crate's [`ConnectionManager`] reconnects on dropped-connection errors but not on
     /// timeouts, so a black-holed connection (see the note on [`REDIS_TCP_KEEPALIVE_TIME`]) would
-    /// otherwise time out on every command indefinitely. A timeout on a healthy Redis is already a
-    /// sign that something is wrong, so rebuilding the connection is the right reaction either way;
+    /// otherwise time out on every command indefinitely. A periodic ping detects this - and heals
+    /// it even while there is no other traffic - without having to wrap every individual operation.
     /// [`Reconnectable::reconnect`] makes sure we only rebuild once per dead connection.
-    async fn run<T, Fut, F>(&self, operation: F) -> Result<T, RedisError>
-    where
-        F: FnOnce(R) -> Fut,
-        Fut: Future<Output = Result<T, RedisError>>,
-    {
-        let connection = self.connection.current();
-        let result = operation((*connection).clone()).await;
-        if let Err(error) = &result
-            && error.is_timeout()
-        {
-            self.connection.reconnect(&connection).await;
-        }
-        result
+    fn spawn_health_check(connection: Arc<Reconnectable<R>>) {
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(REDIS_HEALTH_CHECK_INTERVAL).await;
+
+                let current = connection.current();
+                let mut ping_connection = (*current).clone();
+                // The connection carries its own response timeout, so a black-holed socket makes
+                // this `PING` fail rather than hang forever.
+                let ping: Result<(), RedisError> =
+                    redis::cmd("PING").query_async(&mut ping_connection).await;
+
+                if let Err(error) = ping {
+                    warn!(?error, "Redis health check failed, rebuilding the connection");
+                    connection.reconnect(&current).await;
+                }
+            }
+        });
     }
 
     #[instrument(skip(self))]
@@ -719,27 +719,17 @@ where
         cluster_group: &str,
         not_accessed_after: &SystemTime,
     ) -> Result<u64, super::Error> {
-        // We can't route the `sscan` through `run`, as the returned iterator borrows the
-        // connection for the whole loop. We rebuild the connection by hand on a timeout instead.
-        let connection = self.connection.current();
-        let mut scan_connection = (*connection).clone();
+        let mut connection = self.connection();
         let mut removed = 0;
 
-        match scan_connection.sscan(queued_query_set_name(cluster_group)).await {
-            Ok(mut queued) => {
-                // TODO: Await `load_queued_query` in parallel (if possible) or add them to a Vec to bulk-delete afterwards
-                while let Some(key) = queued.next_item().await {
-                    let key = key.with_context(|_| ListQueuedQueriesSnafu { cluster_group })?;
-                    let queued_query = self.load_queued_query(&key).await?;
-                    if &queued_query.last_accessed < not_accessed_after {
-                        self.remove_queued_query(&queued_query).await?;
-                        removed += 1;
-                    }
-                }
-            }
-            Err(error) => {
-                if error.is_timeout() {
-                    self.connection.reconnect(&connection).await;
+        if let Ok(mut queued) = connection.sscan(queued_query_set_name(cluster_group)).await {
+            // TODO: Await `load_queued_query` in parallel (if possible) or add them to a Vec to bulk-delete afterwards
+            while let Some(key) = queued.next_item().await {
+                let key = key.with_context(|_| ListQueuedQueriesSnafu { cluster_group })?;
+                let queued_query = self.load_queued_query(&key).await?;
+                if &queued_query.last_accessed < not_accessed_after {
+                    self.remove_queued_query(&queued_query).await?;
+                    removed += 1;
                 }
             }
         }
@@ -841,7 +831,7 @@ mod tests {
         assert_eq!(*reconnectable.current(), 1);
 
         // The handle is now stale (the connection was replaced); reconnecting with it must not
-        // rebuild again, otherwise a burst of failing commands would rebuild over and over.
+        // rebuild again, otherwise repeated failure reports would rebuild over and over.
         reconnectable.reconnect(&stale).await;
         assert_eq!(rebuilds.load(Ordering::SeqCst), 1);
         assert_eq!(*reconnectable.current(), 1);

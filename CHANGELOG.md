@@ -14,7 +14,7 @@ All notable changes to this project will be documented in this file.
   without ever being closed, so the only error trino-lb sees is a response timeout. The redis crate's
   `ConnectionManager` does not reconnect on timeouts (only on dropped-connection errors), so it kept reusing
   the dead connection forever. trino-lb now enables TCP keepalive / `TCP_USER_TIMEOUT` on the Redis socket and
-  rebuilds the connection itself when a command times out ([#109]).
+  runs a background health check that rebuilds the connection itself when a periodic ping fails ([#109]).
 
 [#109]: https://github.com/stackabletech/trino-lb/issues/109
 [#111]: https://github.com/stackabletech/trino-lb/pull/111
