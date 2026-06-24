@@ -4,6 +4,8 @@ on:
     branches: [main]
   pull_request:
 
+permissions: {}
+
 env:
   RUST_TOOLCHAIN_VERSION: "1.94.0"
   RUSTFLAGS: "-D warnings"
