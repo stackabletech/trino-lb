@@ -222,7 +222,8 @@ where
 
         match (self.factory)().await {
             Ok(connection) => {
-                *self.current.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(connection);
+                *self.current.write().unwrap_or_else(PoisonError::into_inner) =
+                    Arc::new(connection);
                 info!("Successfully rebuilt the Redis connection");
             }
             Err(error) => {
@@ -279,7 +280,11 @@ impl RedisPersistence<ConnectionManager> {
             Arc::new(move || {
                 let client = client.clone();
                 let redis_config = redis_config.clone();
-                Box::pin(async move { client.get_connection_manager_with_config(redis_config).await })
+                Box::pin(async move {
+                    client
+                        .get_connection_manager_with_config(redis_config)
+                        .await
+                })
             })
         };
 
@@ -706,7 +711,10 @@ where
                     redis::cmd("PING").query_async(&mut ping_connection).await;
 
                 if let Err(error) = ping {
-                    warn!(?error, "Redis health check failed, rebuilding the connection");
+                    warn!(
+                        ?error,
+                        "Redis health check failed, rebuilding the connection"
+                    );
                     connection.reconnect(&current).await;
                 }
             }
