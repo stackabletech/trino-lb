@@ -34,8 +34,6 @@ This starts trino-lb listening on <http://127.0.0.1:8080>.
 
 You can submit a test-query using [trino-cli](https://trino.io/docs/current/client/cli.html) by calling the following command and entering `select 42;`:
 
-
-
 ```bash
 ~/Downloads/trino-cli-* --server http://127.0.0.1:8080
 trino> select 42;
