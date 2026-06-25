@@ -4,6 +4,8 @@ on:
     branches: [main]
   pull_request:
 
+permissions: {}
+
 env:
   RUST_TOOLCHAIN_VERSION: "1.94.0"
   RUSTFLAGS: "-D warnings"
@@ -15,42 +17,40 @@ jobs:
     name: Run tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
-      - uses: dtolnay/rust-toolchain@d8352f6b1d2e870bc5716e7a6d9b65c4cc244a1a
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
+          persist-credentials: false
+      - run: rustup toolchain install "${RUST_TOOLCHAIN_VERSION}"
       - run: cargo test --all-features
 
   clippy:
     name: Check clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
-      - uses: dtolnay/rust-toolchain@d8352f6b1d2e870bc5716e7a6d9b65c4cc244a1a
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
-          components: clippy
+          persist-credentials: false
+      - run: rustup toolchain install "${RUST_TOOLCHAIN_VERSION}" --component clippy
       - run: cargo clippy --all-targets -- -D warnings
 
   fmt:
     name: Check formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
-      - uses: dtolnay/rust-toolchain@d8352f6b1d2e870bc5716e7a6d9b65c4cc244a1a
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
-          components: rustfmt
+          persist-credentials: false
+      - run: rustup toolchain install "${RUST_TOOLCHAIN_VERSION}" --component rustfmt
       - run: cargo fmt --all -- --check
 
   docs:
     name: Generate docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
-      - uses: dtolnay/rust-toolchain@d8352f6b1d2e870bc5716e7a6d9b65c4cc244a1a
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
+          persist-credentials: false
+      - run: rustup toolchain install "${RUST_TOOLCHAIN_VERSION}"
       - run: cargo doc --document-private-items
 
   build:
@@ -65,10 +65,12 @@ jobs:
           - ubuntu-latest
           - ubicloud-standard-8-arm
     steps:
-      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
       - name: Build and (optionally) push container image
         id: build
-        uses: stackabletech/actions/build-container-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+        uses: stackabletech/actions/build-container-image@a14cbd08d9e034e2361ea9205b32aff0491885db # v0.15.0
         with:
           image-name: trino-lb
           image-index-manifest-tag: dev
@@ -76,7 +78,7 @@ jobs:
 
       - name: Publish Container Image on oci.stackable.tech
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: stackabletech/actions/publish-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+        uses: stackabletech/actions/publish-image@a14cbd08d9e034e2361ea9205b32aff0491885db # v0.15.0
         with:
           image-registry-uri: oci.stackable.tech
           image-registry-username: robot$stackable+github-action-build
@@ -95,10 +97,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Publish and Sign Image Index Manifest to oci.stackable.tech
-        uses: stackabletech/actions/publish-index-manifest@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+        uses: stackabletech/actions/publish-index-manifest@a14cbd08d9e034e2361ea9205b32aff0491885db # v0.15.0
         with:
           image-registry-uri: oci.stackable.tech
           image-registry-username: robot$stackable+github-action-build
