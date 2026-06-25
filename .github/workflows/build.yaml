@@ -70,7 +70,7 @@ jobs:
           persist-credentials: false
       - name: Build and (optionally) push container image
         id: build
-        uses: stackabletech/actions/build-container-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+        uses: stackabletech/actions/build-container-image@a14cbd08d9e034e2361ea9205b32aff0491885db # v0.15.0
         with:
           image-name: trino-lb
           image-index-manifest-tag: dev
@@ -78,7 +78,7 @@ jobs:
 
       - name: Publish Container Image on oci.stackable.tech
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: stackabletech/actions/publish-image@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+        uses: stackabletech/actions/publish-image@a14cbd08d9e034e2361ea9205b32aff0491885db # v0.15.0
         with:
           image-registry-uri: oci.stackable.tech
           image-registry-username: robot$stackable+github-action-build
@@ -102,7 +102,7 @@ jobs:
           persist-credentials: false
 
       - name: Publish and Sign Image Index Manifest to oci.stackable.tech
-        uses: stackabletech/actions/publish-index-manifest@013e6482fbc0edf2d38cf9220fc931f6a81336fb # v0.0.6
+        uses: stackabletech/actions/publish-index-manifest@a14cbd08d9e034e2361ea9205b32aff0491885db # v0.15.0
         with:
           image-registry-uri: oci.stackable.tech
           image-registry-username: robot$stackable+github-action-build
