@@ -41,9 +41,20 @@ main_error = "0.1"
 num_cpus = "1.16"
 number_prefix = "0.4"
 opentelemetry = "0.32"
-opentelemetry_sdk = { version = "0.32", features = ["rt-tokio"] }
+opentelemetry_sdk = "0.32"
 opentelemetry-http = "0.32"
-opentelemetry-otlp = { version = "0.32", features = ["serialize", "gzip-tonic"] }
+# `default-features = false` because the 0.32 defaults switched from tonic/gRPC to an http-proto
+# (reqwest) exporter we don't use; we re-list only the tonic-based features we need.
+opentelemetry-otlp = { version = "0.32", default-features = false, features = [
+    "grpc-tonic",
+    "gzip-tonic",
+    "serialize",
+    "trace",
+    "metrics",
+    # On by default in 0.32; re-listed because `default-features = false` would otherwise drop it.
+    # Lets the exporter report its own failures (e.g. collector unreachable) via `tracing`.
+    "internal-logs",
+] }
 opentelemetry-prometheus = "0.32"
 prometheus = "0.14"
 prusto = "0.5"
