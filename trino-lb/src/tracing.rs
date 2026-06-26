@@ -79,9 +79,7 @@ pub fn init(
         .build()
         .context(CreateOpenTelemetryPrometheusExporterSnafu)?;
 
-    let meter_provider = SdkMeterProvider::builder()
-        .with_reader(exporter)
-        .build();
+    let meter_provider = SdkMeterProvider::builder().with_reader(exporter).build();
 
     tracing::subscriber::set_global_default(tracing_subscriber::registry().with(layers))
         .context(SetGlobalTracingSubscriberSnafu)?;
