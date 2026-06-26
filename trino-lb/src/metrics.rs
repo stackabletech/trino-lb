@@ -24,6 +24,32 @@ use trino_lb_persistence::{Persistence, PersistenceImplementation};
 
 use crate::trino_client::ClusterInfo;
 
+/// Explicit histogram bucket boundaries (in milliseconds) for the `query_queued_duration` metric.
+///
+/// The default boundaries top out at 10s, which is far too small for queue durations, hence the
+/// custom buckets. As of opentelemetry 0.32 these can be set directly on the instrument via
+/// [`with_boundaries`](opentelemetry::metrics::HistogramBuilder::with_boundaries) instead of a view.
+///
+// Copied and adapted from https://github.com/open-telemetry/opentelemetry-rust/blob/7d0b80ea852eb3218504b722476484063802a9a4/opentelemetry-sdk/src/metrics/reader.rs#L151-L154
+const QUEUED_DURATION_BUCKETS: [f64; 24] = [
+    0.0, 5.0, 10.0, 25.0, 50.0, 75.0, 100.0, 250.0, 500.0, 750.0, 1000.0, 2500.0, 5000.0, 7500.0,
+    10000.0, 25000.0, 50000.0, 75000.0, 100000.0, 250000.0, 500000.0, 750000.0, 1000000.0,
+    2500000.0,
+];
+
+// The SDK silently turns the histogram into a no-op if the boundaries are not strictly increasing,
+// so verify the constant at compile time. Strictly increasing also rules out duplicates and NaN.
+const _: () = {
+    let mut i = 1;
+    while i < QUEUED_DURATION_BUCKETS.len() {
+        assert!(
+            QUEUED_DURATION_BUCKETS[i - 1] < QUEUED_DURATION_BUCKETS[i],
+            "QUEUED_DURATION_BUCKETS must be strictly increasing",
+        );
+        i += 1;
+    }
+};
+
 pub struct Metrics {
     pub registry: Registry,
     pub http_counter: Counter<u64>,
@@ -52,6 +78,7 @@ impl Metrics {
             .u64_histogram("query_queued_duration")
             .with_unit("ms")
             .with_description("The time queries where queued in trino-lb")
+            .with_boundaries(QUEUED_DURATION_BUCKETS.to_vec())
             .build();
 
         let cluster_infos = Arc::new(RwLock::new(HashMap::<TrinoClusterName, ClusterInfo>::new()));

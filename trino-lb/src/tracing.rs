@@ -5,7 +5,7 @@ use opentelemetry_http::HeaderInjector;
 use opentelemetry_otlp::{MetricExporter, SpanExporter, WithExportConfig, WithTonicConfig};
 use opentelemetry_sdk::{
     Resource,
-    metrics::{Aggregation, Instrument, PeriodicReader, SdkMeterProvider, Stream, Temporality},
+    metrics::{PeriodicReader, SdkMeterProvider, Temporality},
     propagation::TraceContextPropagator,
     trace::{RandomIdGenerator, Sampler, SdkTracerProvider},
 };
@@ -80,7 +80,6 @@ pub fn init(
         .context(CreateOpenTelemetryPrometheusExporterSnafu)?;
 
     let meter_provider = SdkMeterProvider::builder()
-        .with_view(setup_custom_metrics)
         .with_reader(exporter)
         .build();
 
@@ -161,29 +160,6 @@ fn configure_exporter<B: WithExportConfig + WithTonicConfig>(
     // OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_EXPORTER_OTLP_PROTOCOL
 
     builder
-}
-
-fn setup_custom_metrics(i: &Instrument) -> Option<Stream> {
-    if i.name() == "query_queued_duration" {
-        // `Instrument` no longer exposes its description as a field/getter, so the view only sets
-        // the name and aggregation. Description and unit are inherited from the instrument when not
-        // overridden, so the resulting stream is identical to before.
-        Stream::builder()
-            .with_name(i.name().to_string())
-            .with_aggregation(Aggregation::ExplicitBucketHistogram {
-                // Copied and adopted from https://github.com/open-telemetry/opentelemetry-rust/blob/7d0b80ea852eb3218504b722476484063802a9a4/opentelemetry-sdk/src/metrics/reader.rs#L151-L154
-                boundaries: vec![
-                    0.0, 5.0, 10.0, 25.0, 50.0, 75.0, 100.0, 250.0, 500.0, 750.0, 1000.0, 2500.0,
-                    5000.0, 7500.0, 10000.0, 25000.0, 50000.0, 75000.0, 100000.0, 250000.0,
-                    500000.0, 750000.0, 1000000.0, 2500000.0,
-                ],
-                record_min_max: true,
-            })
-            .build()
-            .ok()
-    } else {
-        None
-    }
 }
 
 pub fn add_current_context_to_client_request(
