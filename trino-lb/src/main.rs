@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use ::tracing::warn;
 use clap::Parser;
 use cluster_group_manager::ClusterGroupManager;
 use main_error::MainError;
