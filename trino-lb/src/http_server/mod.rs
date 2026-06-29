@@ -42,6 +42,9 @@ pub enum Error {
     #[snafu(display("Failed start HTTP server"))]
     StartHttpServer { source: std::io::Error },
 
+    #[snafu(display("Failed to start Prometheus metrics exporter"))]
+    StartMetricsExporter { source: std::io::Error },
+
     #[snafu(display(
         "In case https is used the `tls.certPemFile` and `tls.keyPemFile` options must be set"
     ))]
@@ -84,16 +87,13 @@ pub async fn start_http_server(
     let handle = Handle::new();
     tokio::spawn(graceful_shutdown(handle.clone()));
 
-    // TODO: Think about shutting down the whole trino-lb server when the Prometheus metrics exporter fails.
-    // This is the reason why we start the metrics exporter first on a new task, so we still fail when the main
-    // server fails.
-    let handle_clone = handle.clone();
-    tokio::spawn(async move {
-        axum_server::bind(listen_addr)
-            .handle(handle_clone)
-            .serve(app.into_make_service())
-            .await
-    });
+    // The metrics exporter is run concurrently with the main server (see `try_join!` below) rather than
+    // on a detached task. This way a failure of either server (e.g. failing to bind the listen address)
+    // brings down the whole trino-lb server instead of being silently ignored.
+    let metrics_server = axum_server::bind(listen_addr)
+        .handle(handle.clone())
+        .serve(app.into_make_service())
+        .map(|result| result.context(StartMetricsExporterSnafu));
 
     // Note that get routes will also be called for HEAD requests but will have the response body
     // removed. Make sure to add explicit HEAD routes afterwards.
@@ -158,21 +158,23 @@ pub async fn start_http_server(
                 key_pem_file,
             })?;
 
-        axum_server::bind_rustls(listen_addr, tls_config)
+        let main_server = axum_server::bind_rustls(listen_addr, tls_config)
             .handle(handle)
             .serve(app.into_make_service())
-            .await
-            .context(StartHttpServerSnafu)?;
+            .map(|result| result.context(StartHttpServerSnafu));
+
+        tokio::try_join!(metrics_server, main_server)?;
     } else {
         // Start http server
         let listen_addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, ports_config.http));
         info!(%listen_addr, "Starting server");
 
-        axum_server::bind(listen_addr)
+        let main_server = axum_server::bind(listen_addr)
             .handle(handle)
             .serve(app.into_make_service())
-            .await
-            .context(StartHttpServerSnafu)?;
+            .map(|result| result.context(StartHttpServerSnafu));
+
+        tokio::try_join!(metrics_server, main_server)?;
     }
 
     info!("Shut down");

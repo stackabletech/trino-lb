@@ -65,8 +65,8 @@ pub enum Error {
     #[snafu(display("Failed to start scaler"))]
     StartScaler { source: scaling::Error },
 
-    #[snafu(display("Failed to start HTTP server"))]
-    StartHttpServer { source: http_server::Error },
+    #[snafu(display("Failed to run HTTP servers"))]
+    RunHttpServers { source: http_server::Error },
 }
 
 /// We can not use the `#[tokio::main]` macro, as we need at least 3 worker threads because of some magic happening
@@ -187,7 +187,7 @@ async fn start() -> Result<(), MainError> {
         Arc::clone(&metrics),
     )
     .await
-    .context(StartHttpServerSnafu)?;
+    .context(RunHttpServersSnafu)?;
 
     // The global `shutdown_tracer_provider` helper was removed in opentelemetry 0.32; shut down via
     // the provider handle returned by `tracing::init` instead so pending spans are flushed.
