@@ -27,8 +27,7 @@ use crate::trino_client::ClusterInfo;
 /// Explicit histogram bucket boundaries (in milliseconds) for the `query_queued_duration` metric.
 ///
 /// The default boundaries top out at 10s, which is far too small for queue durations, hence the
-/// custom buckets. As of opentelemetry 0.32 these can be set directly on the instrument via
-/// [`with_boundaries`](opentelemetry::metrics::HistogramBuilder::with_boundaries) instead of a view.
+/// custom buckets.
 ///
 // Copied and adapted from https://github.com/open-telemetry/opentelemetry-rust/blob/7d0b80ea852eb3218504b722476484063802a9a4/opentelemetry-sdk/src/metrics/reader.rs#L151-L154
 const QUEUED_DURATION_BUCKETS: [f64; 24] = [

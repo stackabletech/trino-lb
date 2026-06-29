@@ -189,12 +189,10 @@ async fn start() -> Result<(), MainError> {
     .await
     .context(RunHttpServersSnafu)?;
 
-    // The global `shutdown_tracer_provider` helper was removed in opentelemetry 0.32; shut down via
-    // the provider handle returned by `tracing::init` instead so pending spans are flushed.
     if let Some(tracer_provider) = tracer_provider
         && let Err(error) = tracer_provider.shutdown()
     {
-        ::tracing::warn!(%error, "Failed to shut down the OpenTelemetry tracer provider");
+        warn!(%error, "Failed to shut down the OpenTelemetry tracer provider");
     }
 
     Ok(())
