@@ -40,12 +40,23 @@ kube = { version = "4.0", default-features = false, features = [
 main_error = "0.1"
 num_cpus = "1.16"
 number_prefix = "0.4"
-opentelemetry = "0.24"
-opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
-opentelemetry-http = "0.13"
-opentelemetry-otlp = { version = "0.17", features = ["serialize", "gzip-tonic"] }
-opentelemetry-prometheus = "0.17"
-prometheus = "0.13"
+opentelemetry = "0.32"
+opentelemetry_sdk = "0.32"
+opentelemetry-http = "0.32"
+# `default-features = false` because the 0.32 defaults switched from tonic/gRPC to an http-proto
+# (reqwest) exporter we don't use; we re-list only the tonic-based features we need.
+opentelemetry-otlp = { version = "0.32", default-features = false, features = [
+    "grpc-tonic",
+    "gzip-tonic",
+    "serialize",
+    "trace",
+    "metrics",
+    # On by default in 0.32; re-listed because `default-features = false` would otherwise drop it.
+    # Lets the exporter report its own failures (e.g. collector unreachable) via `tracing`.
+    "internal-logs",
+] }
+opentelemetry-prometheus = "0.32"
+prometheus = "0.14"
 prusto = "0.5"
 pyo3 = { version = "0.29", features = ["auto-initialize"] }
 rand = "0.10"
@@ -80,11 +91,11 @@ sqlx = { version = "0.9", features = [
   "postgres",
 ] }
 strum = { version = "0.28", features = ["derive"] }
-tokio = "1.39"
+tokio = "1.52"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["compression-full", "tracing"] }
 tracing = "0.1"
-tracing-opentelemetry = "0.25"
+tracing-opentelemetry = "0.33"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 trait-variant = "0.1"
 url = { version = "2.5", features = ["serde"] }
