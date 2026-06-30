@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use ::tracing::warn;
 use clap::Parser;
 use cluster_group_manager::ClusterGroupManager;
 use main_error::MainError;
@@ -7,7 +8,6 @@ use maintenance::{
     leftover_queries::LeftoverQueryDetector, query_count_fetcher,
     query_count_fetcher::QueryCountFetcher,
 };
-use opentelemetry::global::shutdown_tracer_provider;
 use routing::Router;
 use scaling::Scaler;
 use snafu::{ResultExt, Snafu};
@@ -66,8 +66,8 @@ pub enum Error {
     #[snafu(display("Failed to start scaler"))]
     StartScaler { source: scaling::Error },
 
-    #[snafu(display("Failed to start HTTP server"))]
-    StartHttpServer { source: http_server::Error },
+    #[snafu(display("Failed to run HTTP servers"))]
+    RunHttpServers { source: http_server::Error },
 }
 
 /// We can not use the `#[tokio::main]` macro, as we need at least 3 worker threads because of some magic happening
@@ -146,14 +146,13 @@ async fn start() -> Result<(), MainError> {
             }
         });
 
-    let metrics = Arc::new(
-        tracing::init(
-            config.trino_lb.tracing.as_ref(),
-            Arc::clone(&persistence),
-            &config,
-        )
-        .context(SetUpTracingSnafu)?,
-    );
+    let (metrics, tracer_provider) = tracing::init(
+        config.trino_lb.tracing.as_ref(),
+        Arc::clone(&persistence),
+        &config,
+    )
+    .context(SetUpTracingSnafu)?;
+    let metrics = Arc::new(metrics);
 
     let cluster_group_manager = ClusterGroupManager::new(
         Arc::clone(&persistence),
@@ -189,9 +188,13 @@ async fn start() -> Result<(), MainError> {
         Arc::clone(&metrics),
     )
     .await
-    .context(StartHttpServerSnafu)?;
+    .context(RunHttpServersSnafu)?;
 
-    shutdown_tracer_provider();
+    if let Some(tracer_provider) = tracer_provider
+        && let Err(error) = tracer_provider.shutdown()
+    {
+        warn!(%error, "Failed to shut down the OpenTelemetry tracer provider");
+    }
 
     Ok(())
 }

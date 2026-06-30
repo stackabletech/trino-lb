@@ -7,10 +7,9 @@ use std::{
 use futures::future::try_join_all;
 use opentelemetry::{
     KeyValue,
-    metrics::{Counter, Histogram, MetricsError},
+    metrics::{Counter, Histogram},
 };
 use prometheus::Registry;
-use snafu::{ResultExt, Snafu};
 use tokio::{
     runtime::Builder,
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
@@ -25,11 +24,30 @@ use trino_lb_persistence::{Persistence, PersistenceImplementation};
 
 use crate::trino_client::ClusterInfo;
 
-#[derive(Snafu, Debug)]
-pub enum Error {
-    #[snafu(display("Failed to register metrics callback"))]
-    RegisterMetricsCallback { source: MetricsError },
-}
+/// Explicit histogram bucket boundaries (in milliseconds) for the `query_queued_duration` metric.
+///
+/// The default boundaries top out at 10s, which is far too small for queue durations, hence the
+/// custom buckets.
+///
+// Copied and adapted from https://github.com/open-telemetry/opentelemetry-rust/blob/7d0b80ea852eb3218504b722476484063802a9a4/opentelemetry-sdk/src/metrics/reader.rs#L151-L154
+const QUEUED_DURATION_BUCKETS: [f64; 24] = [
+    0.0, 5.0, 10.0, 25.0, 50.0, 75.0, 100.0, 250.0, 500.0, 750.0, 1000.0, 2500.0, 5000.0, 7500.0,
+    10000.0, 25000.0, 50000.0, 75000.0, 100000.0, 250000.0, 500000.0, 750000.0, 1000000.0,
+    2500000.0,
+];
+
+// The SDK silently turns the histogram into a no-op if the boundaries are not strictly increasing,
+// so verify the constant at compile time. Strictly increasing also rules out duplicates and NaN.
+const _: () = {
+    let mut i = 1;
+    while i < QUEUED_DURATION_BUCKETS.len() {
+        assert!(
+            QUEUED_DURATION_BUCKETS[i - 1] < QUEUED_DURATION_BUCKETS[i],
+            "QUEUED_DURATION_BUCKETS must be strictly increasing",
+        );
+        i += 1;
+    }
+};
 
 pub struct Metrics {
     pub registry: Registry,
@@ -46,79 +64,62 @@ impl Metrics {
         registry: Registry,
         persistence: Arc<PersistenceImplementation>,
         config: &Config,
-    ) -> Result<Self, Error> {
+    ) -> Self {
         let meter = opentelemetry::global::meter("trino-lb");
 
         let http_counter = meter
             .u64_counter("http_requests_total")
             .with_unit("requests")
             .with_description("Total number of HTTP requests made.")
-            .init();
+            .build();
 
         let queued_time = meter
             .u64_histogram("query_queued_duration")
             .with_unit("ms")
             .with_description("The time queries where queued in trino-lb")
-            .init();
+            .with_boundaries(QUEUED_DURATION_BUCKETS.to_vec())
+            .build();
 
         let cluster_infos = Arc::new(RwLock::new(HashMap::<TrinoClusterName, ClusterInfo>::new()));
 
-        let cluster_counts_per_state_metric = meter
-            .u64_observable_gauge("cluster_counts_per_state")
-            .with_unit("clusters")
-            .with_description("The number of active or inactive clusters for each cluster group")
-            .init();
-
-        let cluster_queries_metric = meter
+        // As of opentelemetry 0.32 the callback is attached to the instrument builder via
+        // `with_callback` instead of the removed `Meter::register_callback`. The built instrument
+        // handle is not needed afterwards: the callback is registered with the SDK on `build()`.
+        let cluster_infos_for_callback = Arc::clone(&cluster_infos);
+        let _cluster_queries_metric = meter
             .u64_observable_gauge("cluster_queries")
             .with_unit("queries")
             .with_description(
                 "The number of running, queued or blocked queries on a specific Trino cluster",
             )
-            .init();
-
-        let queued_queries_metric = meter
-            .u64_observable_gauge("queued_queries")
-            .with_unit("queries")
-            .with_description("The number of queries queued across all trino-lb instances")
-            .init();
-
-        let cluster_infos_for_callback = Arc::clone(&cluster_infos);
-        meter
-            .register_callback(&[cluster_queries_metric.as_any()], move |observer| {
+            .with_callback(move |observer| {
                 if let Ok(cluster_query_counters) = cluster_infos_for_callback.read() {
                     for (cluster, counter) in cluster_query_counters.deref() {
-                        observer.observe_u64(
-                            &cluster_queries_metric,
+                        observer.observe(
                             counter.running_queries,
-                            [
+                            &[
                                 KeyValue::new("cluster", cluster.to_string()),
                                 KeyValue::new("state", "running"),
-                            ]
-                            .as_ref(),
+                            ],
                         );
-                        observer.observe_u64(
-                            &cluster_queries_metric,
+                        observer.observe(
                             counter.queued_queries,
-                            [
+                            &[
                                 KeyValue::new("cluster", cluster.to_string()),
                                 KeyValue::new("state", "queued"),
-                            ]
-                            .as_ref(),
+                            ],
                         );
-                        observer.observe_u64(
-                            &cluster_queries_metric,
+                        observer.observe(
                             counter.blocked_queries,
-                            [
+                            &[
                                 KeyValue::new("cluster", cluster.to_string()),
                                 KeyValue::new("state", "blocked"),
-                            ]
-                            .as_ref(),
+                            ],
                         );
                     }
                 }
             })
-            .context(RegisterMetricsCallbackSnafu)?;
+            .build();
 
         // All of this mess can be removed once https://github.com/open-telemetry/opentelemetry-rust/issues/1376 is supported.
         let (ping_sender, ping_receiver) = tokio::sync::mpsc::unbounded_channel::<()>();
@@ -140,8 +141,11 @@ impl Metrics {
             ))
         });
 
-        meter
-            .register_callback(&[queued_queries_metric.as_any()], move |observer| {
+        let _queued_queries_metric = meter
+            .u64_observable_gauge("queued_queries")
+            .with_unit("queries")
+            .with_description("The number of queries queued across all trino-lb instances")
+            .with_callback(move |observer| {
                 if let Err(err) = ping_sender.send(()) {
                     error!(error = ?err, "Failed to send ping for queued_queries metric");
                     return;
@@ -172,15 +176,14 @@ impl Metrics {
 
                 if let Some(queued_queries) = queued_queries {
                     for (cluster_group, queued) in queued_queries {
-                        observer.observe_u64(
-                            &queued_queries_metric,
+                        observer.observe(
                             queued,
-                            [KeyValue::new("cluster-group", cluster_group)].as_ref(),
+                            &[KeyValue::new("cluster-group", cluster_group)],
                         );
                     }
                 }
             })
-            .context(RegisterMetricsCallbackSnafu)?;
+            .build();
 
         // All of this mess can be removed once https://github.com/open-telemetry/opentelemetry-rust/issues/1376 is supported.
         let (ping_sender, ping_receiver) = tokio::sync::mpsc::unbounded_channel::<()>();
@@ -202,63 +205,61 @@ impl Metrics {
             ))
         });
 
-        meter
-            .register_callback(
-                &[cluster_counts_per_state_metric.as_any()],
-                move |observer| {
-                    if let Err(err) = ping_sender.send(()) {
-                        error!(error = ?err, "Failed to send ping for cluster_counts_per_state metric");
-                        return;
-                    }
-                    let cluster_counts = std::thread::scope(|s| {
-                        s.spawn(|| {
-                            let mut receiver = match metrics_receiver.write() {
-                                Ok(r) => r,
-                                Err(err) => {
-                                    error!(error = %err, "Failed to acquire write lock for cluster_counts_per_state metric");
-                                    return None;
-                                }
-                            };
-                            match receiver.blocking_recv() {
-                                Some(v) => Some(v),
-                                None => {
-                                    error!("cluster_counts_per_state metrics channel closed");
-                                    None
-                                }
+        let _cluster_counts_per_state_metric = meter
+            .u64_observable_gauge("cluster_counts_per_state")
+            .with_unit("clusters")
+            .with_description("The number of active or inactive clusters for each cluster group")
+            .with_callback(move |observer| {
+                if let Err(err) = ping_sender.send(()) {
+                    error!(error = ?err, "Failed to send ping for cluster_counts_per_state metric");
+                    return;
+                }
+                let cluster_counts = std::thread::scope(|s| {
+                    s.spawn(|| {
+                        let mut receiver = match metrics_receiver.write() {
+                            Ok(r) => r,
+                            Err(err) => {
+                                error!(error = %err, "Failed to acquire write lock for cluster_counts_per_state metric");
+                                return None;
                             }
-                        })
-                        .join()
-                        .unwrap_or_else(|err| {
-                            error!(error = ?err, "cluster_counts_per_state metrics thread panicked");
-                            None
-                        })
-                    });
-
-                    if let Some(cluster_counts) = cluster_counts {
-                        for (cluster_group, counts) in cluster_counts {
-                            for (state, count) in counts {
-                                observer.observe_u64(
-                                    &cluster_counts_per_state_metric,
-                                    count,
-                                    [
-                                        KeyValue::new("cluster-group", cluster_group.clone()),
-                                        KeyValue::new::<_, &str>("state", state.into()),
-                                    ]
-                                    .as_ref(),
-                                );
+                        };
+                        match receiver.blocking_recv() {
+                            Some(v) => Some(v),
+                            None => {
+                                error!("cluster_counts_per_state metrics channel closed");
+                                None
                             }
                         }
-                    }
-                },
-            )
-            .context(RegisterMetricsCallbackSnafu)?;
+                    })
+                    .join()
+                    .unwrap_or_else(|err| {
+                        error!(error = ?err, "cluster_counts_per_state metrics thread panicked");
+                        None
+                    })
+                });
 
-        Ok(Self {
+                if let Some(cluster_counts) = cluster_counts {
+                    for (cluster_group, counts) in cluster_counts {
+                        for (state, count) in counts {
+                            observer.observe(
+                                count,
+                                &[
+                                    KeyValue::new("cluster-group", cluster_group.clone()),
+                                    KeyValue::new::<_, &str>("state", state.into()),
+                                ],
+                            );
+                        }
+                    }
+                }
+            })
+            .build();
+
+        Self {
             registry,
             http_counter,
             queued_time,
             cluster_infos,
-        })
+        }
     }
 }
 
