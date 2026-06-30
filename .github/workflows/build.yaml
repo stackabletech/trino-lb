@@ -102,7 +102,7 @@ jobs:
           persist-credentials: false
 
       - name: Publish and Sign Image Index Manifest to oci.stackable.tech
-        uses: stackabletech/actions/publish-index-manifest@a14cbd08d9e034e2361ea9205b32aff0491885db # v0.15.0
+        uses: stackabletech/actions/publish-image-index-manifest@a14cbd08d9e034e2361ea9205b32aff0491885db # v0.15.0
         with:
           image-registry-uri: oci.stackable.tech
           image-registry-username: robot$stackable+github-action-build
