@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- Switch from the older `prusto` crate to the forked `trino-rust-client` ([#XXX]).
+- Switch from the older `prusto` crate to the forked `trino-rust-client` ([#116]).
 
 ### Fixed
 
@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
   the metrics `RwLock`, cascading into further panics and leaving pods unresponsive ([#111]).
 
 [#111]: https://github.com/stackabletech/trino-lb/pull/111
-[#XXX]: https://github.com/stackabletech/trino-lb/pull/XXX
+[#116]: https://github.com/stackabletech/trino-lb/pull/116
 
 ## [0.6.0] - 2026-02-17
 
