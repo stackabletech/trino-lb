@@ -3,11 +3,11 @@ use std::{
     time::{Duration, SystemTimeError},
 };
 
-use prusto::{QueryError, Warning};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value::RawValue};
 use snafu::{ResultExt, Snafu};
 use tracing::instrument;
+use trino_rust_client::{QueryError, Warning};
 use url::Url;
 
 use crate::{TrinoQueryId, trino_query::QueuedQuery};

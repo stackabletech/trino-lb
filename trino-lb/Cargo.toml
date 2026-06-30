@@ -36,7 +36,6 @@ opentelemetry-otlp.workspace = true
 opentelemetry-prometheus.workspace = true
 opentelemetry.workspace = true
 prometheus.workspace = true
-prusto.workspace = true
 pyo3.workspace = true
 rand.workspace = true
 redis.workspace = true
@@ -54,6 +53,7 @@ tower-http.workspace = true
 tracing-opentelemetry.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
+trino-rust-client.workspace = true
 url.workspace = true
 urlencoding.workspace = true
 

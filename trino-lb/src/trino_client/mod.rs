@@ -1,11 +1,11 @@
 use http::HeaderMap;
-use prusto::{Client, ClientBuilder, DataSet, auth::Auth};
 use snafu::{OptionExt, ResultExt, Snafu};
 use tracing::instrument;
 use trino_lb_core::{
     sanitization::Sanitize,
     trino_query_plan::{ExplainQueryResult, QueryPlan, QueryPlanEstimation},
 };
+use trino_rust_client::{Client, ClientBuilder, DataSet, auth::Auth};
 use url::Url;
 
 pub use crate::trino_client::cluster_info::{ClusterInfo, get_cluster_info};
@@ -24,8 +24,8 @@ pub enum Error {
 
     #[snafu(display("Failed to create Trino client"))]
     CreateTrinoClient {
-        #[snafu(source(from(prusto::error::Error, Box::new)))]
-        source: Box<prusto::error::Error>,
+        #[snafu(source(from(trino_rust_client::error::Error, Box::new)))]
+        source: Box<trino_rust_client::error::Error>,
     },
 
     #[snafu(display("Failed to create HTTP client"))]
@@ -33,8 +33,8 @@ pub enum Error {
 
     #[snafu(display("Failed to execute explain query {explain_query:?}"))]
     ExecuteExplainQuery {
-        #[snafu(source(from(prusto::error::Error, Box::new)))]
-        source: Box<prusto::error::Error>,
+        #[snafu(source(from(trino_rust_client::error::Error, Box::new)))]
+        source: Box<trino_rust_client::error::Error>,
         explain_query: String,
     },
 
