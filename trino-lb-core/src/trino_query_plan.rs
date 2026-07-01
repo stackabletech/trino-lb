@@ -1,12 +1,12 @@
 use std::{collections::BTreeMap, fmt::Display, iter::Sum, ops::Add};
 
 use number_prefix::NumberPrefix;
-use prusto::Presto;
 use serde::{Deserialize, Deserializer, Serialize};
+use trino_rust_client::Trino;
 
-#[derive(Clone, Debug, Presto)]
+#[derive(Clone, Debug, Deserialize, Serialize, Trino)]
 pub struct ExplainQueryResult {
-    #[presto(rename = "Query Plan")]
+    #[trino(rename = "Query Plan")]
     pub query_plan: String,
 }
 
