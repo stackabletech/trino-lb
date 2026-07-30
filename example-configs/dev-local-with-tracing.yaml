@@ -31,6 +31,7 @@ trinoClusterGroups:
     trinoClusters:
       - name: trino-s-1
         endpoint: https://5.250.181.98:8443
+        externalEndpoint: https://5.250.181.98:8443
         credentials: &common-credentials
           username: admin
           password: adminadmin
@@ -39,6 +40,7 @@ trinoClusterGroups:
     trinoClusters:
       - name: trino-m-1
         endpoint: https://5.250.181.98:8443
+        externalEndpoint: https://5.250.181.98:8443
         credentials: *common-credentials
 trinoClusterGroupsIgnoreCert: true
 
