@@ -35,6 +35,7 @@ trinoClusterGroups:
     trinoClusters:
       - name: trino-s-1
         endpoint: https://trino-s-1-coordinator-default.default.svc.cluster.local:8443
+        externalEndpoint: https://trino-s-1-coordinator-default.default.svc.cluster.local:8443
         credentials: &common-credentials
           username: admin
           password: adminadmin

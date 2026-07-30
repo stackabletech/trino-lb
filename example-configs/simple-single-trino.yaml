@@ -16,6 +16,7 @@ trinoClusterGroups:
     trinoClusters:
       - name: trino-default-1
         endpoint: https://5.250.181.98:8443 # FIXME
+        externalEndpoint: https://5.250.181.98:8443 # FIXME
         credentials:
           username: admin
           password: adminadmin # FIXME
