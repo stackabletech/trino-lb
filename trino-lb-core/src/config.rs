@@ -192,8 +192,17 @@ pub struct TrinoClusterConfig {
     pub name: String,
     pub endpoint: Url,
 
-    /// Public endpoint of the Trino cluster.
-    /// This can e.g. be used to change segment ackUris to.
+    /// Public endpoint of the Trino cluster, meaning the address clients can reach this Trino
+    /// cluster at directly (bypassing trino-lb).
+    ///
+    /// It is used for two purposes:
+    ///
+    /// 1. The forwarding related headers (such as `Host` and `X-Forwarded-Host`) of proxied client
+    ///    requests are pointed at this endpoint. Trino builds the absolute URLs it hands out to
+    ///    clients from these headers, so without this they would point at trino-lb, which e.g.
+    ///    breaks the OAuth 2.0 authentication flow.
+    /// 2. The segment ackUris are changed to this endpoint, as sometimes Trino gets confused and
+    ///    puts the wrong endpoint (namely the one of trino-lb) in there.
     pub external_endpoint: Option<Url>,
     pub credentials: TrinoClusterCredentialsConfig,
 }
