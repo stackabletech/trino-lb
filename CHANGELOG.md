@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- Switch from the older `prusto` crate to the forked `trino-rust-client` ([#116]).
+- Switch from the older (forked) `prusto` crate to `trino-rust-client` ([#116]).
 
 ### Fixed
 
