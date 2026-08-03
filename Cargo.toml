@@ -31,7 +31,7 @@ indoc = "2.0"
 k8s-openapi = { version = "0.28", default-features = false, features = [
   "v1_36",
 ] }
-kube = { version = "4.0", default-features = false, features = [
+kube = { version = "4.2", default-features = false, features = [
   "client",
   "jsonpatch",
   "runtime",
@@ -90,20 +90,16 @@ sqlx = { version = "0.9", features = [
   "postgres",
 ] }
 strum = { version = "0.28", features = ["derive"] }
-tokio = "1.52"
+tokio = { version = "1.52", features = ["rt-multi-thread", "macros"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["compression-full", "tracing"] }
+tower-http = { version = "0.7", features = ["compression-full", "trace"] }
 tracing = "0.1"
 tracing-opentelemetry = "0.33"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 trait-variant = "0.1"
-trino-rust-client = "0.9"
+trino-rust-client = "0.11"
 url = { version = "2.5", features = ["serde"] }
 urlencoding = "2.1"
 
 # For trino-lb-bench
 indicatif = "0.18"
-
-[patch.crates-io]
-# We raised a bunch of PRs, which aren't merged yet
-trino-rust-client = { git = "https://github.com/stackabletech/trino-rust-client.git", branch = "trino-lb" }
