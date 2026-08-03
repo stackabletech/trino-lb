@@ -203,6 +203,8 @@ pub struct TrinoClusterConfig {
     ///    breaks the OAuth 2.0 authentication flow.
     /// 2. The segment ackUris are changed to this endpoint, as sometimes Trino gets confused and
     ///    puts the wrong endpoint (namely the one of trino-lb) in there.
+    ///
+    /// Note that the path of the URL is ignored.
     pub external_endpoint: Option<Url>,
     pub credentials: TrinoClusterCredentialsConfig,
 }
