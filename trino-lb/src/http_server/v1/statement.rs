@@ -501,6 +501,7 @@ async fn handle_query_running_on_trino(
                     trino_endpoint: query.trino_endpoint.clone(),
                 },
             )?,
+            query.trino_external_endpoint.as_ref(),
             headers,
         )
         .await
@@ -566,6 +567,7 @@ async fn handle_head_request_to_trino(
                     trino_endpoint: query.trino_endpoint.clone(),
                 },
             )?,
+            query.trino_external_endpoint.as_ref(),
             headers,
         )
         .await

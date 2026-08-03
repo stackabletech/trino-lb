@@ -13,9 +13,18 @@ All notable changes to this project will be documented in this file.
 - Handle Redis connection errors (e.g. broken pipe during master failover) gracefully instead of panicking.
   Previously, `get_queued_query_count` would `.unwrap()` on the Redis result, causing a panic that poisoned
   the metrics `RwLock`, cascading into further panics and leaving pods unresponsive ([#111]).
+- Point the forwarding related headers (`Host`, `X-Forwarded-Host`, `X-Forwarded-Proto` and
+  `X-Forwarded-Port`) of proxied client requests at the configured `externalEndpoint` of the Trino
+  cluster. Trino builds the absolute URLs it hands out to clients from these headers, so previously
+  they pointed at trino-lb. Most notably this broke the OAuth 2.0 flow: Trino put the trino-lb
+  address into the `x_redirect_server` and `x_token_server` of its `WWW-Authenticate` challenge, so
+  clients were sent to `https://<trino-lb>/oauth2/token/{id}`, which trino-lb answered with a `404`.
+  The RFC 7239 `Forwarded` header is now removed as well, as it takes precedence over the
+  `X-Forwarded-*` headers. This is a no-op for Trino clusters without an `externalEndpoint` ([#119]).
 
 [#111]: https://github.com/stackabletech/trino-lb/pull/111
 [#116]: https://github.com/stackabletech/trino-lb/pull/116
+[#119]: https://github.com/stackabletech/trino-lb/pull/119
 
 ## [0.6.0] - 2026-02-17
 
