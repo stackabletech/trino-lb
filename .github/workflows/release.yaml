@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - run: rustup toolchain install "${RUST_TOOLCHAIN_VERSION}" --component clippy
+      - run: rustup toolchain install "${RUST_TOOLCHAIN_VERSION}" --component rustfmt
       - run: cargo fmt --all -- --check
 
   docs:
