@@ -7,7 +7,7 @@ on:
 permissions: {}
 
 env:
-  RUST_TOOLCHAIN_VERSION: "1.94.0"
+  RUST_TOOLCHAIN_VERSION: "1.97.1"
   RUSTFLAGS: "-D warnings"
   RUSTDOCFLAGS: "-D warnings"
   CARGO_TERM_COLOR: always
