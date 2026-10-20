@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Replace the deprecated `serde_yaml` crate with the maintained `yaml_serde` fork ([#123]).
+
+[#123]: https://github.com/stackabletech/trino-lb/pull/123
+
 ## [0.7.0] - 2026-08-03
 
 ### Changed

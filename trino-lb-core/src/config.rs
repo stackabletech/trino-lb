@@ -22,7 +22,7 @@ pub enum Error {
 
     #[snafu(display("Failed to parse configuration file at {config_file:?}"))]
     ParseConfigFile {
-        source: serde_yaml::Error,
+        source: yaml_serde::Error,
         config_file: PathBuf,
     },
 }
@@ -361,14 +361,14 @@ pub struct StackableCluster {
 }
 
 impl Config {
-    /// Using [`std::fs::File`] over `tokio::fs::File`, as [`serde_yaml::from_reader`] does not support
+    /// Using [`std::fs::File`] over `tokio::fs::File`, as [`yaml_serde::from_reader`] does not support
     /// async yet (?). Should not matter, as we only read the config once during startup.
     pub async fn read_from_file(config_file: &PathBuf) -> Result<Self, Error> {
         let config_file_content =
             File::open(config_file).context(ReadConfigFileSnafu { config_file })?;
 
-        let deserializer = serde_yaml::Deserializer::from_reader(config_file_content);
-        serde_yaml::with::singleton_map_recursive::deserialize(deserializer)
+        let deserializer = yaml_serde::Deserializer::from_reader(config_file_content);
+        yaml_serde::with::singleton_map_recursive::deserialize(deserializer)
             .context(ParseConfigFileSnafu { config_file })
     }
 }

@@ -78,7 +78,6 @@ rustls = "0.23"
 rstest = "0.26"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
-serde_yaml = "0.9"
 snafu = "0.9"
 # 0.7.4 is the first release that includes https://github.com/launchbadge/sqlx/pull/2927
 sqlx = { version = "0.9", features = [
@@ -100,6 +99,7 @@ trait-variant = "0.1"
 trino-rust-client = "0.11"
 url = { version = "2.5", features = ["serde"] }
 urlencoding = "2.1"
+yaml_serde = "0.10"
 
 # For trino-lb-bench
 indicatif = "0.18"
