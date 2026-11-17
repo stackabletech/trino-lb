@@ -12,6 +12,16 @@ All notable changes to this project will be documented in this file.
   and `Zstd`) are still accepted. `zstd` compression now actually works, previously it failed during
   startup ([#125]).
 
+### Fixed
+
+- Recover from a black-holed Redis connection instead of hanging until the liveness probe restarts the pod.
+  When the node running the Redis master is drained, the TCP connection silently stops delivering packets
+  without ever being closed, so the only error trino-lb sees is a response timeout. The redis crate's
+  `ConnectionManager` does not reconnect on timeouts (only on dropped-connection errors), so it kept reusing
+  the dead connection forever. trino-lb now enables TCP keepalive / `TCP_USER_TIMEOUT` on the Redis socket and
+  runs a background health check that rebuilds the connection itself when a periodic ping times out ([#112]).
+
+[#112]: https://github.com/stackabletech/trino-lb/pull/112
 [#123]: https://github.com/stackabletech/trino-lb/pull/123
 [#125]: https://github.com/stackabletech/trino-lb/pull/125
 
