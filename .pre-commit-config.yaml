@@ -1,6 +1,6 @@
+---
 exclude: ^(Cargo\.nix|crate-hashes\.json|nix/.*)$
 
----
 default_language_version:
   node: system
 
