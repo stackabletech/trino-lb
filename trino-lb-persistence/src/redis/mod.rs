@@ -31,19 +31,22 @@ use crate::Persistence;
 const REDIS_CONNECTION_TIMEOUT: Duration = Duration::from_secs(10);
 const REDIS_RESPONSE_TIMEOUT: Duration = Duration::from_secs(10);
 
-// TCP keepalive / user-timeout settings for the Redis socket.
-//
-// The redis crate's [`ConnectionManager`] only reconnects when a command fails with a
-// dropped-connection error (broken pipe, connection reset, ...). When the Kubernetes node running
-// the Redis master is drained, the established TCP connection turns into a black hole: packets are
-// silently dropped and no FIN/RST ever arrives, so the only error trino-lb ever sees is a response
-// *timeout* - which the redis crate does not treat as a reason to reconnect. Without these socket
-// options the connection would stay wedged until the liveness probe restarts the pod (see issue
-// #109). Enabling TCP keepalive (and TCP_USER_TIMEOUT) lets the kernel tear the dead socket down on
-// its own, shrinking the detection window; the [`Reconnectable`] wrapper then rebuilds it.
+/// TCP keepalive / user-timeout settings for the Redis socket.
+///
+/// The redis crate's [`ConnectionManager`] only reconnects when a command fails with a
+/// dropped-connection error (broken pipe, connection reset, ...). When the Kubernetes node running
+/// the Redis master is drained, the established TCP connection turns into a black hole: packets are
+/// silently dropped and no FIN/RST ever arrives, so the only error trino-lb ever sees is a response
+/// *timeout* - which the redis crate does not treat as a reason to reconnect. Without these socket
+/// options the connection would stay wedged until the liveness probe restarts the pod (see issue
+/// #109). Enabling TCP keepalive (and TCP_USER_TIMEOUT) lets the kernel tear the dead socket down on
+/// its own, shrinking the detection window. On top of that,
+/// [`RedisPersistence::spawn_health_check`] rebuilds the connection if it keeps timing out.
 const REDIS_TCP_KEEPALIVE_TIME: Duration = Duration::from_secs(5);
 const REDIS_TCP_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(2);
 const REDIS_TCP_KEEPALIVE_RETRIES: u32 = 3;
+/// `TCP_USER_TIMEOUT` is only supported on Linux.
+#[cfg(target_os = "linux")]
 const REDIS_TCP_USER_TIMEOUT: Duration = Duration::from_secs(12);
 
 /// How often the background health check pings Redis to detect a black-holed connection (see the
@@ -55,14 +58,16 @@ const REDIS_HEALTH_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 
 /// TCP settings applied to every Redis connection (and every reconnect), see the constants above.
 fn tcp_settings() -> TcpSettings {
-    TcpSettings::default()
-        .set_keepalive(
-            TcpKeepalive::new()
-                .with_time(REDIS_TCP_KEEPALIVE_TIME)
-                .with_interval(REDIS_TCP_KEEPALIVE_INTERVAL)
-                .with_retries(REDIS_TCP_KEEPALIVE_RETRIES),
-        )
-        .set_user_timeout(REDIS_TCP_USER_TIMEOUT)
+    let settings = TcpSettings::default().set_keepalive(
+        TcpKeepalive::new()
+            .with_time(REDIS_TCP_KEEPALIVE_TIME)
+            .with_interval(REDIS_TCP_KEEPALIVE_INTERVAL)
+            .with_retries(REDIS_TCP_KEEPALIVE_RETRIES),
+    );
+    #[cfg(target_os = "linux")]
+    let settings = settings.set_user_timeout(REDIS_TCP_USER_TIMEOUT);
+
+    settings
 }
 
 const LAST_QUERY_COUNT_FETCHER_UPDATE_KEY: &str = "lastQueryCountFetcherUpdate";
@@ -180,59 +185,36 @@ type ConnectionFactory<T> =
 /// rebuild the underlying connection ourselves; the background health check in
 /// [`RedisPersistence::spawn_health_check`] decides *when* to rebuild.
 struct Reconnectable<T> {
-    current: RwLock<Arc<T>>,
+    current: RwLock<T>,
     factory: ConnectionFactory<T>,
-    /// Guarantees only a single rebuild runs at a time.
-    reconnecting: tokio::sync::Mutex<()>,
 }
 
 impl<T> Reconnectable<T>
 where
-    T: Send + Sync + 'static,
+    T: Clone,
 {
     fn new(initial: T, factory: ConnectionFactory<T>) -> Self {
         Self {
-            current: RwLock::new(Arc::new(initial)),
+            current: RwLock::new(initial),
             factory,
-            reconnecting: tokio::sync::Mutex::new(()),
         }
     }
 
     /// Returns the connection currently in use.
-    fn current(&self) -> Arc<T> {
-        Arc::clone(&self.current.read().unwrap_or_else(PoisonError::into_inner))
+    fn current(&self) -> T {
+        self.current
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
-    /// Rebuilds the connection, replacing the one currently in use.
-    ///
-    /// `used` is the connection that was found to be bad. This is a no-op if another rebuild is
-    /// already in progress, or if the connection has already been replaced since `used` was
-    /// obtained (i.e. another rebuild already happened). This keeps overlapping failure reports
-    /// from rebuilding the connection over and over.
-    async fn reconnect(&self, used: &Arc<T>) {
-        let Ok(_guard) = self.reconnecting.try_lock() else {
-            // Another task is already rebuilding the connection.
-            return;
-        };
+    /// Builds a new connection and replaces the one currently in use with it. The current
+    /// connection is kept if building the new one fails.
+    async fn reconnect(&self) -> Result<(), RedisError> {
+        let connection = (self.factory)().await?;
+        *self.current.write().unwrap_or_else(PoisonError::into_inner) = connection;
 
-        if !Arc::ptr_eq(&self.current(), used) {
-            // The connection was already replaced while we waited for the lock.
-            return;
-        }
-
-        match (self.factory)().await {
-            Ok(connection) => {
-                *self.current.write().unwrap_or_else(PoisonError::into_inner) =
-                    Arc::new(connection);
-                info!("Successfully rebuilt the Redis connection");
-            }
-            Err(error) => {
-                warn!(
-                    ?error,
-                    "Failed to rebuild the Redis connection, will retry on the next health check"
-                );
-            }
-        }
+        Ok(())
     }
 }
 
@@ -275,18 +257,15 @@ impl RedisPersistence<ConnectionManager> {
             .set_tcp_settings(tcp_settings());
         let client = Client::open(connection_info).context(CreateClientSnafu)?;
 
-        let factory: ConnectionFactory<ConnectionManager> = {
+        let factory: ConnectionFactory<ConnectionManager> = Arc::new(move || {
             let client = client.clone();
-            Arc::new(move || {
-                let client = client.clone();
-                let redis_config = redis_config.clone();
-                Box::pin(async move {
-                    client
-                        .get_connection_manager_with_config(redis_config)
-                        .await
-                })
+            let redis_config = redis_config.clone();
+            Box::pin(async move {
+                client
+                    .get_connection_manager_with_config(redis_config)
+                    .await
             })
-        };
+        });
 
         let connection = factory().await.context(CreateClientSnafu)?;
 
@@ -314,14 +293,12 @@ impl RedisPersistence<ClusterConnection<MultiplexedConnection>> {
             .build()
             .context(CreateClientSnafu)?;
 
-        let factory: ConnectionFactory<ClusterConnection<MultiplexedConnection>> = {
-            let client = client.clone();
+        let factory: ConnectionFactory<ClusterConnection<MultiplexedConnection>> =
             Arc::new(move || {
                 let client = client.clone();
                 let redis_config = redis_config.clone();
                 Box::pin(async move { client.get_async_connection_with_config(redis_config).await })
-            })
-        };
+            });
 
         let connection = factory().await.context(CreateClientSnafu)?;
 
@@ -687,35 +664,64 @@ where
     }
 
     fn connection(&self) -> R {
-        (*self.connection.current()).clone()
+        self.connection.current()
     }
 
     /// Spawns a background task that periodically pings Redis and rebuilds the connection if the
-    /// ping fails.
+    /// ping times out.
     ///
     /// The redis crate's [`ConnectionManager`] reconnects on dropped-connection errors but not on
     /// timeouts, so a black-holed connection (see the note on [`REDIS_TCP_KEEPALIVE_TIME`]) would
     /// otherwise time out on every command indefinitely. A periodic ping detects this - and heals
     /// it even while there is no other traffic - without having to wrap every individual operation.
-    /// [`Reconnectable::reconnect`] makes sure we only rebuild once per dead connection.
+    /// Other ping errors (e.g. server errors or dropped connections) are left to the redis crate.
     fn spawn_health_check(connection: Arc<Reconnectable<R>>) {
         tokio::spawn(async move {
+            // Set while the connection is known to be dead, so that we retry the rebuild directly
+            // instead of waiting for yet another ping to time out first.
+            let mut needs_rebuild = false;
+
             loop {
                 tokio::time::sleep(REDIS_HEALTH_CHECK_INTERVAL).await;
 
-                let current = connection.current();
-                let mut ping_connection = (*current).clone();
-                // The connection carries its own response timeout, so a black-holed socket makes
-                // this `PING` fail rather than hang forever.
-                let ping: Result<(), RedisError> =
-                    redis::cmd("PING").query_async(&mut ping_connection).await;
+                if !needs_rebuild {
+                    let mut ping_connection = connection.current();
+                    // The connection carries its own response timeout, so a black-holed socket
+                    // makes this `PING` fail rather than hang forever.
+                    let ping: Result<(), RedisError> =
+                        redis::cmd("PING").query_async(&mut ping_connection).await;
 
-                if let Err(error) = ping {
-                    warn!(
-                        ?error,
-                        "Redis health check failed, rebuilding the connection"
-                    );
-                    connection.reconnect(&current).await;
+                    match ping {
+                        Ok(()) => {}
+                        Err(err) if err.is_timeout() => {
+                            warn!(
+                                error = ?err,
+                                "Redis health check timed out, rebuilding the connection"
+                            );
+                            needs_rebuild = true;
+                        }
+                        Err(err) => {
+                            debug!(
+                                error = ?err,
+                                "Redis health check failed, not rebuilding the connection as it did not time out"
+                            );
+                        }
+                    }
+                }
+
+                if needs_rebuild {
+                    match connection.reconnect().await {
+                        Ok(()) => {
+                            info!("Successfully rebuilt the Redis connection");
+                            needs_rebuild = false;
+                        }
+                        Err(err) => {
+                            warn!(
+                                error = ?err,
+                                "Failed to rebuild the Redis connection, will retry on the next health check"
+                            );
+                        }
+                    }
                 }
             }
         });
@@ -800,18 +806,14 @@ mod tests {
     use super::*;
 
     /// Returns a [`Reconnectable`] over a `u32` plus a counter of how many times it was rebuilt.
-    /// Every rebuild yields once (so concurrent rebuild attempts interleave deterministically) and
-    /// then returns the new rebuild count as the connection value.
+    /// Every rebuild returns the new rebuild count as the connection value.
     fn counting_reconnectable() -> (Arc<AtomicU32>, Reconnectable<u32>) {
         let rebuilds = Arc::new(AtomicU32::new(0));
 
         let factory_rebuilds = Arc::clone(&rebuilds);
         let factory: ConnectionFactory<u32> = Arc::new(move || {
             let rebuilds = Arc::clone(&factory_rebuilds);
-            Box::pin(async move {
-                tokio::task::yield_now().await;
-                Ok(rebuilds.fetch_add(1, Ordering::SeqCst) + 1)
-            })
+            Box::pin(async move { Ok(rebuilds.fetch_add(1, Ordering::SeqCst) + 1) })
         });
 
         (rebuilds, Reconnectable::new(0, factory))
@@ -820,46 +822,27 @@ mod tests {
     #[tokio::test]
     async fn reconnect_replaces_the_connection() {
         let (rebuilds, reconnectable) = counting_reconnectable();
+        assert_eq!(reconnectable.current(), 0);
 
-        let used = reconnectable.current();
-        assert_eq!(*used, 0);
-
-        reconnectable.reconnect(&used).await;
+        reconnectable.reconnect().await.unwrap();
 
         assert_eq!(rebuilds.load(Ordering::SeqCst), 1);
-        assert_eq!(*reconnectable.current(), 1);
+        assert_eq!(reconnectable.current(), 1);
     }
 
     #[tokio::test]
-    async fn reconnect_is_a_noop_for_an_already_replaced_connection() {
-        let (rebuilds, reconnectable) = counting_reconnectable();
-
-        let stale = reconnectable.current();
-        reconnectable.reconnect(&stale).await;
-        assert_eq!(*reconnectable.current(), 1);
-
-        // The handle is now stale (the connection was replaced); reconnecting with it must not
-        // rebuild again, otherwise repeated failure reports would rebuild over and over.
-        reconnectable.reconnect(&stale).await;
-        assert_eq!(rebuilds.load(Ordering::SeqCst), 1);
-        assert_eq!(*reconnectable.current(), 1);
-    }
-
-    #[tokio::test]
-    async fn concurrent_reconnects_rebuild_only_once() {
-        let (rebuilds, reconnectable) = counting_reconnectable();
-        let reconnectable = Arc::new(reconnectable);
-
-        let used = reconnectable.current();
-        let attempts = (0..8).map(|_| {
-            let reconnectable = Arc::clone(&reconnectable);
-            let used = Arc::clone(&used);
-            async move { reconnectable.reconnect(&used).await }
+    async fn failed_reconnect_keeps_the_current_connection() {
+        let factory: ConnectionFactory<u32> = Arc::new(|| {
+            Box::pin(async {
+                Err(RedisError::from(std::io::Error::from(
+                    std::io::ErrorKind::ConnectionRefused,
+                )))
+            })
         });
-        futures::future::join_all(attempts).await;
+        let reconnectable = Reconnectable::new(0, factory);
 
-        // Single-flight: many concurrent failures on the same connection rebuild it exactly once.
-        assert_eq!(rebuilds.load(Ordering::SeqCst), 1);
-        assert_eq!(*reconnectable.current(), 1);
+        reconnectable.reconnect().await.unwrap_err();
+
+        assert_eq!(reconnectable.current(), 0);
     }
 }
