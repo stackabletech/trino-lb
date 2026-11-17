@@ -98,7 +98,7 @@ mod tests {
         #[case] x_trino_client_tags: Option<&str>,
         #[case] expected: Option<&str>,
     ) {
-        let config = serde_yaml::from_str(
+        let config = yaml_serde::from_str(
             r#"
             trinoClusterGroup: my-target
             oneOf: ["foo", "bar", "bak", "system=airflow"]
@@ -135,7 +135,7 @@ mod tests {
         #[case] x_trino_client_tags: Option<&str>,
         #[case] expected: Option<&str>,
     ) {
-        let config = serde_yaml::from_str(
+        let config = yaml_serde::from_str(
             r#"
             trinoClusterGroup: my-target
             allOf: ["foo", "bar", "bak", "system=airflow"]
@@ -161,7 +161,7 @@ mod tests {
     /// Seems like whatever comes first takes precedence
     #[test]
     fn test_configuring_one_of_and_all_of() {
-        let config: ClientTagsRouterConfig = serde_yaml::from_str(
+        let config: ClientTagsRouterConfig = yaml_serde::from_str(
             r#"
             trinoClusterGroup: my-target
             allOf: ["allOf"]
@@ -174,7 +174,7 @@ mod tests {
             TagMatchingStrategy::AllOf(_)
         ));
 
-        let config: ClientTagsRouterConfig = serde_yaml::from_str(
+        let config: ClientTagsRouterConfig = yaml_serde::from_str(
             r#"
             trinoClusterGroup: my-target
             oneOf: ["oneOf"]

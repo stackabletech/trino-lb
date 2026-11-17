@@ -12,6 +12,6 @@ publish = false
 clap.workspace = true
 futures.workspace = true
 indicatif.workspace = true
-prusto.workspace = true
+trino-rust-client.workspace = true
 tokio.workspace = true
 url.workspace = true

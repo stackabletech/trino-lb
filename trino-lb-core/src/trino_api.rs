@@ -3,11 +3,11 @@ use std::{
     time::{Duration, SystemTimeError},
 };
 
-use prusto::{QueryError, Warning};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, value::RawValue};
 use snafu::{ResultExt, Snafu};
 use tracing::instrument;
+use trino_rust_client::{QueryError, Warning};
 use url::Url;
 
 use crate::{TrinoQueryId, trino_query::QueuedQuery};
@@ -62,7 +62,7 @@ pub struct TrinoQueryApiResponse {
     pub update_count: Option<u64>,
 }
 
-/// Copied from [`prusto::Stat`], but with `root_stage`
+/// Copied from [`trino_rust_client::Stat`], but with `root_stage`
 #[derive(Deserialize, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Stat {

@@ -8,7 +8,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Stackable GmbH <info@stackable.tech>"]
 license = "Apache-2.0"
 edition = "2024"
@@ -31,7 +31,7 @@ indoc = "2.0"
 k8s-openapi = { version = "0.28", default-features = false, features = [
   "v1_36",
 ] }
-kube = { version = "4.0", default-features = false, features = [
+kube = { version = "4.2", default-features = false, features = [
   "client",
   "jsonpatch",
   "runtime",
@@ -57,7 +57,6 @@ opentelemetry-otlp = { version = "0.32", default-features = false, features = [
 ] }
 opentelemetry-prometheus = "0.32"
 prometheus = "0.14"
-prusto = "0.5"
 pyo3 = { version = "0.29", features = ["auto-initialize"] }
 rand = "0.10"
 redis = { version = "1.2", default-features = false, features = [
@@ -79,7 +78,6 @@ rustls = "0.23"
 rstest = "0.26"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
-serde_yaml = "0.9"
 snafu = "0.9"
 # 0.7.4 is the first release that includes https://github.com/launchbadge/sqlx/pull/2927
 sqlx = { version = "0.9", features = [
@@ -91,18 +89,17 @@ sqlx = { version = "0.9", features = [
   "postgres",
 ] }
 strum = { version = "0.28", features = ["derive"] }
-tokio = "1.52"
+tokio = { version = "1.52", features = ["rt-multi-thread", "macros"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["compression-full", "tracing"] }
+tower-http = { version = "0.7", features = ["compression-full", "trace"] }
 tracing = "0.1"
 tracing-opentelemetry = "0.33"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 trait-variant = "0.1"
+trino-rust-client = "0.11"
 url = { version = "2.5", features = ["serde"] }
 urlencoding = "2.1"
+yaml_serde = "0.10"
 
 # For trino-lb-bench
 indicatif = "0.18"
-
-[patch.crates-io]
-prusto = { git = "https://github.com/sbernauer/prusto.git", branch = "feat/derive-name-attribute-2" }

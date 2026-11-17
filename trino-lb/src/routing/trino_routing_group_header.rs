@@ -63,7 +63,7 @@ mod tests {
     #[case(Some("bar,bak"))]
     #[tokio::test]
     async fn test_standard_header(#[case] x_trino_routing_group: Option<&str>) {
-        let config = serde_yaml::from_str("").unwrap();
+        let config = yaml_serde::from_str("").unwrap();
         let valid_target_groups = HashSet::from(["foo".to_string(), "bar,bak".to_string()]);
         let router = TrinoRoutingGroupHeaderRouter::new(&config, valid_target_groups);
 
@@ -115,7 +115,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_target_group_does_not_exist() {
-        let config = serde_yaml::from_str("").unwrap();
+        let config = yaml_serde::from_str("").unwrap();
         let valid_target_groups = HashSet::from(["foo".to_string()]);
         let router = TrinoRoutingGroupHeaderRouter::new(&config, valid_target_groups);
 

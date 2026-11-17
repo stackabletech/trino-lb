@@ -3,8 +3,8 @@ use std::{sync::Arc, time::Duration};
 use args::Args;
 use clap::Parser;
 use indicatif::{MultiProgress, ProgressBar};
-use prusto::{ClientBuilder, Row, auth::Auth};
 use tokio::time;
+use trino_rust_client::{ClientBuilder, Row, auth::Auth};
 
 mod args;
 
@@ -41,19 +41,21 @@ async fn main() {
 
     while count < args.queries {
         interval.tick().await;
-        let client_clone = Arc::clone(&client);
-        let finished_bar_clone = Arc::clone(&finished_bar);
-        handles.push(tokio::spawn(async move {
-            let result = client_clone
-                .get_all::<Row>("select count(*) from tpch.sf2.lineitem".to_owned())
-                .await;
-            if let Err(err) = result {
-                println!("[WARN] Query failed: {err}")
-            }
-            finished_bar_clone.inc(1);
-        }));
-        started_bar.inc(1);
-        count += 1;
+        {
+            let client = client.clone();
+            let finished_bar = finished_bar.clone();
+            handles.push(tokio::spawn(async move {
+                let result = client
+                    .get_all::<Row>("select count(*) from tpch.sf2.lineitem".to_owned())
+                    .await;
+                if let Err(err) = result {
+                    println!("[WARN] Query failed: {err}")
+                }
+                finished_bar.inc(1);
+            }));
+            started_bar.inc(1);
+            count += 1;
+        }
     }
 
     futures::future::join_all(handles).await;
