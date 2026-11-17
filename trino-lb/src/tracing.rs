@@ -148,10 +148,10 @@ fn configure_exporter<B: WithExportConfig + WithTonicConfig>(
         builder = builder.with_endpoint(endpoint.as_str());
     }
     if let Some(protocol) = tracing_config.otlp_protocol {
-        builder = builder.with_protocol(protocol);
+        builder = builder.with_protocol(protocol.into());
     }
     if let Some(compression) = tracing_config.otlp_compression {
-        builder = builder.with_compression(compression);
+        builder = builder.with_compression(compression.into());
     }
 
     // In case endpoint and protocol are not set here, they will still be read from the env vars

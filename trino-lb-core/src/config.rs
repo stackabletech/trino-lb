@@ -94,13 +94,54 @@ pub struct TrinoLbTracingConfig {
     pub otlp_endpoint: Option<Url>,
 
     #[serde(rename = "OTEL_EXPORTER_OTLP_PROTOCOL")]
-    pub otlp_protocol: Option<opentelemetry_otlp::Protocol>,
+    pub otlp_protocol: Option<OtlpProtocol>,
 
-    /// TODO: Ideally [`opentelemetry_otlp::Compression`] would serialize and deserialize to
-    /// `gzip`. However, they currently de/ser to `Gzip`, which differs from `opentelemetry_otlp::Compression::from_str`
-    /// We should raise an upstream issue
     #[serde(rename = "OTEL_EXPORTER_OTLP_COMPRESSION")]
-    pub otlp_compression: Option<opentelemetry_otlp::Compression>,
+    pub otlp_compression: Option<OtlpCompression>,
+}
+
+/// Local counterpart of [`opentelemetry_otlp::Protocol`], as it can not be deserialized anymore
+/// since opentelemetry-otlp 0.33 removed the `serialize` feature.
+///
+/// Only gRPC is supported, as we only ship the tonic exporter.
+///
+/// The variants are named after the OTLP spec values. The aliases keep configs working that were
+/// written against the previous serde representation of [`opentelemetry_otlp::Protocol`].
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+pub enum OtlpProtocol {
+    #[serde(rename = "grpc", alias = "Grpc")]
+    Grpc,
+}
+
+impl From<OtlpProtocol> for opentelemetry_otlp::Protocol {
+    fn from(protocol: OtlpProtocol) -> Self {
+        match protocol {
+            OtlpProtocol::Grpc => Self::Grpc,
+        }
+    }
+}
+
+/// Local counterpart of [`opentelemetry_otlp::Compression`], as it can not be deserialized anymore
+/// since opentelemetry-otlp 0.33 removed the `serialize` feature.
+///
+/// The variants are named after the OTLP spec values. The aliases keep configs working that were
+/// written against the previous serde representation of [`opentelemetry_otlp::Compression`].
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+pub enum OtlpCompression {
+    #[serde(rename = "gzip", alias = "Gzip")]
+    Gzip,
+
+    #[serde(rename = "zstd", alias = "Zstd")]
+    Zstd,
+}
+
+impl From<OtlpCompression> for opentelemetry_otlp::Compression {
+    fn from(compression: OtlpCompression) -> Self {
+        match compression {
+            OtlpCompression::Gzip => Self::Gzip,
+            OtlpCompression::Zstd => Self::Zstd,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
