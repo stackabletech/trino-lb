@@ -10,10 +10,10 @@ All notable changes to this project will be documented in this file.
 - The tracing settings `OTEL_EXPORTER_OTLP_PROTOCOL` and `OTEL_EXPORTER_OTLP_COMPRESSION` now accept
   the values from the OTLP spec (`grpc`, `gzip` and `zstd`). The previous spellings (`Grpc`, `Gzip`
   and `Zstd`) are still accepted. `zstd` compression now actually works, previously it failed during
-  startup ([#XXX]).
+  startup ([#125]).
 
 [#123]: https://github.com/stackabletech/trino-lb/pull/123
-[#XXX]: https://github.com/stackabletech/trino-lb/pull/XXX
+[#125]: https://github.com/stackabletech/trino-lb/pull/125
 
 ## [0.7.0] - 2026-08-03
 
