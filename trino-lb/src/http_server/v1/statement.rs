@@ -75,7 +75,8 @@ pub enum Error {
 
     #[snafu(display("Failed to find best cluster for cluster group {cluster_group}"))]
     FindBestClusterForClusterGroup {
-        source: cluster_group_manager::Error,
+        #[snafu(source(from(cluster_group_manager::Error, Box::new)))]
+        source: Box<cluster_group_manager::Error>,
         cluster_group: String,
     },
 
