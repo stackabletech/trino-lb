@@ -6285,7 +6285,7 @@ rec {
           "latest" = [ "v1_37" ];
           "schemars" = [ "dep:schemars" ];
         };
-        resolvedDefaultFeatures = [ "v1_36" ];
+        resolvedDefaultFeatures = [ "v1_37" ];
       };
       "kube" = rec {
         crateName = "kube";
@@ -14506,7 +14506,7 @@ rec {
             name = "k8s-openapi";
             packageId = "k8s-openapi";
             usesDefaultFeatures = false;
-            features = [ "v1_36" ];
+            features = [ "v1_37" ];
           }
           {
             name = "kube";
