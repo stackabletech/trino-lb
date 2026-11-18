@@ -14444,7 +14444,7 @@ rec {
       };
       "trino-lb" = rec {
         crateName = "trino-lb";
-        version = "0.7.0";
+        version = "0.7.1";
         edition = "2024";
         crateBin = [
           {
@@ -14667,7 +14667,7 @@ rec {
       };
       "trino-lb-bench" = rec {
         crateName = "trino-lb-bench";
-        version = "0.7.0";
+        version = "0.7.1";
         edition = "2024";
         crateBin = [
           {
@@ -14713,7 +14713,7 @@ rec {
       };
       "trino-lb-core" = rec {
         crateName = "trino-lb-core";
-        version = "0.7.0";
+        version = "0.7.1";
         edition = "2024";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./trino-lb-core; };
         libName = "trino_lb_core";
@@ -14804,7 +14804,7 @@ rec {
       };
       "trino-lb-persistence" = rec {
         crateName = "trino-lb-persistence";
-        version = "0.7.0";
+        version = "0.7.1";
         edition = "2024";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./trino-lb-persistence; };
         libName = "trino_lb_persistence";
@@ -18362,3 +18362,4 @@ rec {
   #
   };
 }
+
