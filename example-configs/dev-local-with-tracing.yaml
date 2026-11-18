@@ -16,7 +16,7 @@ trinoLb:
     enabled: true
     # helm install jaeger jaegertracing/jaeger --set 'collector.service.otlp.grpc.name=otlp-grpc,collector.service.otlp.grpc.port=4317,collector.service.otlp.http.name=otlp-http,collector.service.otlp.http.port=4318'
     OTEL_EXPORTER_OTLP_ENDPOINT: http://5.250.183.53:4317
-    OTEL_EXPORTER_OTLP_PROTOCOL: Grpc
+    OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     # In case endpoint and protocol are not set here, they will still be read from the env vars
     # OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_EXPORTER_OTLP_PROTOCOL
   ports:
