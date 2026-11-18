@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-18
+
 ### Changed
 
 - Replace the deprecated `serde_yaml` crate with the maintained `yaml_serde` fork ([#123]).
